@@ -373,6 +373,7 @@ table.budget .ok{color:var(--ok);font-weight:600}
     <div class="actions">
       <span class="mode" id="mode">Conectando…</span>
       <button class="btn" id="btnInstall" type="button" hidden>Instalar app</button>
+      <button class="btn" id="btnUndo" type="button" data-act="undo" disabled title="Deshacer el último cambio (Ctrl+Z)">↶ Atrás</button>
       <details class="menu" id="projMenu"><summary class="btn">Proyectos <span aria-hidden="true">▾</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
   </header>
@@ -577,15 +578,20 @@ function deleteItem(it){
 
 /* ---------- Almacenamiento: base de datos de Claude o este navegador ---------- */
 // Historial para el botón «Atrás»: guarda cómo estaba cada cosa antes de cambiarla
-const HIST_COLS=["items","estancias","productos"];
+const HIST_COLS=["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const sameDoc=(a,b)=>{ if(!a||!b) return false; const ks=new Set([...Object.keys(a),...Object.keys(b)]); ks.delete("id"); for(const k of ks) if(JSON.stringify(a[k]??"")!==JSON.stringify(b[k]??"")) return false; return true; };
 function record(col,id,prev,next){
   if(S.undoing||!HIST_COLS.includes(col)) return;
   if(S.preEdit&&col==="items"&&S.preEdit.id===id){ prev=S.preEdit; S.preEdit=null; }
   if(next&&sameDoc(prev,next)) return;
-  if(!S.histGroup){ S.histGroup=[]; S.hist.push(S.histGroup); if(S.hist.length>60) S.hist.shift(); setTimeout(()=>{ S.histGroup=null; },0); }
+  if(!S.histGroup){ S.histGroup=[]; S.hist.push(S.histGroup); if(S.hist.length>60) S.hist.shift(); }
+  // el grupo se cierra al terminar la acción (o cuando acaba una acción de varios pasos)
+  clearTimeout(S.histT); S.histT=setTimeout(function rel(){ if(S.histHeld>0||Date.now()<(S.histHoldUntil||0)){ S.histT=setTimeout(rel,60); return; } S.histGroup=null; },0);
   S.histGroup.push({col,id,prev:prev?JSON.parse(JSON.stringify(prev)):null});
 }
+// Agrupa todo lo que se guarda durante fn en un solo paso de «Atrás»
+async function held(fn){ S.histGroup=null; S.histHeld=(S.histHeld||0)+1; try{ return await fn(); } finally{ S.histHeld--; } }
+function holdHist(ms=1500){ S.histGroup=null; S.histHoldUntil=Date.now()+ms; }
 function undo(){
   const g=S.hist.pop(); if(!g){ toast("No hay nada que deshacer."); return; }
   S.undoing=true;
@@ -647,7 +653,7 @@ function render(){
 
   if(S.mode==="loading"){ main.innerHTML=`<p class="muted">Cargando tus proyectos…</p>`; return; }
   const p=proyecto(); S.proyId=p?.id||null;
-  $("projMenuP").innerHTML=projMenuHTML();
+  $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
   if(!p){
     main.innerHTML=`<section class="blank"><h2>Crea tu primer proyecto</h2>
@@ -828,7 +834,8 @@ function template(k,W,L){
   if(k==="chaflan"){ const c=R(Math.min(W,L)*.25); return [[0,0],[W-c,0],[W,c],[W,L],[0,L]]; }
   return [[0,0],[W,0],[W,L],[0,L]];
 }
-async function saveShape(r,P){
+const saveShape=(r,P)=>held(()=>saveShape0(r,P));
+async function saveShape0(r,P){
   P=P.filter((p,i)=>{ const q=P[(i+1)%P.length]; return P.length<=3||Math.hypot(q[0]-p[0],q[1]-p[1])>=1; });
   if(P.length<3) return;
   const mx=Math.min(...P.map(p=>p[0])), my=Math.min(...P.map(p=>p[1]));
@@ -878,7 +885,7 @@ function planHTML(p,r){
   const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
   const area=(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
   const v3=S.vista==="3d";
-  return `<div class="toolbar">${chips}<div class="tb-right"><button class="btn sm" type="button" data-act="undo"${S.hist.length?"":" disabled"} title="Deshacer el último cambio (Ctrl+Z)">↶ Atrás</button><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<details class="menu"><summary class="btn sm" aria-label="Opciones de la estancia" title="Opciones de la estancia">⋯</summary>
+  return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<details class="menu"><summary class="btn sm" aria-label="Opciones de la estancia" title="Opciones de la estancia">⋯</summary>
       <div class="menu-p" role="menu"><button type="button" role="menuitem" data-act="editRoom">Medidas de ${esc(r.nombre)}</button><button type="button" role="menuitem" data-act="editShape">Dibujar la forma</button><hr><button type="button" role="menuitem" data-act="newRoom">Añadir otra estancia</button></div></details>`}</div></div>
   <div class="planner">
     <div class="plan-main"><div class="canvas">
@@ -907,7 +914,7 @@ function propsHTML(it){
   const trash=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>`;
   return `<div class="panel" id="props">
     <div class="pr-h"><div style="min-width:0"><span class="label">Mueble seleccionado</span><h3>${esc(it.nombre)}</h3></div>
-      <div class="pr-ic"><button class="icon-btn danger" type="button" data-act="delItem" aria-label="Borrar este mueble" title="Borrar">${trash}</button><button class="icon-btn" type="button" data-act="unsel" aria-label="Cerrar" title="Cerrar">✕</button></div></div>
+      <div class="pr-ic"><button class="icon-btn" type="button" data-act="dup" aria-label="Duplicar este mueble" title="Duplicar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button><button class="icon-btn danger" type="button" data-act="delItem" aria-label="Borrar este mueble" title="Borrar">${trash}</button><button class="icon-btn" type="button" data-act="unsel" aria-label="Cerrar" title="Cerrar">✕</button></div></div>
     <div class="props">
       <div class="full"><label for="pr_rot">Giro</label><div class="rotrow"><input type="range" id="pr_rot" min="0" max="359" step="1" value="${rot}"><input type="number" id="pr_rotn" min="0" max="359" step="1" value="${rot}" inputmode="numeric" aria-label="Grados"><span>°</span></div>
         <div class="rotq">${[-90,-15,15,90].map(v=>`<button class="btn sm" type="button" data-rotby="${v}">${v>0?"+":"−"}${Math.abs(v)}°</button>`).join("")}<button class="btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}">⇋ Simetría</button></div>
@@ -926,7 +933,6 @@ function propsHTML(it){
         ${["chaise","rinconera"].includes(S3.f)?`<div class="full"><label for="pr_lado">Lado de la chaise</label><select id="pr_lado"><option value="der"${S3.lado==="der"?" selected":""}>Derecha</option><option value="izq"${S3.lado==="izq"?" selected":""}>Izquierda</option></select></div>`:""}`}
       </div></details>
     ${prod?`<p style="margin:0;font-size:13px" class="muted">Es tu producto de «${esc(prod.busco)}»${prod.precio?` · ${eur2.format(+prod.precio)}`:""}${prod.tienda?` · ${esc(prod.tienda)}`:""}</p>`:""}
-    <div><button class="btn sm" type="button" data-act="dup">Duplicar</button></div>
   </div>`;
 }
 function addItem(r,base){
@@ -1386,7 +1392,8 @@ function listsHTML(p,r){
     :`<p class="muted" style="margin:0;font-size:13px">Crea una lista por cada cosa que buscas aquí (mueble de TV, sofá, lámpara…), mete las opciones que vayas viendo y pulsa una para verla en el plano.</p>`}
     <button class="btn sm" type="button" data-act="newList">+ Nueva lista</button></div>`;
 }
-async function choose(id){
+const choose=id=>held(()=>choose0(id));
+async function choose0(id){
   const x=S.productos.find(y=>y.id===id); if(!x) return;
   const group=S.productos.filter(y=>y.proyectoId===x.proyectoId&&y.busco===x.busco&&(y.estanciaId||"")===(x.estanciaId||""));
   for(const y of group) if(y.id!==id&&y.estado==="elegido"){ const {id:yid,...b}=y; await save("productos",yid,{...b,estado:"favorito"}).catch(()=>{}); }
@@ -1709,7 +1716,7 @@ function peopleHTML(tasks){
 function fill(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${esc(v)}">${esc(n)}</option>`).join(""); el.value=val??opts[0]?.[0]??""; }
 function armDelete(btn,fn){
   btn.dataset.label ||= btn.textContent; btn.textContent=btn.dataset.label; btn.classList.remove("armed");
-  btn.onclick=async()=>{ if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent="Pulsa otra vez para eliminar";return;} await fn(); };
+  btn.onclick=async()=>{ if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent="Pulsa otra vez para eliminar";return;} await held(fn); toast("Eliminado",undo); };
 }
 const roomOpts = pid => [["","Toda la casa"],...roomsOf(pid).map(r=>[r.id,r.nombre])];
 
@@ -1727,7 +1734,7 @@ function openProj(p){
   $("dlgProj").showModal();
 }
 $("fProj").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edP?.id||uid();
   const data={nombre:$("j_nombre").value.trim(),tipo:$("j_tipo").value,presupuesto:num($("j_pres").value)||0,direccion:$("j_dir").value.trim(),notas:$("j_notas").value.trim(),creado:edP?.creado||Date.now()};
   try{
@@ -1749,7 +1756,7 @@ function openRoom(r){
   $("dlgRoom").showModal();
 }
 $("fRoom").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edR?.id||uid();
   const nw=+$("r_ancho").value, nl=+$("r_largo").value;
   let puntos=edR?.puntos;
@@ -1774,7 +1781,7 @@ function openProd(x,preset={}){
   $("dlgProd").showModal();
 }
 $("fProd").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   if(!$("d_busco").value.trim()){ ev.preventDefault(); $("d_busco").hidden=false; $("d_busco").focus(); toast("Elige una lista o escribe el nombre de una nueva."); return; }
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
@@ -1801,7 +1808,7 @@ function openTask(t){
   $("dlgTask").showModal();
 }
 $("fTask").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edT?.id||uid();
   try{ await save("tareas",id,{proyectoId:edT?.proyectoId||S.proyId,titulo:$("t_titulo").value.trim(),estanciaId:$("t_room").value,estado:$("t_estado").value,contactoId:$("t_cont").value,
     inicio:$("t_ini").value,fin:$("t_fin").value,prev:num($("t_prev").value),real:num($("t_real").value),notas:$("t_notas").value.trim(),creado:edT?.creado||Date.now()});
@@ -1820,7 +1827,7 @@ function openCont(c){
   $("dlgCont").showModal();
 }
 $("fCont").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edC?.id||uid();
   try{ await save("contactos",id,{nombre:$("c_nombre").value.trim(),oficio:$("c_oficio").value.trim(),tel:$("c_tel").value.trim(),email:$("c_email").value.trim(),notas:$("c_notas").value.trim()});
     toast(edC?"Contacto guardado":"Contacto añadido"); }catch{}
@@ -1831,13 +1838,13 @@ function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 
 $("fList").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const n=$("l_nombre").value.trim(); if(!n) return;
   if(listsOf(S.proyId).some(l=>l.nombre===n)){ toast("Ya tienes una lista con ese nombre."); return; }
   await save("listas",uid(),{proyectoId:S.proyId,nombre:n,estanciaId:$("l_room").value,creado:Date.now()}).catch(()=>{}); S.lastList=n; toast(`Lista «${n}» creada`);
 });
 $("fCj").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edCj?.id||uid();
   const data={proyectoId:edCj?.proyectoId||S.proyId,nombre:$("cj_nombre").value.trim(),estanciaId:$("cj_room").value,forma:$("cj_forma").value,ancho:num($("cj_ancho").value),fondo:num($("cj_fondo").value),alto:num($("cj_alto").value),
     color:$("cj_color").value,notas:$("cj_notas").value.trim(),elementos:edCj?.elementos||[],creado:edCj?.creado||Date.now()};
@@ -1862,7 +1869,7 @@ document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("deta
   if(dd.matches?.("details.pr-more")) S.propsMore=dd.open;
   if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
 $("fGasto").addEventListener("submit",async ev=>{
-  if(ev.submitter?.value!=="ok") return;
+  if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edG?.id||uid();
   try{ await save("gastos",id,{proyectoId:edG?.proyectoId||S.proyId,concepto:$("g_concepto").value.trim(),importe:num($("g_importe").value),estanciaId:$("g_room").value,pagado:$("g_pagado").checked,notas:$("g_notas").value.trim(),creado:edG?.creado||Date.now()});
     toast(edG?"Gasto guardado":"Gasto añadido"); }catch{}
