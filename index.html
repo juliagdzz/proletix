@@ -28,7 +28,7 @@ addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = do
   --bg:#FFF3FC; --surface:#FFFFFF; --sunk:#FFE4FB; --ink:#3B2832; --muted:#7A6371; --line:#F2D9EE;
   --red:#F86C2F; --red-ink:#3B1A0E; --gold:#C0D6FF; --gold-ink:#2A2440; --pink:#FFD5FB; --pink-ink:#6D0101; --beige:#F7EAE0; --granate:#6D0101;
   --ok:#2E7A4E; --warn:#9E5600; --bad:#B0201A;
-  --floor:#FFFFFF; --wall:#6D0101; --grid:rgb(109 1 1 / .06);
+  --floor:#FFFFFF; --wall:#6D0101; --plan-calco:#2B6CB0; --grid:rgb(109 1 1 / .06);
   --f0:#C0D6FF; --f1:#FDBE9E; --f2:#FFD5FB; --f3:#EBCBC6; --f4:#F5E3D8; --f5:#ECE2E6;
   --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -567,6 +567,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
   <div id="finBody" class="fin-b"></div>
 </form></dialog>
 
+<input type="file" id="dxfIn" accept=".dxf,.dwg" hidden>
 <input type="file" id="vcfIn" accept=".vcf,text/vcard,text/x-vcard" hidden>
 
 <!-- Gasto -->
@@ -949,17 +950,17 @@ function planHTML(p,r){
   if(!r) return `<div class="toolbar">${chips}</div><div class="blank"><h2>Dibuja tu primera estancia</h2><p>Solo necesitas el ancho y el largo en centímetros. Después arrastras muebles encima y ves si caben.</p><button class="btn primary" type="button" data-act="newRoom">Añadir estancia</button></div>`;
   const items=S.items.filter(i=>i.estanciaId===r.id);
   const bad=problems(items,r);
-  const P=pts(r), {W,L}=bbox(P), pad=Math.max(40,Math.max(W,L)*.07), hs=Math.max(7,Math.max(W,L)/50), es=!!S.editShape&&S.vista!=="3d";
+  const P=pts(r), BB=bbox(P), W=Math.max(BB.W,r.calco?.w||0), L=Math.max(BB.L,r.calco?.l||0), pad=Math.max(40,Math.max(W,L)*.07), hs=Math.max(7,Math.max(W,L)/50), es=!!S.editShape&&S.vista!=="3d";
   const sel=items.find(i=>i.id===S.sel);
   const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
   const area=(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
   const v3=S.vista==="3d";
   return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<details class="menu"><summary class="btn sm" aria-label="Opciones de la estancia" title="Opciones de la estancia">⋯</summary>
-      <div class="menu-p" role="menu"><button type="button" role="menuitem" data-act="editRoom">Medidas de ${esc(r.nombre)}</button><button type="button" role="menuitem" data-act="editShape">Dibujar la forma</button><button type="button" role="menuitem" data-act="finishes">Paredes y suelo</button><hr><button type="button" role="menuitem" data-act="newRoom">Añadir otra estancia</button></div></details>`}</div></div>
+      <div class="menu-p" role="menu"><button type="button" role="menuitem" data-act="editRoom">Medidas de ${esc(r.nombre)}</button><button type="button" role="menuitem" data-act="editShape">Dibujar la forma</button><button type="button" role="menuitem" data-act="finishes">Paredes y suelo</button><button type="button" role="menuitem" data-act="dxf">Importar plano (DXF)</button>${r.calco?`${r.calco.poly?`<button type="button" role="menuitem" data-act="calcoShape">Usar el contorno del plano</button>`:""}<button type="button" role="menuitem" data-act="calcoOff">Quitar el plano de fondo</button>`:""}<hr><button type="button" role="menuitem" data-act="newRoom">Añadir otra estancia</button></div></details>`}</div></div>
   <div class="planner">
     <div class="plan-main"><div class="canvas">
       ${v3?`<div id="view3d"></div><span class="hint">Arrastra un mueble para moverlo · púlsalo otra vez para girarlo · arrastra el fondo para girar la vista</span>`:`<svg id="plan" data-pad="${pad}" data-hs="${hs}" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
-        <g id="roomGeom">${roomGeomSVG(P,pad,r.sueloColor||DEF_FIN.sueloColor)}</g>
+        <g id="roomGeom">${roomGeomSVG(P,pad,r.sueloColor||DEF_FIN.sueloColor)}</g>${r.calco?`<g id="calco" opacity=".55" pointer-events="none">${calcoSVG(r.calco)}</g>`:""}
         <g id="itemsLayer"${es?' opacity=".3" style="pointer-events:none"':""}>${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
         ${es?`<g id="shapeLayer">${shapeHandlesSVG(P,hs)}</g>`:""}
       </svg>
@@ -1914,6 +1915,75 @@ async function pickContacts(){
   }catch{ toast("No se ha podido abrir la agenda. Prueba con un archivo de contactos (.vcf)."); }
 }
 
+/* ---------- Importar un plano DXF como calco de fondo ---------- */
+function parseDxf(txt){
+  const L=txt.split(/\r?\n/), pairs=[];
+  for(let i=0;i+1<L.length;i+=2) pairs.push([parseInt(L[i].trim(),10),L[i+1].trim()]);
+  let units=0;
+  for(let i=0;i<pairs.length;i++){ if(pairs[i][0]===9&&pairs[i][1]==="$INSUNITS"){ const n=pairs[i+1]; if(n&&n[0]===70) units=+n[1]; break; } if(pairs[i][0]===2&&pairs[i][1]==="ENTITIES") break; }
+  let i=pairs.findIndex(p=>p[0]===2&&p[1]==="ENTITIES"); if(i<0) i=0;
+  const ents=[]; let ent=null;
+  for(;i<pairs.length;i++){ const [c,v]=pairs[i]; if(c===0){ if(ent) ents.push(ent); if(v==="ENDSEC"){ ent=null; break; } ent={type:v,codes:[]}; } else if(ent) ent.codes.push([c,v]); }
+  if(ent) ents.push(ent);
+  const segs=[], polys=[];
+  const addPoly=(pts,closed)=>{ if(pts.length<2) return; const a=pts[0], b=pts[pts.length-1]; if(!closed&&pts.length>3&&Math.hypot(a[0]-b[0],a[1]-b[1])<1e-6) closed=true;
+    for(let j=0;j+1<pts.length;j++) segs.push([...pts[j],...pts[j+1]]); if(closed&&pts.length>2){ segs.push([...b,...a]); polys.push(pts); } };
+  let cur=null;
+  for(const e of ents){
+    const g=k=>{ const f=e.codes.find(x=>x[0]===k); return f?+f[1]:0; }, all=k=>e.codes.filter(x=>x[0]===k).map(x=>+x[1]);
+    if(e.type==="LINE") segs.push([g(10),g(20),g(11),g(21)]);
+    else if(e.type==="LWPOLYLINE"){ const xs=all(10), ys=all(20); addPoly(xs.map((x,j)=>[x,ys[j]]),(g(70)&1)===1); }
+    else if(e.type==="POLYLINE") cur={pts:[],closed:(g(70)&1)===1};
+    else if(e.type==="VERTEX"&&cur) cur.pts.push([g(10),g(20)]);
+    else if(e.type==="SEQEND"&&cur){ addPoly(cur.pts,cur.closed); cur=null; }
+    else if(e.type==="ARC"||e.type==="CIRCLE"){ const cx=g(10), cy=g(20), r=g(40); let a0=e.type==="ARC"?g(50):0, a1=e.type==="ARC"?g(51):360; if(a1<=a0) a1+=360;
+      const n=Math.max(4,Math.ceil((a1-a0)/15)); for(let k=0;k<n;k++){ const t0=(a0+(a1-a0)*k/n)*Math.PI/180, t1=(a0+(a1-a0)*(k+1)/n)*Math.PI/180; segs.push([cx+r*Math.cos(t0),cy+r*Math.sin(t0),cx+r*Math.cos(t1),cy+r*Math.sin(t1)]); } }
+  }
+  return {segs,polys,units};
+}
+// Pasa el dibujo a centímetros, con el eje vertical como en el plano y empezando en 0,0
+function dxfToCalco(d){
+  if(!d.segs.length) return null;
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  d.segs.forEach(([a,b,c,e])=>{ x0=Math.min(x0,a,c); x1=Math.max(x1,a,c); y0=Math.min(y0,b,e); y1=Math.max(y1,b,e); });
+  const w=x1-x0;
+  let k={1:2.54,2:30.48,4:.1,5:1,6:100}[d.units];
+  if(!k) k=w>3000?.1:w<60?100:1;
+  const T=([x,y])=>[Math.round((x-x0)*k*10)/10,Math.round((y1-y)*k*10)/10];
+  let segs=d.segs.map(([a,b,c,e])=>[...T([a,b]),...T([c,e])]).filter(([a,b,c,e])=>Math.hypot(c-a,e-b)>=1);
+  if(segs.length>6000) segs=segs.sort((p,q)=>Math.hypot(q[2]-q[0],q[3]-q[1])-Math.hypot(p[2]-p[0],p[3]-p[1])).slice(0,6000);
+  const big=d.polys.map(p=>p.map(T)).filter(p=>p.length>2).sort((a,b)=>polyArea(b)-polyArea(a))[0]||null;
+  return {w:Math.round(w*k),l:Math.round((y1-y0)*k),s:segs.flat(),poly:big?big.map(([x,y])=>({x:Math.round(x),y:Math.round(y)})):null};
+}
+function calcoSVG(c){
+  if(!c||!c.s?.length) return "";
+  let d=""; for(let i=0;i+3<c.s.length;i+=4) d+=`M${c.s[i]} ${c.s[i+1]}L${c.s[i+2]} ${c.s[i+3]}`;
+  return `<path d="${d}" fill="none" stroke="var(--plan-calco)" stroke-width="1.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+}
+async function importDxf(file){
+  const p0=proyecto(), r=p0&&room(p0); if(!r){ toast("Crea primero una estancia."); return; }
+  if(/\.dwg$/i.test(file.name)){ toast("Los archivos DWG no se pueden leer en la web. Guárdalo como DXF desde tu programa de CAD (o con el conversor gratuito ODA File Converter) e impórtalo."); return; }
+  let calco=null;
+  try{ calco=dxfToCalco(parseDxf(await file.text())); }catch{ calco=null; }
+  if(!calco){ toast("No he encontrado líneas en ese archivo. Comprueba que es un DXF."); return; }
+  const {id,...b}=r; await save("estancias",id,{...b,calco}).catch(()=>{});
+  S.vista="2d"; render();
+  const msg=`Plano importado: ${(calco.w/100).toLocaleString("es-ES",{maximumFractionDigits:1})} × ${(calco.l/100).toLocaleString("es-ES",{maximumFractionDigits:1})} m`;
+  if(calco.poly) toastAction(msg,"Usar su contorno",()=>useCalcoShape()); else toast(msg+". No tiene un contorno cerrado: dibuja la forma encima con «Dibujar la forma».");
+}
+function useCalcoShape(){
+  const p0=proyecto(), r=p0&&room(p0); if(!r?.calco?.poly) return;
+  saveShape(r,r.calco.poly.map(q=>[q.x,q.y]));
+  toast("La estancia ya tiene la forma del plano.",undo);
+}
+function toastAction(msg,label,fn){
+  document.querySelectorAll(".toast").forEach(x=>x.remove());
+  const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
+  const s=document.createElement("span"); s.textContent=msg; t.appendChild(s);
+  const b=document.createElement("button"); b.type="button"; b.textContent=label; b.onclick=()=>{ t.remove(); fn(); }; t.appendChild(b);
+  document.body.appendChild(t); setTimeout(()=>t.remove(),9000);
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 // Comparador tipo tienda: una columna por producto y una fila por característica
@@ -2178,6 +2248,7 @@ document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("deta
   if(dd.matches?.("details.cat-d")){ if(dd.open) S.openCats.add(dd.dataset.cat); else S.openCats.delete(dd.dataset.cat); }
   if(dd.matches?.("details.need")){ if(dd.open) S.foldedLists.delete(dd.dataset.fold); else S.foldedLists.add(dd.dataset.fold); }
   if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
+$("dxfIn").addEventListener("change",()=>{ const f=$("dxfIn").files[0]; if(f) importDxf(f); });
 $("vcfIn").addEventListener("change",async()=>{
   const f=$("vcfIn").files[0]; if(!f) return;
   try{ const list=parseVcf(await f.text()); if(!list.length){ toast("Ese archivo no tiene contactos en formato .vcf."); return; } importContacts(list); }
@@ -2257,6 +2328,9 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "dxf": $("dxfIn").value=""; $("dxfIn").click(); break;
+    case "calcoShape": useCalcoShape(); break;
+    case "calcoOff": if(r){ const {id,calco,...b}=r; save("estancias",id,b).then(()=>toast("Plano de fondo quitado",undo)).catch(()=>{}); } break;
     case "pickCont": pickContacts(); break;
     case "vcfCont": $("vcfIn").value=""; $("vcfIn").click(); break;
     case "finishes": if(r) openFin(r); break;
