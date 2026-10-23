@@ -230,6 +230,7 @@ dialog form{display:flex;flex-direction:column}
 .opt .num{font-size:13px}
 details.field summary{cursor:pointer;font-size:13px;color:var(--granate);font-weight:600}
 details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);border:0;border-radius:var(--r);padding:8px 10px;width:100%}
+.pimg{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff;border-radius:4px;display:block}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -294,7 +295,7 @@ details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);bo
 <dialog id="dlgProd"><form method="dialog" id="fProd">
   <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
   <div class="dlg-b">
-    <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint">Al pegarlo se rellenan la tienda y el nombre</span></div>
+    <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
     <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
       <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí"></textarea>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm" type="button" id="d_fill">Rellenar ficha</button><span class="hint" id="d_fillmsg"></span></div>
@@ -874,6 +875,22 @@ function mount3d(r){
 
 /* ---------- Importar productos y listas por estancia ---------- */
 let SAMPLE=null;
+// Fuera de Claude (Vercel) hay un lector de páginas en /api/producto
+const HAS_API=!window.claude;
+async function readUrl(u){
+  const msg=$("d_urlmsg"); msg.textContent="Leyendo la página de la tienda…";
+  try{
+    const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
+    if($("d_url").value.trim()!==u) return;
+    if(!r.ok||d.error){ msg.textContent=(d.error||"No se ha podido leer la página.")+" Copia y pega el texto de la página abajo."; $("d_more").open=true; return; }
+    const f=fromUrl(u), host=new URL(u).hostname.replace(/-/g,""), known=Object.keys(SHOPS).some(k=>host.includes(k));
+    applyImport({...d,tienda:known?f.tienda:(d.tienda||f.tienda)});
+    if(d.imagen) $("d_img").value=d.imagen;
+    const faltan=[!d.precio&&"el precio",!(d.ancho&&d.fondo)&&"las medidas"].filter(Boolean);
+    msg.textContent=faltan.length?`Leído, pero no encuentro ${faltan.join(" ni ")}. Pega el texto de la página abajo o escríbelo.`:"Leído. Revisa los datos antes de guardar.";
+    if(faltan.length) $("d_more").open=true;
+  }catch{ msg.textContent="No se ha podido leer la página. Copia y pega el texto abajo."; $("d_more").open=true; }
+}
 const SHOPS={ikea:"IKEA",leroymerlin:"Leroy Merlin",maisonsdumonde:"Maisons du Monde",elcorteingles:"El Corte Inglés",conforama:"Conforama",amazon:"Amazon",zarahome:"Zara Home",sklum:"Sklum",kavehome:"Kave Home",westwing:"Westwing",jysk:"JYSK",bauhaus:"Bauhaus",laredoute:"La Redoute",carrefour:"Carrefour",mueblesboom:"Muebles BOOM",tuco:"Tuco",merkamueble:"Merkamueble",habitat:"Habitat",aliexpress:"AliExpress",wallapop:"Wallapop",milanuncios:"Milanuncios",temu:"Temu",shein:"Shein",lidl:"Lidl",action:"Action",casashops:"Casa",hm:"H&M Home",vidaxl:"vidaXL",miliboo:"Miliboo",ventaunica:"Venta Única",brico:"Bricodepot",bricomart:"Bricomart",mediamarkt:"MediaMarkt"};
 function fromUrl(u){
   try{
@@ -974,7 +991,7 @@ function shopHTML(p,prods){
       <span class="sum">${list.length} opci${list.length>1?"ones":"ón"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}</span></div>
       <div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
-        return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">
+        return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
           <div class="row"><span class="st st-${x.estado||"visto"}">${(ESTADOS_P.find(e=>e[0]===x.estado)||ESTADOS_P[0])[1]}</span>${min!==null&&+x.precio===min&&x.estado!=="descartado"?'<span class="tag cheap">Más barato</span>':""}</div>
           <h4>${esc(x.nombre)}</h4>
           <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}</span>${stars(x.valor)}</div>
@@ -1079,7 +1096,7 @@ function openProd(x,preset={}){
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
   fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
   $("d_busco").value=x?.busco||preset.busco||""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
-  $("d_url").value=x?.url||""; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
+  $("d_url").value=x?.url||""; $("d_img").value=x?.imagen||""; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
   $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
   if(x) armDelete($("d_del"),async()=>{ for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id); await remove("productos",x.id); $("dlgProd").close(); toast("Producto eliminado"); });
@@ -1089,7 +1106,7 @@ $("fProd").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
-    url:$("d_url").value.trim(),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
+    url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
     estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
   try{
     await save("productos",id,data);
@@ -1141,7 +1158,7 @@ function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 $("btnNewProj").onclick=()=>openProj(null);
 $("d_fill").onclick=fillFromPaste;
-$("d_url").addEventListener("change",()=>{ const f=fromUrl($("d_url").value.trim()); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
+$("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl]");
   if(!t) return;
