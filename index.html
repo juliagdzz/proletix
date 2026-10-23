@@ -320,6 +320,20 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .rotrow input[type=number]{width:64px;flex:none}
 .rotq{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
 .btn[aria-pressed="true"]{background:var(--pink);color:var(--pink-ink);border-color:var(--pink)}
+#projMenu .menu-p{min-width:250px;max-height:70vh;overflow:auto}
+#projMenu summary{font-size:15px;letter-spacing:normal;padding:8px 14px;line-height:1.45}
+#projMenu summary span{font-size:11px;margin-left:2px}
+.menu-l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--granate);font-weight:600;padding:6px 12px 2px}
+.menu-p button[aria-checked="true"]{background:var(--pink);color:var(--pink-ink);font-weight:600}
+.menu-k{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:56px}
+.abs{display:flex;flex-direction:column;gap:14px}
+.ab{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ab-h{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 16px;flex-wrap:wrap}
+.ab-t{background:none;border:0;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px}
+.ab-t h3{font-size:24px;color:var(--granate)}
+.ab-t:hover h3{text-decoration:underline;text-underline-offset:4px}
+.ab-n{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.ab-n b{color:var(--ink);font-weight:600}
+.ab .tbl-wrap{border:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -346,7 +360,7 @@ table.budget .ok{color:var(--ok);font-weight:600}
     <div class="actions">
       <span class="mode" id="mode">Conectando…</span>
       <button class="btn" id="btnInstall" type="button" hidden>Instalar app</button>
-      <button class="btn" id="btnNewProj" type="button">Nuevo proyecto</button>
+      <details class="menu" id="projMenu"><summary class="btn">Proyectos <span aria-hidden="true">▾</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
   </header>
   <main id="main" style="display:flex;flex-direction:column;gap:18px"></main>
@@ -590,6 +604,8 @@ function render(){
 
   if(S.mode==="loading"){ main.innerHTML=`<p class="muted">Cargando tus proyectos…</p>`; return; }
   const p=proyecto(); S.proyId=p?.id||null;
+  $("projMenuP").innerHTML=projMenuHTML();
+  if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
   if(!p){
     main.innerHTML=`<section class="blank"><h2>Crea tu primer proyecto</h2>
       <p>Un proyecto puede ser una casa entera o una sola estancia. Dentro dibujas cada estancia con sus medidas, colocas muebles, guardas los productos que vas viendo para compararlos y llevas las tareas de la reforma con sus plazos.</p>
@@ -603,7 +619,7 @@ function render(){
     <section class="proj">
       <div class="proj-pick">
         <span class="kind"><b>${p.tipo==="estancia"?"Estancia":"Casa"}</b>${p.direccion?`<span class="muted" style="font-size:13px">${esc(p.direccion)}</span>`:""}</span>
-        ${S.proyectos.length>1?`<select id="selProj" aria-label="Proyecto">${sorted.map(x=>`<option value="${esc(x.id)}"${x.id===p.id?" selected":""}>${esc(x.nombre)}</option>`).join("")}</select>`:`<h1>${esc(p.nombre)}</h1>`}
+        <h1>${esc(p.nombre)}</h1>
       </div>
       <button class="btn" type="button" data-act="editProj">Editar proyecto</button>
     </section>
@@ -1536,6 +1552,45 @@ async function quickAdd(cid){
   setTimeout(()=>$("qa_n_"+cid)?.focus(),30);
 }
 
+/* ---------- Menú de proyectos y presupuestos de todo ---------- */
+function projMenuHTML(){
+  const cur=S.proyId, ps=[...S.proyectos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es"));
+  return `${ps.length?`<span class="menu-l">Tus proyectos</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${S.view!=="presupuestos"&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}<hr>`:""}
+    <button type="button" role="menuitem" data-act="newProj">＋ Nuevo proyecto</button>
+    <button type="button" role="menuitem" data-act="allBudgets"${S.view==="presupuestos"?' aria-checked="true"':""}>Presupuestos de todo</button>`;
+}
+function allBudgetsHTML(){
+  const ps=[...S.proyectos].sort((a,b)=>(a.creado||0)-(b.creado||0));
+  const data=ps.map(p=>{
+    const rows=budgetRows(p), ids=roomsOf(p.id).map(r=>r.id);
+    const groups=[...ids,""].map(rid=>({rid,rows:rows.filter(r=>rid?r.room===rid:!ids.includes(r.room))})).filter(g=>g.rows.length);
+    return {p,max:+p.presupuesto||0,prev:rows.reduce((s,r)=>s+r.prev,0),real:rows.reduce((s,r)=>s+r.real,0),groups};
+  });
+  const T={max:data.reduce((s,d)=>s+d.max,0),prev:data.reduce((s,d)=>s+d.prev,0),real:data.reduce((s,d)=>s+d.real,0)};
+  const withMax=data.filter(d=>d.max), left=withMax.reduce((s,d)=>s+d.max-d.prev,0);
+  const figs=`<section class="figures" aria-label="Total de todos los proyectos">
+    <div class="fig"><span class="label">Presupuesto</span><span class="v">${T.max?eur.format(T.max):"—"}</span><span class="s">${withMax.length} de ${data.length} proyecto${data.length===1?"":"s"} con máximo</span></div>
+    <div class="fig"><span class="label">Previsto</span><span class="v">${eur.format(T.prev)}</span><div class="bar"><u style="width:${T.max?Math.min(100,T.prev/T.max*100):0}%"></u><i style="width:${T.max?Math.min(100,T.real/T.max*100):0}%"></i></div><span class="s">entre todos los proyectos</span></div>
+    <div class="fig"><span class="label">Pagado</span><span class="v">${eur.format(T.real)}</span><span class="s">${T.prev?`${Math.round(T.real/T.prev*100)} % de lo previsto`:"Nada todavía"}</span></div>
+    <div class="fig"><span class="label">${left>=0?"Te queda":"Te pasas"}</span><span class="v" style="${left<0?"color:var(--bad)":""}">${withMax.length?eur.format(Math.abs(left)):"—"}</span><span class="s">en los proyectos con máximo</span></div>
+  </section>`;
+  const cards=data.map(d=>{
+    const over=d.max&&d.prev>d.max;
+    return `<section class="ab">
+      <div class="ab-h"><button type="button" class="ab-t" data-openbud="${esc(d.p.id)}"><span class="kind"><b>${d.p.tipo==="estancia"?"Estancia":"Casa"}</b></span><h3>${esc(d.p.nombre)}</h3></button>
+        <span class="ab-n"><span>Previsto <b class="num">${eur.format(d.prev)}</b></span><span>Pagado <b class="num">${eur.format(d.real)}</b></span>${d.max?`<span>${over?"Te pasas":"Te queda"} <b class="num" style="${over?"color:var(--bad)":""}">${eur.format(Math.abs(d.max-d.prev))}</b> de ${eur.format(d.max)}</span>`:""}</span></div>
+      ${d.max?`<div class="bar"><u style="width:${Math.min(100,d.prev/d.max*100)}%"></u><i class="${over?"over":""}" style="width:${Math.min(100,d.real/d.max*100)}%"></i></div>`:""}
+      ${d.groups.length?`<div class="tbl-wrap"><table class="budget"><thead><tr><th>Estancia</th><th>Qué incluye</th><th class="r">Previsto</th><th class="r">Pagado</th></tr></thead><tbody>
+        ${d.groups.map(g=>{ const c={}; g.rows.forEach(r=>c[r.tipo]=(c[r.tipo]||0)+1);
+          return `<tr class="row" data-openbud="${esc(d.p.id)}" tabindex="0"><td><b>${esc(roomName(g.rid)||"Toda la casa")}</b></td><td class="muted">${Object.entries(c).map(([t,n])=>`${n} ${t==="Compra"?(n>1?"compras":"compra"):t==="Reforma"?(n>1?"obras":"obra"):t==="Conjunto"?(n>1?"conjuntos":"conjunto"):(n>1?"gastos":"gasto")}`).join(" · ")}</td>
+            <td class="r num">${eur.format(g.rows.reduce((s,r)=>s+r.prev,0))}</td><td class="r num">${eur.format(g.rows.reduce((s,r)=>s+r.real,0))}</td></tr>`; }).join("")}
+        <tr class="tot"><td colspan="2">Total ${esc(d.p.nombre)}</td><td class="r num">${eur.format(d.prev)}</td><td class="r num">${eur.format(d.real)}</td></tr></tbody></table></div>`
+      :`<p class="muted" style="margin:0;font-size:13px">Sin nada que sumar todavía.</p>`}
+    </section>`; }).join("");
+  return `<section class="proj"><div class="proj-pick"><span class="kind"><b>Todos los proyectos</b></span><h1>Presupuestos</h1></div><button class="btn" type="button" data-act="backProj">Volver al proyecto</button></section>
+    ${figs}<div class="abs">${cards}</div>`;
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 function shopHTML(p,prods){
@@ -1626,7 +1681,7 @@ $("fProj").addEventListener("submit",async ev=>{
   const id=edP?.id||uid();
   const data={nombre:$("j_nombre").value.trim(),tipo:$("j_tipo").value,presupuesto:num($("j_pres").value)||0,direccion:$("j_dir").value.trim(),notas:$("j_notas").value.trim(),creado:edP?.creado||Date.now()};
   try{
-    await save("proyectos",id,data); S.proyId=id; lsSet("proletix:proy",id);
+    await save("proyectos",id,data); S.proyId=id; S.view="proyecto"; lsSet("proletix:proy",id);
     if(!edP){ const rid=uid(); await save("estancias",rid,{proyectoId:id,nombre:data.tipo==="estancia"?data.nombre:"Salón",ancho:400,largo:350,creado:Date.now()}); S.roomId=rid; S.tab="plano"; render(); }
     toast(edP?"Proyecto guardado":"Proyecto creado");
   }catch{}
@@ -1724,7 +1779,7 @@ $("fCont").addEventListener("submit",async ev=>{
 /* ---------- Eventos ---------- */
 function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
-$("btnNewProj").onclick=()=>openProj(null);
+
 $("fList").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
   const n=$("l_nombre").value.trim(); if(!n) return;
@@ -1770,7 +1825,7 @@ $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ con
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-rotby],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-rotby],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -1785,6 +1840,8 @@ document.addEventListener("click",e=>{
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
+  if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
+  if(d.openbud){ S.proyId=d.openbud; S.view="proyecto"; S.tab="presupuesto"; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); window.scrollTo(0,0); return; }
   if(d.rotby){ const it=selItem(); if(it) rotateTo(it,(+it.rot||0)+(+d.rotby)); return; }
   if(d.editcj){ openCj(S.conjuntos.find(x=>x.id===d.editcj)); return; }
   if(d.qadd){ quickAdd(d.qadd); return; }
@@ -1814,6 +1871,8 @@ document.addEventListener("click",e=>{
     case "newCj": openCj(null); break;
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
+    case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
+    case "backProj": S.view="proyecto"; render(); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
     case "mirror": { const it=selItem(); if(it) saveItem(it,{espejo:!it.espejo}); break; }
@@ -1845,6 +1904,7 @@ document.addEventListener("change",e=>{
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&e.target.matches("[data-qa]")){ e.preventDefault(); quickAdd(e.target.dataset.qa); return; }
   if(e.key==="Enter"&&e.target.matches("[data-eledit]")){ const [cid,eid]=e.target.dataset.eledit.split("|"); openEl(cid,eid); return; }
+  if(e.key==="Enter"&&e.target.matches("tr[data-openbud]")) e.target.click();
   if(e.key==="Enter"&&e.target.matches("tr[data-editprod]")) openProd(S.productos.find(y=>y.id===e.target.dataset.editprod));
   if(e.key==="Enter"&&e.target.matches("tr[data-editgasto]")) openGasto(S.gastos.find(y=>y.id===e.target.dataset.editgasto));
   if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
