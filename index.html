@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Proletix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: cabecera de obra + franja de cifras + pestañas (tablero por estado, presupuesto por capítulos, gremios) */
+:root{
+  --bg:#ECEBE6; --surface:#F9F8F5; --sunk:#E3E2DC; --ink:#1D2023; --muted:#5C5F5C; --line:#D2D0C8;
+  --accent:#F2B705; --accent-ink:#1D2023; --plan:#2B5A78;
+  --ok:#2C7A4B; --warn:#9A5B00; --bad:#B0372B;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151719; --surface:#1E2124; --sunk:#26292D; --ink:#E8E6E0; --muted:#A2A29B; --line:#363A3E;
+  --accent:#F2B705; --accent-ink:#1D2023; --plan:#82B3D3;
+  --ok:#6CC28F; --warn:#E5A54C; --bad:#EC7F72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151719; --surface:#1E2124; --sunk:#26292D; --ink:#E8E6E0; --muted:#A2A29B; --line:#363A3E;
+  --accent:#F2B705; --accent-ink:#1D2023; --plan:#82B3D3;
+  --ok:#6CC28F; --warn:#E5A54C; --bad:#EC7F72; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--plan);outline-offset:2px}
+
+/* Cabecera */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 20px}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand .label{display:flex;gap:8px;align-items:center}
+.brand .label::before{content:"";width:14px;height:14px;background:var(--accent);border-radius:2px}
+.obra-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.obra-pick select{font-family:var(--f-display);font-size:30px;font-weight:600;background:transparent;border:0;
+  padding:0 26px 0 0;max-width:100%;appearance:none;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
+  background-position:calc(100% - 12px) 55%,calc(100% - 6px) 55%;background-size:6px 6px;background-repeat:no-repeat}
+.obra-pick h1{font-size:30px}
+.meta{color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 14px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.ghost:hover{background:var(--sunk)}
+.btn.danger{color:var(--bad)}
+.btn.danger.armed{background:var(--bad);color:var(--surface);border-color:transparent}
+.btn.sm{padding:4px 10px;font-size:13px}
+
+/* Cifras */
+.figures{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.fig{padding:14px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fig+.fig{border-left:1px solid var(--line)}
+.fig .v{font-family:var(--f-display);font-size:30px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.fig .s{font-size:13px;color:var(--muted)}
+.bar{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--plan);border-radius:3px}
+.bar i.over{background:var(--bad)}
+.bar b{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+@media (max-width:760px){.figures{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fig:nth-child(3){border-left:0}.fig:nth-child(n+3){border-top:1px solid var(--line)}}
+
+/* Avisos */
+.alerts{display:flex;flex-direction:column;gap:6px}
+.alert{display:flex;gap:10px;align-items:baseline;font-size:14px;padding:8px 12px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
+.alert .tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:3px;flex:none}
+.alert .tag.late{background:var(--bad);color:var(--surface)}
+.alert .tag.soon{background:var(--accent);color:var(--accent-ink)}
+.alert .tag.block{border:1px solid var(--warn);color:var(--warn)}
+.alert button{background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+
+/* Pestañas */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;cursor:pointer;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px}
+
+/* Tablero */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+@media (max-width:980px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.board{grid-template-columns:minmax(0,1fr)}}
+.col{background:var(--sunk);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px;transition:background .15s}
+.col.drop{background:color-mix(in srgb,var(--accent) 22%,var(--sunk))}
+.col-h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 4px}
+.col-h h3{font-size:17px;display:flex;align-items:center;gap:8px}
+.col-h .dot{width:9px;height:9px;border-radius:50%}
+.col[data-estado="bloqueada"] .col-h{background:repeating-linear-gradient(-45deg,transparent 0 8px,color-mix(in srgb,var(--accent) 30%,transparent) 8px 16px);border-radius:4px;padding:4px 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;width:100%}
+.card:hover{border-color:var(--muted)}
+.card.dragging{opacity:.4}
+.card .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card .t{font-weight:600;line-height:1.3;min-width:0}
+.card .code{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none}
+.card .sub{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.card .late{color:var(--bad);font-weight:600}
+.chip{font-size:12px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.paid{border-color:var(--ok);color:var(--ok)}
+.empty-col{font-size:13px;color:var(--muted);padding:8px 4px}
+
+/* Presupuesto */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:baseline}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--surface);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tr.cap td{background:var(--sunk);font-family:var(--f-display);font-weight:600;font-size:16px}
+tr.item{cursor:pointer}
+tr.item:hover td{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+tr.total td{font-weight:600;border-bottom:0;border-top:2px solid var(--ink)}
+.dev-pos{color:var(--bad)}.dev-neg{color:var(--ok)}
+.estado{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.estado::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+
+/* Gremios */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.person{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.person .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.person h3{font-size:19px}
+.person .of{font-size:13px;color:var(--muted)}
+.person .tel{font-family:var(--f-mono);font-size:14px;user-select:all;word-break:break-all}
+.person .stats{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+
+/* Estado vacío */
+.blank{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.blank h2{font-size:24px}
+.blank p{margin:0;color:var(--muted);max-width:60ch}
+
+/* Diálogos */
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
+dialog::backdrop{background:rgb(10 12 14 / .45)}
+dialog form{display:flex;flex-direction:column}
+.dlg-h{padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dlg-h h2{font-size:24px}
+.dlg-b{padding:8px 20px 16px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.dlg-f{padding:12px 20px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.dlg-f .right{display:flex;gap:8px;margin-left:auto}
+.field{display:flex;flex-direction:column;gap:4px;grid-column:span 6;min-width:0}
+.field.h3{grid-column:span 3}.field.h2{grid-column:span 2}
+@media (max-width:480px){.field.h3,.field.h2{grid-column:span 6}}
+.field label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;width:100%;min-width:0}
+.field textarea{min-height:70px;resize:vertical}
+.field .hint{font-size:12px;color:var(--muted)}
+.check{display:flex;align-items:center;gap:8px;grid-column:span 6}
+.calc{grid-column:span 6;display:flex;justify-content:space-between;align-items:baseline;background:var(--sunk);border-radius:var(--r);padding:8px 12px}
+.calc .num{font-size:18px;font-weight:500}
+
+.mode{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.mode::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--m,var(--muted))}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-size:14px;z-index:20;max-width:calc(100vw - 32px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="label">Proletix · Gestión de reformas</span>
+      <div class="obra-pick" id="obraPick"><h1>Cargando obras…</h1></div>
+      <div class="meta" id="obraMeta"></div>
+    </div>
+    <div class="actions">
+      <span class="mode" id="mode">Conectando…</span>
+      <button class="btn" id="btnEditObra" type="button" hidden>Editar obra</button>
+      <button class="btn" id="btnNewObra" type="button">Nueva obra</button>
+    </div>
+  </header>
+
+  <main id="main" style="display:flex;flex-direction:column;gap:20px"></main>
+</div>
+
+<!-- Obra -->
+<dialog id="dlgObra"><form method="dialog" id="fObra">
+  <div class="dlg-h"><h2 id="dlgObraT">Nueva obra</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="o_nombre">Nombre</label><input id="o_nombre" required placeholder="Reforma del taller"></div>
+    <div class="field"><label for="o_dir">Dirección</label><input id="o_dir" placeholder="Calle, número, localidad"></div>
+    <div class="field h2"><label for="o_pres">Presupuesto máximo (€)</label><input id="o_pres" type="number" min="0" step="1" inputmode="decimal"></div>
+    <div class="field h2"><label for="o_ini">Inicio</label><input id="o_ini" type="date"></div>
+    <div class="field h2"><label for="o_fin">Fin previsto</label><input id="o_fin" type="date"></div>
+    <div class="field"><label for="o_notas">Notas</label><textarea id="o_notas" placeholder="Licencia de obra menor, horario permitido, acceso para materiales…"></textarea></div>
+  </div>
+  <div class="dlg-f">
+    <button class="btn danger" type="button" id="o_del" hidden>Eliminar obra</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
+  </div>
+</form></dialog>
+
+<!-- Partida -->
+<dialog id="dlgPart"><form method="dialog" id="fPart">
+  <div class="dlg-h"><h2 id="dlgPartT">Nueva partida</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="p_titulo">Partida</label><input id="p_titulo" required placeholder="Alicatado de la zona de aseo"></div>
+    <div class="field h3"><label for="p_cap">Capítulo</label><select id="p_cap"></select></div>
+    <div class="field h3"><label for="p_estado">Estado</label><select id="p_estado"></select></div>
+    <div class="field h2"><label for="p_cant">Cantidad</label><input id="p_cant" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="p_ud">Unidad</label><select id="p_ud"></select></div>
+    <div class="field h2"><label for="p_precio">Precio unitario (€)</label><input id="p_precio" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="calc"><span class="label">Importe presupuestado</span><span class="num" id="p_importe">0 €</span></div>
+    <div class="field h3"><label for="p_real">Coste real (€)</label><input id="p_real" type="number" min="0" step="any" inputmode="decimal"><span class="hint">Lo que has pagado o te han facturado</span></div>
+    <div class="field h3"><label for="p_cont">Quién la hace</label><select id="p_cont"></select></div>
+    <div class="field h3"><label for="p_ini">Inicio</label><input id="p_ini" type="date"></div>
+    <div class="field h3"><label for="p_fin">Fin previsto</label><input id="p_fin" type="date"></div>
+    <label class="check"><input type="checkbox" id="p_pagado"> Pagada</label>
+    <div class="field"><label for="p_notas">Notas</label><textarea id="p_notas" placeholder="Referencia del azulejo, medidas, qué falta para empezar…"></textarea></div>
+  </div>
+  <div class="dlg-f">
+    <button class="btn danger" type="button" id="p_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
+  </div>
+</form></dialog>
+
+<!-- Gremio -->
+<dialog id="dlgCont"><form method="dialog" id="fCont">
+  <div class="dlg-h"><h2 id="dlgContT">Nuevo gremio</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="c_nombre">Nombre o empresa</label><input id="c_nombre" required placeholder="Instalaciones Martínez"></div>
+    <div class="field h3"><label for="c_oficio">Oficio</label><select id="c_oficio"></select></div>
+    <div class="field h3"><label for="c_tel">Teléfono</label><input id="c_tel" type="tel" placeholder="600 000 000"></div>
+    <div class="field"><label for="c_email">Correo</label><input id="c_email" type="email"></div>
+    <div class="field"><label for="c_notas">Notas</label><textarea id="c_notas" placeholder="Pide señal del 30 %, no trabaja los viernes…"></textarea></div>
+  </div>
+  <div class="dlg-f">
+    <button class="btn danger" type="button" id="c_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
+  </div>
+</form></dialog>
+
+<script>
+const CAPITULOS = [
+  ["01","Demoliciones"],["02","Albañilería"],["03","Fontanería"],["04","Electricidad"],
+  ["05","Climatización y ventilación"],["06","Carpintería"],["07","Cerrajería"],
+  ["08","Suelos y revestimientos"],["09","Pintura"],["10","Mobiliario y equipamiento"],["11","Limpieza y varios"]
+];
+const ESTADOS = [
+  {id:"pendiente",n:"Pendiente",c:"var(--muted)"},
+  {id:"curso",n:"En curso",c:"var(--plan)"},
+  {id:"bloqueada",n:"Bloqueada",c:"var(--warn)"},
+  {id:"terminada",n:"Terminada",c:"var(--ok)"}
+];
+const UNIDADES = [["PA","PA · partida alzada"],["m²","m²"],["ml","ml · metro lineal"],["m³","m³"],["ud","ud · unidad"],["h","h · hora"],["kg","kg"]];
+const OFICIOS = ["Albañil","Fontanero","Electricista","Carpintero","Cerrajero","Pintor","Climatización","Solador","Proveedor de materiales","Arquitecto / aparejador","Otro"];
+
+const S = {mode:"loading", db:null, obras:[], partidas:[], contactos:[], obraId:null, tab:"tablero", filtroCap:""};
+const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const eur2 = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:2});
+const fdate = d => d ? new Date(d+"T00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}) : "";
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const $ = id => document.getElementById(id);
+const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const daysTo = d => Math.round((new Date(d+"T00:00") - today())/864e5);
+const importe = p => (+p.cantidad||0)*(+p.precio||0);
+const capName = c => (CAPITULOS.find(x=>x[0]===c)||["","Sin capítulo"])[1];
+
+function lsGet(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+function toast(msg){
+  const t=document.createElement("div");t.className="toast";t.textContent=msg;t.setAttribute("role","status");
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2600);
+}
+
+/* ---------- Almacenamiento: base de datos compartida o, si no hay, este navegador ---------- */
+const COLS = ["obras","partidas","contactos"];
+async function save(col,id,data){
+  if(S.mode==="db"){
+    try{ await S.db.collection(col).doc(id).set(data); }
+    catch(e){ toast(e?.code==="invalid_argument" ? "No tienes permiso para editar esta obra." : "No se ha podido guardar. Prueba otra vez."); throw e; }
+  } else {
+    const arr=S[col]; const i=arr.findIndex(x=>x.id===id);
+    const row={...data,id}; if(i>=0)arr[i]=row; else arr.push(row);
+    lsSet("cuaderno:"+col,arr); render();
+  }
+}
+async function remove(col,id){
+  if(S.mode==="db"){ try{ await S.db.collection(col).doc(id).delete(); }catch(e){ toast("No se ha podido eliminar."); throw e; } }
+  else { S[col]=S[col].filter(x=>x.id!==id); lsSet("cuaderno:"+col,S[col]); render(); }
+}
+async function boot(){
+  render();
+  let db=null;
+  try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch{ db=null; }
+  if(db){
+    S.db=db; S.mode="db"; let pending=COLS.length;
+    COLS.forEach(col=>{
+      db.collection(col).onSnapshot(snap=>{
+        S[col]=snap.docs.map(d=>({...d.data(),id:d.id}));
+        if(pending>0 && !snap.metadata.fromCache) pending--;
+        render();
+      },()=>{ toast("Se ha perdido la conexión con los datos. Recarga la página."); });
+    });
+  } else {
+    S.mode="local";
+    COLS.forEach(col=>S[col]=lsGet("cuaderno:"+col,[]));
+    render();
+  }
+}
+
+/* ---------- Render ---------- */
+function obraActual(){
+  if(!S.obras.length) return null;
+  const saved = S.obraId || lsGet("cuaderno:obra",null);
+  return S.obras.find(o=>o.id===saved) || [...S.obras].sort((a,b)=>(b.creado||0)-(a.creado||0))[0];
+}
+function render(){
+  const m=$("mode");
+  m.textContent = S.mode==="db" ? "Guardado en la nube" : S.mode==="local" ? "Guardado solo en este navegador" : "Conectando…";
+  m.style.setProperty("--m", S.mode==="db" ? "var(--ok)" : S.mode==="local" ? "var(--warn)" : "var(--muted)");
+
+  const obra=obraActual(); S.obraId=obra?.id||null;
+  $("btnEditObra").hidden=!obra;
+  const pick=$("obraPick"), meta=$("obraMeta"), main=$("main");
+
+  if(S.mode==="loading"){ pick.innerHTML="<h1>Cargando obras…</h1>"; meta.innerHTML=""; main.innerHTML=""; return; }
+  if(!obra){
+    pick.innerHTML="<h1>Sin obras todavía</h1>"; meta.innerHTML="";
+    main.innerHTML=`<section class="blank">
+      <h2>Empieza por dar de alta tu obra</h2>
+      <p>Ponle nombre, el presupuesto máximo que quieres gastar y las fechas. Después añade las partidas por capítulos (demoliciones, fontanería, electricidad…) y los gremios que van a trabajar en ella.</p>
+      <button class="btn primary" type="button" data-act="newObra">Crear la primera obra</button></section>`;
+    return;
+  }
+
+  const sorted=[...S.obras].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es"));
+  pick.innerHTML = S.obras.length>1
+    ? `<select id="selObra" aria-label="Obra">${sorted.map(o=>`<option value="${esc(o.id)}"${o.id===obra.id?" selected":""}>${esc(o.nombre)}</option>`).join("")}</select>`
+    : `<h1>${esc(obra.nombre)}</h1>`;
+  const bits=[];
+  if(obra.direccion) bits.push(esc(obra.direccion));
+  if(obra.inicio||obra.fin) bits.push(`${obra.inicio?fdate(obra.inicio):"¿?"} → ${obra.fin?fdate(obra.fin):"¿?"}`);
+  meta.innerHTML=bits.map(b=>`<span>${b}</span>`).join("");
+
+  const parts=S.partidas.filter(p=>p.obraId===obra.id);
+  main.innerHTML = figuresHTML(obra,parts) + alertsHTML(parts) + `
+    <nav class="tabs" role="tablist">
+      ${[["tablero","Tablero"],["presupuesto","Presupuesto"],["gremios","Gremios"]].map(([k,n])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}</button>`).join("")}
+    </nav>
+    <section>${S.tab==="tablero"?boardHTML(parts):S.tab==="presupuesto"?budgetHTML(parts):peopleHTML(parts)}</section>`;
+}
+
+function figuresHTML(obra,parts){
+  const pres=parts.reduce((s,p)=>s+importe(p),0);
+  const real=parts.reduce((s,p)=>s+(+p.real||0),0);
+  const pagado=parts.filter(p=>p.pagado).reduce((s,p)=>s+(+p.real||importe(p)),0);
+  const max=+obra.presupuesto||0;
+  const ref=max||pres;
+  const pctReal=ref?Math.min(100,real/ref*100):0;
+  const done=parts.filter(p=>p.estado==="terminada").length;
+  const pctDone=parts.length?done/parts.length*100:0;
+  let plazo="Sin fecha de fin", plazoS="Pon una fecha en «Editar obra»", pctT=0;
+  if(obra.fin){
+    const d=daysTo(obra.fin);
+    plazo = d>=0 ? `${d} días` : `${-d} días tarde`;
+    plazoS = `Fin previsto el ${fdate(obra.fin)}`;
+    if(obra.inicio){ const tot=(new Date(obra.fin)-new Date(obra.inicio))/864e5; const gone=(today()-new Date(obra.inicio+"T00:00"))/864e5; pctT=tot>0?Math.max(0,Math.min(100,gone/tot*100)):0; }
+  }
+  const margen = max ? max-pres : null;
+  return `<section class="figures" aria-label="Resumen de la obra">
+    <div class="fig"><span class="label">Presupuestado</span><span class="v">${eur.format(pres)}</span>
+      <span class="s">${max? (margen>=0?`Margen de ${eur.format(margen)} sobre ${eur.format(max)}`:`<span class="dev-pos">Te pasas ${eur.format(-margen)} del máximo</span>`) : "Sin presupuesto máximo"}</span></div>
+    <div class="fig"><span class="label">Gastado</span><span class="v">${eur.format(real)}</span>
+      <div class="bar" title="Gastado sobre ${max?"el máximo":"lo presupuestado"}"><i class="${real>ref&&ref?"over":""}" style="width:${pctReal}%"></i></div>
+      <span class="s">Pagado ${eur.format(pagado)}</span></div>
+    <div class="fig"><span class="label">Avance</span><span class="v">${done} / ${parts.length}</span>
+      <div class="bar"><i style="width:${pctDone}%"></i></div><span class="s">partidas terminadas</span></div>
+    <div class="fig"><span class="label">Plazo</span><span class="v">${plazo}</span>
+      ${obra.inicio&&obra.fin?`<div class="bar" title="Tiempo transcurrido"><b style="width:${pctT}%"></b></div>`:""}<span class="s">${plazoS}</span></div>
+  </section>`;
+}
+
+function alertsHTML(parts){
+  const items=[];
+  parts.filter(p=>p.estado!=="terminada"&&p.fin).forEach(p=>{
+    const d=daysTo(p.fin);
+    if(d<0) items.push({o:d,tag:"late",tx:"Retrasada",p,extra:`tenía que acabar el ${fdate(p.fin)}`});
+    else if(d<=7) items.push({o:d,tag:"soon",tx:d===0?"Hoy":`${d} d`,p,extra:`acaba el ${fdate(p.fin)}`});
+  });
+  parts.filter(p=>p.estado==="bloqueada").forEach(p=>items.push({o:100,tag:"block",tx:"Bloqueada",p,extra:p.notas?esc(p.notas).slice(0,90):"revisa qué falta"}));
+  if(!items.length) return "";
+  items.sort((a,b)=>a.o-b.o);
+  return `<section class="alerts" aria-label="Avisos">${items.slice(0,5).map(i=>`<div class="alert"><span class="tag ${i.tag}">${i.tx}</span><span><button type="button" data-edit="${esc(i.p.id)}">${esc(i.p.titulo)}</button> · <span style="color:var(--muted)">${i.extra}</span></span></div>`).join("")}</section>`;
+}
+
+function capSelectHTML(){
+  return `<select id="filtroCap" aria-label="Filtrar por capítulo"><option value="">Todos los capítulos</option>${CAPITULOS.map(([c,n])=>`<option value="${c}"${S.filtroCap===c?" selected":""}>${c} ${n}</option>`).join("")}</select>`;
+}
+function codeOf(p,parts){
+  const same=parts.filter(x=>x.cap===p.cap).sort((a,b)=>(a.creado||0)-(b.creado||0));
+  return `${p.cap||"00"}.${String(same.indexOf(p)+1).padStart(2,"0")}`;
+}
+function boardHTML(parts){
+  const list=S.filtroCap?parts.filter(p=>p.cap===S.filtroCap):parts;
+  const contacto=id=>S.contactos.find(c=>c.id===id);
+  return `<div class="toolbar" style="margin:14px 0 12px">${capSelectHTML()}<button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
+  <div class="board">${ESTADOS.map(e=>{
+    const cards=list.filter(p=>(p.estado||"pendiente")===e.id).sort((a,b)=>(a.fin||"9999").localeCompare(b.fin||"9999"));
+    return `<div class="col" data-estado="${e.id}">
+      <div class="col-h"><h3><span class="dot" style="background:${e.c}"></span>${e.n}</h3><span class="num" style="color:var(--muted);font-size:13px">${cards.length}</span></div>
+      ${cards.length?cards.map(p=>{
+        const c=contacto(p.contactoId); const late=p.fin&&p.estado!=="terminada"&&daysTo(p.fin)<0;
+        return `<button class="card" type="button" draggable="true" data-edit="${esc(p.id)}">
+          <div class="row"><span class="t">${esc(p.titulo)}</span><span class="code">${codeOf(p,parts)}</span></div>
+          <div class="sub"><span>${esc(capName(p.cap))}</span>${c?`<span>${esc(c.nombre)}</span>`:""}</div>
+          <div class="row"><span class="num" style="font-size:13px">${eur.format(+p.real||importe(p))}${p.real?"":" <span style=\"color:var(--muted)\">prev.</span>"}</span>
+            <span class="sub">${p.fin?`<span class="${late?"late":""}">${fdate(p.fin)}</span>`:""}${p.pagado?'<span class="chip paid">Pagada</span>':""}</span></div>
+        </button>`}).join(""):`<div class="empty-col">${e.id==="pendiente"?"Nada pendiente.":"Arrastra aquí una partida."}</div>`}
+    </div>`}).join("")}</div>`;
+}
+
+function budgetHTML(parts){
+  if(!parts.length) return `<div class="toolbar" style="margin:14px 0 12px"><span></span><button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
+    <div class="blank"><h2>Todavía no hay partidas</h2><p>Cada partida lleva su medición (cantidad y unidad) y su precio unitario, como en un presupuesto de obra. Así ves en qué capítulo se va el dinero y cuánto te desvías.</p></div>`;
+  let rows="", tp=0, tr=0;
+  CAPITULOS.forEach(([c,n])=>{
+    const ps=parts.filter(p=>p.cap===c).sort((a,b)=>(a.creado||0)-(b.creado||0)); if(!ps.length) return;
+    const sp=ps.reduce((s,p)=>s+importe(p),0), sr=ps.reduce((s,p)=>s+(+p.real||0),0); tp+=sp; tr+=sr;
+    rows+=`<tr class="cap"><td colspan="5">${c} ${esc(n)}</td><td class="r num">${eur.format(sp)}</td><td class="r num">${sr?eur.format(sr):"—"}</td><td></td></tr>`;
+    ps.forEach(p=>{
+      const imp=importe(p), r=+p.real||0, dv=r?r-imp:null, e=ESTADOS.find(x=>x.id===(p.estado||"pendiente"));
+      rows+=`<tr class="item" data-edit="${esc(p.id)}" tabindex="0">
+        <td class="num" style="color:var(--muted)">${codeOf(p,parts)}</td><td>${esc(p.titulo)}</td>
+        <td class="r num">${p.cantidad!==""&&p.cantidad!=null?(+p.cantidad).toLocaleString("es-ES"):""} ${esc(p.unidad||"")}</td>
+        <td class="r num">${p.precio?eur2.format(+p.precio):""}</td>
+        <td><span class="estado" style="--c:${e.c}">${e.n}</span></td>
+        <td class="r num">${eur.format(imp)}</td>
+        <td class="r num">${r?eur.format(r):"—"}${dv!==null&&dv!==0?` <span class="${dv>0?"dev-pos":"dev-neg"}" style="font-size:12px">${dv>0?"+":"−"}${eur.format(Math.abs(dv))}</span>`:""}</td>
+        <td>${p.pagado?'<span class="chip paid">Pagada</span>':""}</td></tr>`;
+    });
+  });
+  return `<div class="toolbar" style="margin:14px 0 12px"><span class="label">Mediciones y presupuesto por capítulos</span><button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Cód.</th><th>Partida</th><th class="r">Medición</th><th class="r">Precio ud.</th><th>Estado</th><th class="r">Presupuesto</th><th class="r">Real</th><th>Pago</th></tr></thead>
+    <tbody>${rows}<tr class="total"><td colspan="5">Total</td><td class="r num">${eur.format(tp)}</td><td class="r num">${eur.format(tr)}</td><td></td></tr></tbody>
+  </table></div>`;
+}
+
+function peopleHTML(parts){
+  const head=`<div class="toolbar" style="margin:14px 0 12px"><span class="label">Gremios y proveedores, compartidos entre obras</span><button class="btn primary" type="button" data-act="newCont">Añadir gremio</button></div>`;
+  if(!S.contactos.length) return head+`<div class="blank"><h2>Apunta a quién llamas</h2><p>Guarda el teléfono del fontanero, del electricista o del almacén de materiales. Luego asígnalos a cada partida para saber cuánto te cuesta cada uno.</p></div>`;
+  const cs=[...S.contactos].sort((a,b)=>(a.oficio||"").localeCompare(b.oficio||"","es")||(a.nombre||"").localeCompare(b.nombre||"","es"));
+  return head+`<div class="people">${cs.map(c=>{
+    const mine=parts.filter(p=>p.contactoId===c.id); const tot=mine.reduce((s,p)=>s+(+p.real||importe(p)),0);
+    const pend=mine.filter(p=>!p.pagado&&(+p.real||0)>0).reduce((s,p)=>s+(+p.real||0),0);
+    return `<article class="person">
+      <div class="row"><h3>${esc(c.nombre)}</h3><button class="btn ghost sm" type="button" data-editc="${esc(c.id)}">Editar</button></div>
+      <span class="of">${esc(c.oficio||"")}</span>
+      ${c.tel?`<span class="tel">${esc(c.tel)}</span>`:""}${c.email?`<span class="tel" style="font-size:13px">${esc(c.email)}</span>`:""}
+      ${c.notas?`<span style="font-size:13px">${esc(c.notas)}</span>`:""}
+      <span class="stats">${mine.length?`${mine.length} partida${mine.length>1?"s":""} en esta obra · ${eur.format(tot)}${pend?` · <span class="dev-pos">pendiente de pago ${eur.format(pend)}</span>`:""}`:"Sin partidas en esta obra"}</span>
+    </article>`}).join("")}</div>`;
+}
+
+/* ---------- Diálogos ---------- */
+function fillSelect(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${esc(v)}">${esc(n)}</option>`).join(""); el.value=val??opts[0]?.[0]??""; }
+function armDelete(btn,fn){
+  btn.classList.remove("armed"); btn.dataset.label ||= btn.textContent; btn.textContent=btn.dataset.label;
+  btn.onclick=async()=>{
+    if(!btn.classList.contains("armed")){ btn.classList.add("armed"); btn.textContent="Pulsa otra vez para eliminar"; return; }
+    await fn();
+  };
+}
+
+let editingObra=null;
+function openObra(o){
+  editingObra=o||null;
+  $("dlgObraT").textContent=o?"Editar obra":"Nueva obra";
+  $("o_nombre").value=o?.nombre||""; $("o_dir").value=o?.direccion||""; $("o_pres").value=o?.presupuesto||"";
+  $("o_ini").value=o?.inicio||""; $("o_fin").value=o?.fin||""; $("o_notas").value=o?.notas||"";
+  $("o_del").hidden=!o;
+  if(o) armDelete($("o_del"),async()=>{
+    const ps=S.partidas.filter(p=>p.obraId===o.id);
+    for(const p of ps) await remove("partidas",p.id);
+    await remove("obras",o.id); $("dlgObra").close(); S.obraId=null; lsSet("cuaderno:obra",null); toast("Obra eliminada"); render();
+  });
+  $("dlgObra").showModal();
+}
+$("fObra").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=editingObra?.id||uid();
+  const data={nombre:$("o_nombre").value.trim(),direccion:$("o_dir").value.trim(),presupuesto:$("o_pres").value?+$("o_pres").value:0,
+    inicio:$("o_ini").value,fin:$("o_fin").value,notas:$("o_notas").value.trim(),creado:editingObra?.creado||Date.now()};
+  try{ await save("obras",id,data); S.obraId=id; lsSet("cuaderno:obra",id); toast(editingObra?"Obra guardada":"Obra creada"); render(); }catch{}
+});
+
+let editingPart=null;
+function updImporte(){ $("p_importe").textContent=eur2.format((+$("p_cant").value||0)*(+$("p_precio").value||0)); }
+["p_cant","p_precio"].forEach(i=>$(i).addEventListener("input",updImporte));
+$("p_ud").addEventListener("change",()=>{ if($("p_ud").value==="PA"&&!$("p_cant").value){$("p_cant").value=1;updImporte();} });
+function openPart(p,preset={}){
+  editingPart=p||null;
+  $("dlgPartT").textContent=p?"Editar partida":"Nueva partida";
+  fillSelect($("p_cap"),CAPITULOS.map(([c,n])=>[c,`${c} ${n}`]),p?.cap||preset.cap||S.filtroCap||"02");
+  fillSelect($("p_estado"),ESTADOS.map(e=>[e.id,e.n]),p?.estado||preset.estado||"pendiente");
+  fillSelect($("p_ud"),UNIDADES,p?.unidad||"PA");
+  fillSelect($("p_cont"),[["","Sin asignar"],...[...S.contactos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")).map(c=>[c.id,`${c.nombre}${c.oficio?" · "+c.oficio:""}`])],p?.contactoId||"");
+  $("p_titulo").value=p?.titulo||""; $("p_cant").value=p?.cantidad??(p?"":1); $("p_precio").value=p?.precio??"";
+  $("p_real").value=p?.real||""; $("p_ini").value=p?.inicio||""; $("p_fin").value=p?.fin||"";
+  $("p_pagado").checked=!!p?.pagado; $("p_notas").value=p?.notas||"";
+  updImporte();
+  $("p_del").hidden=!p;
+  if(p) armDelete($("p_del"),async()=>{ await remove("partidas",p.id); $("dlgPart").close(); toast("Partida eliminada"); });
+  $("dlgPart").showModal();
+}
+$("fPart").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=editingPart?.id||uid();
+  const num=v=>v===""?"":+v;
+  const data={obraId:editingPart?.obraId||S.obraId,titulo:$("p_titulo").value.trim(),cap:$("p_cap").value,estado:$("p_estado").value,
+    cantidad:num($("p_cant").value),unidad:$("p_ud").value,precio:num($("p_precio").value),real:num($("p_real").value),
+    contactoId:$("p_cont").value,inicio:$("p_ini").value,fin:$("p_fin").value,pagado:$("p_pagado").checked,
+    notas:$("p_notas").value.trim(),creado:editingPart?.creado||Date.now()};
+  try{ await save("partidas",id,data); toast(editingPart?"Partida guardada":"Partida añadida"); }catch{}
+});
+
+let editingCont=null;
+function openCont(c){
+  editingCont=c||null;
+  $("dlgContT").textContent=c?"Editar gremio":"Nuevo gremio";
+  fillSelect($("c_oficio"),OFICIOS.map(o=>[o,o]),c?.oficio||"Albañil");
+  $("c_nombre").value=c?.nombre||""; $("c_tel").value=c?.tel||""; $("c_email").value=c?.email||""; $("c_notas").value=c?.notas||"";
+  $("c_del").hidden=!c;
+  if(c) armDelete($("c_del"),async()=>{
+    for(const p of S.partidas.filter(p=>p.contactoId===c.id)) await save("partidas",p.id,{...p,contactoId:""});
+    await remove("contactos",c.id); $("dlgCont").close(); toast("Gremio eliminado");
+  });
+  $("dlgCont").showModal();
+}
+$("fCont").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=editingCont?.id||uid();
+  const data={nombre:$("c_nombre").value.trim(),oficio:$("c_oficio").value,tel:$("c_tel").value.trim(),email:$("c_email").value.trim(),notas:$("c_notas").value.trim()};
+  try{ await save("contactos",id,data); toast(editingCont?"Gremio guardado":"Gremio añadido"); }catch{}
+});
+
+/* ---------- Eventos ---------- */
+$("btnNewObra").onclick=()=>openObra(null);
+$("btnEditObra").onclick=()=>openObra(obraActual());
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-act],[data-tab],[data-edit],[data-editc]"); if(!t) return;
+  if(t.dataset.tab){ S.tab=t.dataset.tab; lsSet("cuaderno:tab",S.tab); render(); return; }
+  if(t.dataset.editc){ openCont(S.contactos.find(c=>c.id===t.dataset.editc)); return; }
+  if(t.dataset.edit){ const p=S.partidas.find(p=>p.id===t.dataset.edit); if(p) openPart(p); return; }
+  const a=t.dataset.act;
+  if(a==="newObra") openObra(null);
+  if(a==="newPart") openPart(null);
+  if(a==="newCont") openCont(null);
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.matches("tr.item")){ const p=S.partidas.find(p=>p.id===e.target.dataset.edit); if(p) openPart(p); }
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="selObra"){ S.obraId=e.target.value; lsSet("cuaderno:obra",S.obraId); S.filtroCap=""; render(); }
+  if(e.target.id==="filtroCap"){ S.filtroCap=e.target.value; render(); }
+});
+// Arrastrar tarjetas entre columnas para cambiar el estado
+let dragId=null;
+document.addEventListener("dragstart",e=>{ const c=e.target.closest?.(".card"); if(!c) return; dragId=c.dataset.edit; c.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",dragId); });
+document.addEventListener("dragend",e=>{ e.target.closest?.(".card")?.classList.remove("dragging"); document.querySelectorAll(".col.drop").forEach(c=>c.classList.remove("drop")); });
+document.addEventListener("dragover",e=>{ const col=e.target.closest?.(".col"); if(!col||!dragId) return; e.preventDefault(); document.querySelectorAll(".col.drop").forEach(c=>c!==col&&c.classList.remove("drop")); col.classList.add("drop"); });
+document.addEventListener("drop",async e=>{
+  const col=e.target.closest?.(".col"); if(!col||!dragId) return; e.preventDefault(); col.classList.remove("drop");
+  const p=S.partidas.find(x=>x.id===dragId); dragId=null;
+  if(p&&p.estado!==col.dataset.estado){ try{ await save("partidas",p.id,{...p,estado:col.dataset.estado}); toast(`«${p.titulo}» → ${ESTADOS.find(x=>x.id===col.dataset.estado).n}`); }catch{} }
+});
+
+S.tab=lsGet("cuaderno:tab","tablero");
+boot();
+</script>
+
+</body>
+</html>
