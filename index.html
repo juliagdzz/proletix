@@ -347,6 +347,8 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .pr-more .props{margin-top:8px}
 .toast{display:flex;align-items:center;gap:14px}
 .toast button{background:none;border:0;color:var(--red);font-weight:700;cursor:pointer;padding:2px 4px;text-decoration:underline;text-underline-offset:3px}
+.cmp-tg{margin-left:6px}.cmp-tg svg{flex:none}
+.need-h .sum{display:flex;align-items:center;gap:4px 6px;flex-wrap:wrap;justify-content:flex-end}
 .seg-sm button{padding:4px 10px;font-size:13px;font-family:var(--f-body);font-weight:600;font-stretch:100%}
 .cmp-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 table.cmp{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:14px}
@@ -564,7 +566,7 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), cardLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
 const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
@@ -1710,11 +1712,10 @@ function shopHTML(p,prods){
     const vivos=list.filter(x=>x.estado!=="descartado"&&+x.precio>0);
     const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
     const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
-    const canCmp=list.filter(x=>x.estado!=="descartado").length>1, cmpOn=canCmp&&!S.cardLists.has(n);
+    const canCmp=list.filter(x=>x.estado!=="descartado").length>1, cmpOn=canCmp&&S.cmpLists.has(n);
     return `<section class="need"><div class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
       <span class="sum">${list.length?`${list.length} opci${list.length>1?"ones":"ón"}`:"Lista vacía"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}
-        ${canCmp?`<span class="seg seg-sm" role="group" aria-label="Vista de la lista"><button type="button" data-view="cmp" data-vkey="${esc(n)}" aria-pressed="${cmpOn}">⇆ Comparar</button><button type="button" data-view="cards" data-vkey="${esc(n)}" aria-pressed="${!cmpOn}">Tarjetas</button></span>`:""}
-        <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}</span></div>
+        <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}${canCmp?`<button class="btn sm cmp-tg" type="button" data-view="${cmpOn?"cards":"cmp"}" data-vkey="${esc(n)}" aria-pressed="${cmpOn}" title="${cmpOn?"Volver a la lista":"Comparar opciones lado a lado"}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M6.5 9h0M17.5 9h0M6.5 13h0M17.5 13h0"/></svg>${cmpOn?"Ver lista":"Comparar"}</button>`:""}</span></div>
       ${cmpOn?compareHTML(list):`<div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
         return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
@@ -1951,7 +1952,7 @@ document.addEventListener("click",e=>{
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
   if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
   if(d.openbud){ S.proyId=d.openbud; S.view="proyecto"; S.tab="presupuesto"; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); window.scrollTo(0,0); return; }
-  if(d.view){ if(d.view==="cards") S.cardLists.add(d.vkey); else S.cardLists.delete(d.vkey); render(); return; }
+  if(d.view){ if(d.view==="cmp") S.cmpLists.add(d.vkey); else S.cmpLists.delete(d.vkey); render(); return; }
   if(d.rotto){ const it=selItem(); if(it){ const r0=((+it.rot||0)%360+360)%360, opts=d.rotto==="h"?[0,180,360]:[90,270]; const best=opts.reduce((a,b)=>Math.abs(b-r0)<Math.abs(a-r0)?b:a); rotateTo(it,best%360); } return; }
   if(d.rotby){ const it=selItem(); if(it) rotateTo(it,(+it.rot||0)+(+d.rotby)); return; }
   if(d.editcj){ openCj(S.conjuntos.find(x=>x.id===d.editcj)); return; }
