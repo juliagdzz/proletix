@@ -218,6 +218,7 @@ dialog form{display:flex;flex-direction:column}
 .cat button:hover{background:var(--surface)}
 .dlg-h{border-bottom:3px solid var(--beige);position:sticky;top:0;z-index:3;background:var(--surface)}
 .dlg-hb{display:flex;gap:6px;align-items:center}
+.dlg-hb .btn.primary{order:2}
 .prod .foot{border-top:1px dashed var(--line);padding-top:8px}
 .tick{border-color:var(--granate)}
 .kind b{border:1px solid var(--granate)}
@@ -440,7 +441,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <!-- Proyecto -->
 <dialog id="dlgProj"><form method="dialog" id="fProj">
-  <div class="dlg-h"><h2 id="dlgProjT">Nuevo proyecto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgProjT">Nuevo proyecto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="j_nombre">Nombre</label><input id="j_nombre" required placeholder="Piso de la calle Mayor"></div>
     <div class="field h3"><label for="j_tipo">Tipo</label><select id="j_tipo"><option value="casa">Casa entera</option><option value="estancia">Una estancia</option></select></div>
@@ -448,13 +449,12 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field"><label for="j_dir">Dirección</label><input id="j_dir" placeholder="Opcional"></div>
     <div class="field"><label for="j_notas">Notas</label><textarea id="j_notas"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="j_del" hidden>Eliminar proyecto</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="j_del" hidden>Eliminar proyecto</button></div>
 </form></dialog>
 
 <!-- Estancia -->
 <dialog id="dlgRoom"><form method="dialog" id="fRoom">
-  <div class="dlg-h"><h2 id="dlgRoomT">Nueva estancia</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgRoomT">Nueva estancia</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="r_nombre">Nombre</label><input id="r_nombre" required placeholder="Salón" list="roomNames"></div>
     <div class="field h2"><label for="r_ancho">Ancho (cm)</label><input id="r_ancho" type="number" min="50" max="3000" step="1" required inputmode="numeric"></div>
@@ -462,14 +462,13 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field h2"><label for="r_alto">Techo (cm)</label><input id="r_alto" type="number" min="180" max="600" step="1" inputmode="numeric" placeholder="250"></div>
     <p class="field hint" style="margin:0">Mide de pared a pared por dentro. Si no es rectangular, pon el ancho y el largo máximos y luego pulsa «Dibujar forma» en el plano. Las puertas y ventanas las colocas desde el catálogo.</p>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="r_del" hidden>Eliminar estancia</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="r_del" hidden>Eliminar estancia</button></div>
 </form></dialog>
 <datalist id="roomNames"><option>Salón</option><option>Cocina</option><option>Dormitorio principal</option><option>Dormitorio</option><option>Baño</option><option>Aseo</option><option>Recibidor</option><option>Despacho</option><option>Terraza</option></datalist>
 
 <!-- Producto -->
 <dialog id="dlgProd"><form method="dialog" id="fProd">
-  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button><button class="btn primary" value="ok" id="d_ok">Añadir</button></div></div>
+  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="d_ok">Añadir</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
     <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
@@ -497,7 +496,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <!-- Tarea -->
 <dialog id="dlgTask"><form method="dialog" id="fTask">
-  <div class="dlg-h"><h2 id="dlgTaskT">Nueva tarea</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgTaskT">Nueva tarea</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="t_titulo">Tarea</label><input id="t_titulo" required placeholder="Cambiar el plato de ducha"></div>
     <div class="field h3"><label for="t_room">Estancia</label><select id="t_room"></select></div>
@@ -509,24 +508,22 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field h3"><label for="t_real">Coste real (€)</label><input id="t_real" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field"><label for="t_notas">Notas</label><textarea id="t_notas"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="t_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="t_del" hidden>Eliminar</button></div>
 </form></dialog>
 
 <!-- Lista -->
 <dialog id="dlgList"><form method="dialog" id="fList">
-  <div class="dlg-h"><h2>Nueva lista</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2>Nueva lista</h2><div class="dlg-hb"><button class="btn primary" value="ok">Crear lista</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="l_nombre">Nombre</label><input id="l_nombre" required placeholder="Mueble de TV, sofá, lámpara de techo…"></div>
     <div class="field"><label for="l_room">Estancia</label><select id="l_room"></select></div>
     <p class="field hint" style="margin:0">Se queda guardada para elegirla cada vez que añadas un producto.</p>
   </div>
-  <div class="dlg-f"><div class="right"><button class="btn primary" value="ok">Crear lista</button></div></div>
 </form></dialog>
 
 <!-- Conjunto -->
 <dialog id="dlgCj"><form method="dialog" id="fCj">
-  <div class="dlg-h"><h2 id="dlgCjT">Nuevo conjunto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgCjT">Nuevo conjunto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="cj_nombre">Nombre</label><input id="cj_nombre" required placeholder="Escritorio a medida, estantería del recibidor…"></div>
     <div class="field h3"><label for="cj_room">Estancia</label><select id="cj_room"></select></div>
@@ -538,13 +535,12 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <p class="field h3 hint" style="margin:0;align-self:end">Las medidas del mueble terminado, para el plano</p>
     <div class="field"><label for="cj_notas">Notas</label><textarea id="cj_notas" placeholder="Idea, medidas de cada pieza, pasos…"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="cj_del" hidden>Eliminar conjunto</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="cj_del" hidden>Eliminar conjunto</button></div>
 </form></dialog>
 
 <!-- Elemento de un conjunto -->
 <dialog id="dlgEl"><form method="dialog" id="fEl">
-  <div class="dlg-h"><h2>Elemento</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2>Elemento</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="el_nombre">Nombre</label><input id="el_nombre" required></div>
     <div class="field h3"><label for="el_tipo">Tipo</label><select id="el_tipo"><option value="pieza">Pieza (tablero, cajonera, patas…)</option><option value="material">Material o herraje (tornillos, masilla…)</option></select></div>
@@ -557,8 +553,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="el_comprado" style="width:auto"> Ya lo tengo</label>
     <div class="field"><label for="el_notas">Notas</label><textarea id="el_notas" placeholder="Medida de corte, referencia…"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="el_del">Quitar del conjunto</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="el_del">Quitar del conjunto</button></div>
 </form></dialog>
 
 <!-- Paredes y suelo -->
@@ -572,7 +567,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
-  <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="g_concepto">Concepto</label><input id="g_concepto" required placeholder="Transporte del sofá, montaje, licencia de obra…"></div>
     <div class="field h3"><label for="g_importe">Importe (€)</label><input id="g_importe" type="number" min="0" step="any" inputmode="decimal" required></div>
@@ -580,13 +575,12 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="g_pagado" style="width:auto"> Ya está pagado</label>
     <div class="field"><label for="g_notas">Notas</label><textarea id="g_notas"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="g_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="g_del" hidden>Eliminar</button></div>
 </form></dialog>
 
 <!-- Contacto -->
 <dialog id="dlgCont"><form method="dialog" id="fCont">
-  <div class="dlg-h"><h2 id="dlgContT">Nuevo contacto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgContT">Nuevo contacto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="c_nombre">Nombre o empresa</label><input id="c_nombre" required></div>
     <div class="field h3"><label for="c_oficio">Oficio</label><input id="c_oficio" list="oficios" placeholder="Fontanero"></div>
@@ -594,8 +588,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field"><label for="c_email">Correo</label><input id="c_email" type="email"></div>
     <div class="field"><label for="c_notas">Notas</label><textarea id="c_notas" placeholder="Pide señal del 30 %, no trabaja los viernes…"></textarea></div>
   </div>
-  <div class="dlg-f"><button class="btn danger" type="button" id="c_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="c_del" hidden>Eliminar</button></div>
 </form></dialog>
 <datalist id="oficios"><option>Albañil</option><option>Fontanero</option><option>Electricista</option><option>Carpintero</option><option>Pintor</option><option>Cerrajero</option><option>Climatización</option><option>Montador de muebles</option><option>Tienda</option><option>Arquitecto</option></datalist>
 
