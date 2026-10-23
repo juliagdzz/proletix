@@ -12,28 +12,28 @@
 <style>
 /* Layout: cabecera con logo y proyecto · franja de cifras · pestañas (plano 2D con catálogo lateral, compras comparadas, reforma, contactos) */
 :root{
-  --bg:#ECEEF1; --surface:#FFFFFF; --sunk:#E2E5EA; --ink:#17191D; --muted:#5A626C; --line:#D3D8DF;
-  --red:#CF2A1F; --red-ink:#FFFFFF; --gold:#F3BE00; --gold-ink:#17191D;
-  --ok:#2A7A48; --warn:#9A5B00; --bad:#C0261B;
-  --floor:#F7F4EC; --wall:#2A2D33; --grid:rgb(42 45 51 / .08);
-  --f0:#DCE6F2; --f1:#F1DCCB; --f2:#DDEBD9; --f3:#E9DDF0; --f4:#F3E7B8; --f5:#E4E4E4;
+  --bg:#F9E8D4; --surface:#FFF8EF; --sunk:#F1DAC0; --ink:#663924; --muted:#86604B; --line:#E6CCB0;
+  --red:#D54C15; --red-ink:#FFF8EF; --gold:#8DB6C7; --gold-ink:#3B2014;
+  --ok:#3D7A54; --warn:#9E5600; --bad:#A8231A;
+  --floor:#FFF8EF; --wall:#663924; --grid:rgb(102 57 36 / .08);
+  --f0:#D3E4EA; --f1:#F5CBB4; --f2:#DFE6D2; --f3:#EAD6C6; --f4:#F4DFC3; --f5:#E6DCD2;
   --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --r:6px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121417; --surface:#1B1E23; --sunk:#252930; --ink:#E9EBEE; --muted:#9BA3AD; --line:#30353D;
-  --red:#FF5546; --red-ink:#17191D; --gold:#F3BE00; --gold-ink:#17191D;
-  --ok:#6CC28F; --warn:#E5A54C; --bad:#FF7468;
-  --floor:#24272C; --wall:#C9CDD3; --grid:rgb(255 255 255 / .06);
-  --f0:#2C3A4D; --f1:#4A3627; --f2:#2E4430; --f3:#3E3048; --f4:#4A421F; --f5:#3A3D42; color-scheme:dark}}
+  --bg:#24160F; --surface:#2E1D14; --sunk:#3A261B; --ink:#F9E8D4; --muted:#C7A78E; --line:#4A3226;
+  --red:#F0692F; --red-ink:#24160F; --gold:#8DB6C7; --gold-ink:#24160F;
+  --ok:#7CC79A; --warn:#E5A54C; --bad:#FF7A6B;
+  --floor:#33221A; --wall:#F9E8D4; --grid:rgb(249 232 212 / .07);
+  --f0:#2F4650; --f1:#5A2E1A; --f2:#3A4530; --f3:#4A3528; --f4:#4D3A22; --f5:#3E3029; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121417; --surface:#1B1E23; --sunk:#252930; --ink:#E9EBEE; --muted:#9BA3AD; --line:#30353D;
-  --red:#FF5546; --red-ink:#17191D; --gold:#F3BE00; --gold-ink:#17191D;
-  --ok:#6CC28F; --warn:#E5A54C; --bad:#FF7468;
-  --floor:#24272C; --wall:#C9CDD3; --grid:rgb(255 255 255 / .06);
-  --f0:#2C3A4D; --f1:#4A3627; --f2:#2E4430; --f3:#3E3048; --f4:#4A421F; --f5:#3A3D42; color-scheme:dark}
+  --bg:#24160F; --surface:#2E1D14; --sunk:#3A261B; --ink:#F9E8D4; --muted:#C7A78E; --line:#4A3226;
+  --red:#F0692F; --red-ink:#24160F; --gold:#8DB6C7; --gold-ink:#24160F;
+  --ok:#7CC79A; --warn:#E5A54C; --bad:#FF7A6B;
+  --floor:#33221A; --wall:#F9E8D4; --grid:rgb(249 232 212 / .07);
+  --f0:#2F4650; --f1:#5A2E1A; --f2:#3A4530; --f3:#4A3528; --f4:#4D3A22; --f5:#3E3029; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
@@ -147,6 +147,7 @@ svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
 .stars i{color:var(--line);font-style:normal}
 .tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;white-space:nowrap}
 .tag.cheap{background:var(--ok);color:var(--surface)}
+.proj{border-top-color:var(--red)!important}
 .st{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--surface)}
 .st-favorito{border-color:var(--red);color:var(--red)}
 .st-elegido{background:var(--gold);color:var(--gold-ink);border-color:transparent}
@@ -178,7 +179,7 @@ svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
 
 /* Diálogos */
 dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
-dialog::backdrop{background:rgb(10 12 14 / .5)}
+dialog::backdrop{background:rgb(36 22 15 / .55)}
 dialog form{display:flex;flex-direction:column}
 .dlg-h{padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .dlg-h h2{font-size:24px}
