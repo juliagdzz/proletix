@@ -545,6 +545,17 @@ function rectFits(x,y,w,d,P){
   if(!c.every(([a,b])=>inPoly(a,b,P))) return false;
   return !P.some(([a,b])=>a>x+1&&a<x+w-1&&b>y+1&&b<y+d-1);
 }
+// Las paredes bloquean el movimiento: si el mueble está dentro, no puede salir; se desliza pegado a la pared
+function constrain(it,nx,ny,r){
+  if(!r||it.tipo==="puerta"||it.tipo==="ventana") return [nx,ny];
+  const P=pts(r), {fw,fd}=footprint(it);
+  if(!rectFits(it.x,it.y,fw,fd,P)||rectFits(nx,ny,fw,fd,P)) return [nx,ny];
+  let x=it.x, y=it.y; const sx=Math.sign(nx-x)*5, sy=Math.sign(ny-y)*5;
+  while(Math.abs(nx-x)>=5&&rectFits(x+sx,y,fw,fd,P)) x+=sx;
+  while(Math.abs(ny-y)>=5&&rectFits(x,y+sy,fw,fd,P)) y+=sy;
+  while(Math.abs(nx-x)>=5&&rectFits(x+sx,y,fw,fd,P)) x+=sx;
+  return [x,y];
+}
 function roomGeomSVG(P,pad){
   const {W,L}=bbox(P), d="M"+P.map(p=>p.join(" ")).join("L")+"Z";
   const lines=[]; for(let x=50;x<W;x+=50) lines.push(`M${x} 0V${L}`); for(let y=50;y<L;y+=50) lines.push(`M0 ${y}H${W}`);
@@ -700,7 +711,7 @@ function bindPlan(r){
   });
   svg.addEventListener("pointermove",e=>{
     if(!drag) return;
-    const p=toCm(e), nx=Math.round((p.x-drag.dx)/5)*5, ny=Math.round((p.y-drag.dy)/5)*5;
+    const p=toCm(e), [nx,ny]=constrain(drag.it,Math.round((p.x-drag.dx)/5)*5,Math.round((p.y-drag.dy)/5)*5,r);
     if(nx!==drag.it.x||ny!==drag.it.y){ drag.it.x=nx; drag.it.y=ny; drag.moved=true; drag.g.setAttribute("transform",`translate(${nx} ${ny})`); }
   });
   const end=()=>{
@@ -771,7 +782,7 @@ function ensure3d(){
   },{capture:true});
   el.addEventListener("pointermove",e=>{
     const d=V.drag; if(!d) return; const p=floorPt(e); if(!p) return;
-    const nx=Math.round((p.x-d.ox)/5)*5, nz=Math.round((p.z-d.oz)/5)*5;
+    const [nx,nz]=constrain(d.it,Math.round((p.x-d.ox)/5)*5,Math.round((p.z-d.oz)/5)*5,V.room);
     if(nx===d.it.x&&nz===d.it.y) return;
     d.it.x=nx; d.it.y=nz; d.moved=true;
     if(V.objs[d.it.id]) place3d(V.objs[d.it.id],d.it); else build3dRoom(V.room);
@@ -1217,7 +1228,7 @@ document.addEventListener("keydown",e=>{
   if(S.tab==="plano"&&S.sel&&!e.target.closest("input,textarea,select,dialog")){
     const it=selItem(); if(!it) return;
     const step=e.shiftKey?1:5, mv={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
-    if(mv){ e.preventDefault(); saveItem(it,{x:it.x+mv[0],y:it.y+mv[1]}); }
+    if(mv){ e.preventDefault(); const p0=proyecto(), [x,y]=constrain(it,it.x+mv[0],it.y+mv[1],p0&&room(p0)); if(x!==it.x||y!==it.y) saveItem(it,{x,y}); }
     if(e.key==="r"||e.key==="R") saveItem(it,{rot:((it.rot||0)+90)%360});
     if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); S.sel=null; remove("items",it.id).catch(()=>{}); }
   }
