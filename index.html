@@ -39,6 +39,7 @@ addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = do
 /* Siempre en modo claro, también si el móvil o Claude están en oscuro */
 :root,:root[data-theme="dark"]{color-scheme:light}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
 .wrap{max-width:1240px;margin:0 auto;padding-block:16px 48px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -235,6 +236,29 @@ dialog form{display:flex;flex-direction:column}
 details.field summary{cursor:pointer;font-size:13px;color:var(--granate);font-weight:600}
 details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);border:0;border-radius:var(--r);padding:8px 10px;width:100%}
 .pimg{width:100%;aspect-ratio:4/3;object-fit:contain;background:#fff;border-radius:4px;display:block}
+.site-nav{gap:4px;border-bottom:0;background:var(--surface);border-radius:999px;padding:5px;box-shadow:0 1px 0 var(--line);width:fit-content;max-width:100%}
+.site-nav .tab{border:0;margin:0;border-radius:999px;padding:8px 16px;font-size:17px}
+.site-nav .tab:hover{background:var(--bg)}
+.site-nav .tab[aria-selected="true"]{background:var(--pink);color:var(--pink-ink)}
+.site-nav .tab[aria-selected="true"] .n{color:var(--pink-ink);opacity:.7}
+.bud-in{display:flex;align-items:baseline;gap:4px}
+.bud-in input{font-family:var(--f-display);font-size:28px;font-weight:800;font-stretch:85%;color:var(--granate);background:transparent;border:0;border-bottom:2px dashed rgb(109 1 1 / .25);width:100%;min-width:0;padding:0}
+.bud-in span{font-family:var(--f-display);font-size:22px;font-weight:800;color:var(--granate)}
+.bar u{z-index:0}.bar i{z-index:1}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:baseline}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--granate);font-weight:600}
+td.r,th.r{text-align:right}
+table.budget{min-width:620px}
+table.budget td small{display:block;color:var(--muted);font-size:12px}
+table.budget tr.grp td{background:var(--beige);font-family:var(--f-display);font-weight:800;font-stretch:85%;font-size:16px;color:var(--granate)}
+table.budget tr.row{cursor:pointer}
+table.budget tr.row:hover td{background:var(--bg)}
+table.budget tr.tot td{font-weight:700;border-top:2px solid var(--granate);border-bottom:0}
+table.budget .ok{color:var(--ok);font-weight:600}
+.tipo{font-size:12px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t-c{background:var(--pink);color:var(--pink-ink)}.t-r{background:var(--gold);color:var(--gold-ink)}.t-g{background:var(--beige);color:var(--granate)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -342,6 +366,20 @@ details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);bo
     <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
 </form></dialog>
 
+<!-- Gasto -->
+<dialog id="dlgGasto"><form method="dialog" id="fGasto">
+  <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="g_concepto">Concepto</label><input id="g_concepto" required placeholder="Transporte del sofá, montaje, licencia de obra…"></div>
+    <div class="field h3"><label for="g_importe">Importe (€)</label><input id="g_importe" type="number" min="0" step="any" inputmode="decimal" required></div>
+    <div class="field h3"><label for="g_room">Estancia</label><select id="g_room"></select></div>
+    <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="g_pagado" style="width:auto"> Ya está pagado</label>
+    <div class="field"><label for="g_notas">Notas</label><textarea id="g_notas"></textarea></div>
+  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="g_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+</form></dialog>
+
 <!-- Contacto -->
 <dialog id="dlgCont"><form method="dialog" id="fCont">
   <div class="dlg-h"><h2 id="dlgContT">Nuevo contacto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
@@ -372,9 +410,9 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[],
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[],
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
-const COLS = ["proyectos","estancias","items","productos","tareas","contactos"];
+const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const eur2 = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:2});
 const fdate = d => d ? new Date(d+"T00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}) : "";
@@ -461,10 +499,9 @@ function render(){
       </div>
       <button class="btn" type="button" data-act="editProj">Editar proyecto</button>
     </section>
-    ${figuresHTML(p,prods,tasks)}
-    <nav class="tabs" role="tablist">${[["plano","Plano",roomsOf(p.id).length],["compras","Compras",prods.filter(x=>x.estado!=="descartado").length],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
-      .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}<span class="n">${c}</span></button>`).join("")}</nav>
-    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="compras"?shopHTML(p,prods):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
+    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
+      .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}${c!==""?`<span class="n">${c}</span>`:""}</button>`).join("")}</nav>
+    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
 }
@@ -1191,6 +1228,58 @@ function rotateItem(it){
   saveItem(it,{rot,x,y});
 }
 
+/* ---------- Presupuesto ---------- */
+function budgetRows(p){
+  const prods=S.productos.filter(x=>x.proyectoId===p.id&&(x.estado==="elegido"||x.estado==="comprado"));
+  const tasks=S.tareas.filter(x=>x.proyectoId===p.id), gastos=S.gastos.filter(x=>x.proyectoId===p.id);
+  return [
+    ...prods.map(x=>({concepto:x.nombre,sub:x.busco,room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:+x.precio||0,real:x.estado==="comprado"?+x.precio||0:0,attr:`data-editprod="${esc(x.id)}"`})),
+    ...tasks.map(t=>({concepto:t.titulo,sub:S.contactos.find(c=>c.id===t.contactoId)?.nombre||"",room:t.estanciaId||"",tipo:"Reforma",estado:(ESTADOS_T.find(e=>e[0]===t.estado)||ESTADOS_T[0])[1],ok:t.estado==="hecha",prev:+t.prev||+t.real||0,real:+t.real||0,attr:`data-edittask="${esc(t.id)}"`})),
+    ...gastos.map(g=>({concepto:g.concepto,sub:g.notas||"",room:g.estanciaId||"",tipo:"Otro gasto",estado:g.pagado?"Pagado":"Pendiente",ok:!!g.pagado,prev:+g.importe||0,real:g.pagado?+g.importe||0:0,attr:`data-editgasto="${esc(g.id)}"`}))
+  ];
+}
+function budgetHTML(p){
+  const rows=budgetRows(p), max=+p.presupuesto||0;
+  const prev=rows.reduce((s,r)=>s+r.prev,0), real=rows.reduce((s,r)=>s+r.real,0), left=max-prev;
+  const prods=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado");
+  const lists=[...new Set(prods.map(x=>(x.estanciaId||"")+"\u0001"+x.busco))];
+  const open=lists.filter(k=>!prods.some(x=>(x.estanciaId||"")+"\u0001"+x.busco===k&&(x.estado==="elegido"||x.estado==="comprado")));
+  const ref=max||prev;
+  const figs=`<section class="figures" aria-label="Resumen del presupuesto">
+    <div class="fig"><label class="label" for="bud_max">Presupuesto máximo</label><div class="bud-in"><input id="bud_max" type="number" min="0" step="50" inputmode="decimal" value="${max||""}" placeholder="Sin límite"><span>€</span></div><span class="s">Lo que quieres gastar como mucho</span></div>
+    <div class="fig"><span class="label">Previsto</span><span class="v">${eur.format(prev)}</span><div class="bar" title="Previsto y pagado sobre ${max?"el máximo":"lo previsto"}"><u style="width:${ref?Math.min(100,prev/ref*100):0}%"></u><i class="${max&&prev>max?"over":""}" style="width:${ref?Math.min(100,real/ref*100):0}%"></i></div><span class="s">Lo elegido, las obras y los gastos</span></div>
+    <div class="fig"><span class="label">Pagado</span><span class="v">${eur.format(real)}</span><span class="s">${prev?`${Math.round(real/prev*100)} % de lo previsto`:"Nada todavía"}</span></div>
+    <div class="fig"><span class="label">${max?(left>=0?"Te queda":"Te pasas"):"Por decidir"}</span><span class="v" style="${max&&left<0?"color:var(--bad)":""}">${max?eur.format(Math.abs(left)):open.length}</span><span class="s">${max?(open.length?`y ${open.length} ${open.length>1?"listas":"lista"} sin elegir`:"todo decidido"):(open.length>1?"listas sin producto elegido":"lista sin producto elegido")}</span></div>
+  </section>`;
+  const head=`<div class="toolbar"><span class="label">Todo lo que cuesta este proyecto, por estancias</span><button class="btn primary" type="button" data-act="newGasto">Añadir gasto</button></div>`;
+  if(!rows.length) return figs+head+`<div class="blank"><h2>Aún no hay nada que sumar</h2><p>Aquí se suman solos los productos que elijas en cada lista, las tareas de la reforma con su coste y los gastos sueltos que añadas (transporte, montaje, licencia de obra…).</p></div>`;
+  const roomsOrder=["",...roomsOf(p.id).map(r=>r.id)];
+  const extra=[...new Set(rows.map(r=>r.room))].filter(id=>!roomsOrder.includes(id));
+  let body="";
+  [...roomsOf(p.id).map(r=>r.id),"",...extra].forEach(rid=>{
+    const rs=rows.filter(r=>r.room===rid); if(!rs.length) return;
+    const sp=rs.reduce((s,r)=>s+r.prev,0), sr=rs.reduce((s,r)=>s+r.real,0);
+    body+=`<tr class="grp"><td colspan="3">${esc(roomName(rid)||"Toda la casa")}</td><td class="r num">${eur.format(sp)}</td><td class="r num">${eur.format(sr)}</td></tr>`;
+    const ord={Compra:0,Reforma:1,"Otro gasto":2};
+    rs.sort((a,b)=>ord[a.tipo]-ord[b.tipo]||b.prev-a.prev).forEach(r=>{
+      body+=`<tr class="row" ${r.attr} tabindex="0"><td><b>${esc(r.concepto)}</b>${r.sub?`<small>${esc(r.sub)}</small>`:""}</td><td><span class="tipo t-${r.tipo==="Compra"?"c":r.tipo==="Reforma"?"r":"g"}">${r.tipo}</span></td>
+        <td><span class="${r.ok?"ok":"muted"}">${r.estado}</span></td><td class="r num">${eur.format(r.prev)}</td><td class="r num">${r.real?eur.format(r.real):"—"}</td></tr>`;
+    });
+  });
+  return figs+head+`<div class="tbl-wrap"><table class="budget"><thead><tr><th>Concepto</th><th>Tipo</th><th>Estado</th><th class="r">Previsto</th><th class="r">Pagado</th></tr></thead>
+    <tbody>${body}<tr class="tot"><td colspan="3">Total</td><td class="r num">${eur.format(prev)}</td><td class="r num">${eur.format(real)}</td></tr></tbody></table></div>
+    ${open.length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Sin elegir todavía: ${open.map(k=>esc(k.split("\u0001")[1])).join(", ")}. <button class="btn ghost sm" type="button" data-tab="productos">Ir a Productos</button></p>`:""}`;
+}
+let edG=null;
+function openGasto(g){
+  edG=g||null; $("dlgGastoT").textContent=g?"Editar gasto":"Nuevo gasto";
+  fill($("g_room"),roomOpts(g?.proyectoId||S.proyId),g?.estanciaId||"");
+  $("g_concepto").value=g?.concepto||""; $("g_importe").value=g?.importe??""; $("g_pagado").checked=!!g?.pagado; $("g_notas").value=g?.notas||"";
+  $("g_del").hidden=!g;
+  if(g) armDelete($("g_del"),async()=>{ await remove("gastos",g.id); $("dlgGasto").close(); toast("Gasto eliminado"); });
+  $("dlgGasto").showModal();
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 function shopHTML(p,prods){
@@ -1268,7 +1357,7 @@ function openProj(p){
   if(p) armDelete($("j_del"),async()=>{
     const rids=roomsOf(p.id).map(r=>r.id);
     for(const it of S.items.filter(i=>rids.includes(i.estanciaId))) await remove("items",it.id);
-    for(const col of ["estancias","productos","tareas"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
+    for(const col of ["estancias","productos","tareas","gastos"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
     await remove("proyectos",p.id); $("dlgProj").close(); S.proyId=null; lsSet("proletix:proy",null); toast("Proyecto eliminado");
   });
   $("dlgProj").showModal();
@@ -1375,6 +1464,12 @@ $("fCont").addEventListener("submit",async ev=>{
 function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 $("btnNewProj").onclick=()=>openProj(null);
+$("fGasto").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=edG?.id||uid();
+  try{ await save("gastos",id,{proyectoId:edG?.proyectoId||S.proyId,concepto:$("g_concepto").value.trim(),importe:num($("g_importe").value),estanciaId:$("g_room").value,pagado:$("g_pagado").checked,notas:$("g_notas").value.trim(),creado:edG?.creado||Date.now()});
+    toast(edG?"Gasto guardado":"Gasto añadido"); }catch{}
+});
 if(window.__pwaPrompt) $("btnInstall").hidden=false;
 $("btnInstall").onclick=async()=>{ const ev=window.__pwaPrompt; if(!ev) return; ev.prompt(); try{ await ev.userChoice; }catch{} window.__pwaPrompt=null; $("btnInstall").hidden=true; };
 $("d_fill").onclick=fillFromPaste;
@@ -1384,7 +1479,7 @@ $("d_color").addEventListener("input",()=>{ $("d_color").dataset.set="1"; $("d_c
 $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ const c=colorFromName($("d_nombre").value); if(c){ $("d_color").value=c; $("d_colormsg").textContent="Sacado del nombre"; } } });
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -1400,6 +1495,7 @@ document.addEventListener("click",e=>{
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:r?.id||""}); return; }
   if(d.editprod){ openProd(S.productos.find(y=>y.id===d.editprod)); return; }
   if(d.cycle){ e.stopPropagation(); const x=S.tareas.find(y=>y.id===d.cycle); const nx={pendiente:"curso",curso:"hecha",hecha:"pendiente"}[x.estado||"pendiente"]; const {id,...b}=x; save("tareas",id,{...b,estado:nx}).catch(()=>{}); return; }
+  if(d.editgasto){ openGasto(S.gastos.find(y=>y.id===d.editgasto)); return; }
   if(d.edittask){ openTask(S.tareas.find(y=>y.id===d.edittask)); return; }
   if(d.editcont){ openCont(S.contactos.find(y=>y.id===d.editcont)); return; }
   if(d.color){ const it=selItem(); if(it) saveItem(it,{color:+d.color,hex:""}); return; }
@@ -1415,6 +1511,7 @@ document.addEventListener("click",e=>{
     case "delVtx": { const P0=pts(r).map(x=>[...x]); if(S.shapeSel?.t==="v"&&P0.length>3){ P0.splice(S.shapeSel.i,1); S.shapeSel=null; saveShape(r,P0); } break; }
     case "newList": openProd(null,{estanciaId:r?.id||""}); setTimeout(()=>$("d_busco").focus(),50); break;
     case "newCont": openCont(null); break;
+    case "newGasto": openGasto(null); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
     case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
@@ -1426,6 +1523,7 @@ document.addEventListener("change",e=>{
   if(id==="sh_len"){ const p0=proyecto(), r0=p0&&room(p0), P0=r0&&pts(r0).map(x=>[...x]), i=S.shapeSel?.i;
     if(P0&&S.shapeSel?.t==="s"&&+e.target.value>=10){ const a=P0[i], j=(i+1)%P0.length, b=P0[j], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1, nl=+e.target.value;
       P0[j]=[Math.round(a[0]+(b[0]-a[0])/l*nl),Math.round(a[1]+(b[1]-a[1])/l*nl)]; saveShape(r0,P0); } return; }
+  if(id==="bud_max"){ const p0=proyecto(); if(p0){ const {id:pid,...b}=p0; save("proyectos",pid,{...b,presupuesto:num(e.target.value)||0}).catch(()=>{}); } return; }
   if(id==="selProj"){ S.proyId=e.target.value; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); return; }
   const it=selItem(); if(!it) return;
   const v=e.target.value;
@@ -1440,6 +1538,8 @@ document.addEventListener("change",e=>{
   if(id==="pr_y"&&v!=="") saveItem(it,{y:+v});
 });
 document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.matches("tr[data-editprod]")) openProd(S.productos.find(y=>y.id===e.target.dataset.editprod));
+  if(e.key==="Enter"&&e.target.matches("tr[data-editgasto]")) openGasto(S.gastos.find(y=>y.id===e.target.dataset.editgasto));
   if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
   if(S.tab==="plano"&&S.sel&&!e.target.closest("input,textarea,select,dialog")){
     const it=selItem(); if(!it) return;
@@ -1450,7 +1550,7 @@ document.addEventListener("keydown",e=>{
   }
 });
 
-S.tab=lsGet("proletix:tab","plano"); S.vista=lsGet("proletix:vista","3d");
+S.tab=lsGet("proletix:tab","plano"); if(S.tab==="compras") S.tab="productos"; if(!["plano","productos","presupuesto","reforma","contactos"].includes(S.tab)) S.tab="plano"; S.vista=lsGet("proletix:vista","3d");
 boot();
 </script>
 
