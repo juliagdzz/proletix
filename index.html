@@ -416,6 +416,14 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 @keyframes ld-roll{0%,100%{transform:translate(0,0)}50%{transform:translate(-6px,6px)}}
 @keyframes ld-fade{0%,100%{opacity:1}50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.ld-h,.ld-r,.loader span{animation:none}}
+.ph-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ph-t{position:relative;width:72px;height:72px}.ph-t img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.ph-t button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--surface);font-size:11px;cursor:pointer}
+.ph-add{width:72px;height:72px;border:2px dashed var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--granate);cursor:pointer;text-align:center;line-height:1.2}
+.ph-add span{font-size:20px}.ph-add:hover{border-color:var(--red)}
+.med-ph{display:flex;gap:6px}.med-ph img{flex:1;min-width:0;height:120px;object-fit:cover;border-radius:8px;cursor:zoom-in}.med-ph img:first-child{flex:2}
+.ph-dlg{padding:10px;max-width:min(92vw,900px);background:var(--surface)}.ph-dlg form{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.ph-dlg img{max-width:100%;max-height:78vh;border-radius:8px;display:block}
 .meds{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .med{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer}
 .med:hover{border-color:var(--muted)}
@@ -599,10 +607,13 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field h2"><label for="m_fondo">Fondo (cm)</label><input id="m_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field h2"><label for="m_alto">Alto (cm)</label><input id="m_alto" type="number" min="0" step="any" inputmode="decimal"></div>
     <p class="field hint" style="margin:0">Pon solo las que necesites. Para un hueco, mide por el punto más estrecho.</p>
+    <div class="field"><label>Fotos</label><div class="ph-row"><span id="m_fotos" class="ph-row"></span><label class="ph-add" id="m_addph" for="m_file"><span aria-hidden="true">📷</span>Añadir foto</label></div><input type="file" id="m_file" accept="image/*" hidden><span class="hint">Hasta 3. En el móvil puedes hacerla en el momento.</span></div>
     <div class="field"><label for="m_notas">Notas</label><textarea id="m_notas" placeholder="Hay un enchufe a 40 cm del suelo, el rodapié sobresale 1 cm…"></textarea></div>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="m_del" hidden>Eliminar</button></div>
 </form></dialog>
+
+<dialog id="dlgPh" class="ph-dlg" aria-label="Foto"><form method="dialog"><img id="phImg" alt=""><button class="btn" value="cancel">Cerrar</button></form></dialog>
 
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
@@ -664,7 +675,7 @@ const cm = v => (+v).toLocaleString("es-ES");
 const safeUrl = u => /^https?:\/\//i.test(u||"") ? u : "";
 
 function lsGet(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
 function toast(msg,undo){
   document.querySelectorAll(".toast").forEach(x=>x.remove());
   const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");
@@ -708,7 +719,7 @@ async function save(col,id,data){
   if(S.mode==="db"){
     try{ const {id:_,...body}=row; await S.db.collection(col).doc(id).set(body); }
     catch(e){ toast(e?.code==="invalid_argument"?"No tienes permiso para editar este proyecto.":"No se ha podido guardar. Prueba otra vez."); throw e; }
-  } else { lsSet("proletix:"+col,arr); }
+  } else if(!lsSet("proletix:"+col,arr)) toast("No queda espacio en este navegador. Quita alguna foto o conecta la nube.");
   render();
 }
 async function remove(col,id){
@@ -2071,6 +2082,7 @@ function medidasHTML(p){
     return `<article class="med" data-editmed="${esc(m.id)}" role="button" tabindex="0">
       <div class="med-h"><h3>${esc(m.nombre)}</h3><button class="icon-btn" type="button" data-copymed="${esc(m.id)}" title="Copiar las medidas" aria-label="Copiar las medidas"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button></div>
       ${m.estanciaId?`<span class="muted" style="font-size:13px">${esc(roomName(m.estanciaId))}</span>`:""}
+      ${m.fotos?.length?`<div class="med-ph">${m.fotos.map((f,i)=>`<img src="${f}" alt="Foto de ${esc(m.nombre)}" data-photo="${esc(m.id)}|${i}" loading="lazy">`).join("")}</div>`:""}
       <div class="med-d">${[["ancho","Ancho"],["fondo","Fondo"],["alto","Alto"]].map(([k,n])=>`<div><span class="label">${n}</span><b class="num">${+m[k]>0?cm(m[k]):"—"}</b></div>`).join("")}<span class="med-u">cm</span></div>
       ${m.notas?`<p class="med-n">${esc(m.notas)}</p>`:""}
       <div class="med-f">${lists.length?`<span>Lista: <b>${lists.map(esc).join(", ")}</b></span>`:""}${prods.length?`<span>${fitsN} de tus productos ${fitsN===1?"cabe":"caben"}</span>`:""}</div>
@@ -2080,6 +2092,7 @@ let edM=null;
 function openMed(m){
   edM=m||null; $("dlgMedT").textContent=m?"Editar medida":"Nueva medida";
   fill($("m_room"),roomOpts(m?.proyectoId||S.proyId),m?.estanciaId??(S.roomId||""));
+  mFotos=[...(m?.fotos||[])]; drawMFotos();
   $("m_nombre").value=m?.nombre||""; $("m_ancho").value=m?.ancho??""; $("m_fondo").value=m?.fondo??""; $("m_alto").value=m?.alto??""; $("m_notas").value=m?.notas||"";
   $("m_del").hidden=!m;
   if(m) armDelete($("m_del"),async()=>{ for(const l of S.listas.filter(l=>l.medidaId===m.id)){ const {id,...b}=l; await save("listas",id,{...b,medidaId:""}); } await remove("medidas",m.id); $("dlgMed").close(); });
@@ -2090,6 +2103,28 @@ function copyMed(m){
   const ok=()=>toast("Medidas copiadas: "+txt);
   try{ navigator.clipboard.writeText(txt).then(ok,()=>toast(txt)); }catch{ toast(txt); }
 }
+
+/* ---------- Fotos de las medidas: se reducen y se guardan con la medida ---------- */
+let mFotos=[];
+async function compressImg(file,maxSide=900,maxBytes=70000){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    let side=maxSide, q=.72, out="";
+    for(let k=0;k<7;k++){
+      const sc=Math.min(1,side/Math.max(img.naturalWidth,img.naturalHeight)), c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(img.naturalWidth*sc)); c.height=Math.max(1,Math.round(img.naturalHeight*sc));
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); out=c.toDataURL("image/jpeg",q);
+      if(out.length*.75<=maxBytes) break; side*=.8; q=Math.max(.45,q-.07);
+    }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+function drawMFotos(){
+  $("m_fotos").innerHTML=mFotos.map((f,i)=>`<span class="ph-t"><img src="${f}" alt="Foto ${i+1}"><button type="button" data-rmfoto="${i}" aria-label="Quitar foto ${i+1}">✕</button></span>`).join("");
+  $("m_addph").hidden=mFotos.length>=3;
+}
+function showPhoto(src){ $("phImg").src=src; $("dlgPh").showModal(); }
 
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
@@ -2366,10 +2401,16 @@ $("vcfIn").addEventListener("change",async()=>{
   try{ const list=parseVcf(await f.text()); if(!list.length){ toast("Ese archivo no tiene contactos en formato .vcf."); return; } importContacts(list); }
   catch{ toast("No se ha podido leer el archivo."); }
 });
+$("m_file").addEventListener("change",async()=>{
+  const f=$("m_file").files[0]; $("m_file").value=""; if(!f) return;
+  if(mFotos.length>=3){ toast("Como mucho 3 fotos por medida."); return; }
+  try{ mFotos.push(await compressImg(f)); drawMFotos(); }catch{ toast("No se ha podido abrir esa imagen."); }
+});
+$("dlgPh").addEventListener("click",e=>{ if(e.target.id!=="phImg") $("dlgPh").close(); });
 $("fMed").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edM?.id||uid();
-  await save("medidas",id,{proyectoId:edM?.proyectoId||S.proyId,nombre:$("m_nombre").value.trim(),estanciaId:$("m_room").value,ancho:num($("m_ancho").value),fondo:num($("m_fondo").value),alto:num($("m_alto").value),notas:$("m_notas").value.trim(),creado:edM?.creado||Date.now()}).catch(()=>{});
+  await save("medidas",id,{proyectoId:edM?.proyectoId||S.proyId,nombre:$("m_nombre").value.trim(),estanciaId:$("m_room").value,ancho:num($("m_ancho").value),fondo:num($("m_fondo").value),alto:num($("m_alto").value),notas:$("m_notas").value.trim(),fotos:mFotos,creado:edM?.creado||Date.now()}).catch(()=>{});
   toast(edM?"Medida guardada":"Medida apuntada");
 });
 $("fGasto").addEventListener("submit",async ev=>{
@@ -2395,7 +2436,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -2409,6 +2450,8 @@ document.addEventListener("click",e=>{
     S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
+  if(d.photo){ e.stopPropagation(); const [mid,i]=d.photo.split("|"); const m=S.medidas.find(x=>x.id===mid); if(m?.fotos?.[+i]) showPhoto(m.fotos[+i]); return; }
+  if(d.rmfoto){ mFotos.splice(+d.rmfoto,1); drawMFotos(); return; }
   if(d.copymed){ e.stopPropagation(); copyMed(S.medidas.find(m=>m.id===d.copymed)); return; }
   if(d.editmed){ openMed(S.medidas.find(m=>m.id===d.editmed)); return; }
   if(d.editlist){ openList({edit:d.editlist}); return; }
