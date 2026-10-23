@@ -102,22 +102,41 @@ function extract(html, url) {
   };
 }
 
+// Lee la página. Si la tienda bloquea la visita (403, 429…) y hay clave de ScraperAPI
+// en las variables de entorno de Vercel (SCRAPER_API_KEY), lo reintenta a través de ese servicio.
+async function getPage(url) {
+  const timed = (ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return { signal: c.signal, done: () => clearTimeout(t) }; };
+  let status = 0;
+  const a = timed(9000);
+  try {
+    const r = await fetch(url.href, { signal: a.signal, redirect: "follow", headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml", "accept-language": "es-ES,es;q=0.9" } });
+    if (PRIVATE.test(new URL(r.url).hostname)) return { error: 400 };
+    if (r.ok) return { html: await r.text() };
+    status = r.status;
+  } catch { status = 504; } finally { a.done(); }
+  const key = process.env.SCRAPER_API_KEY;
+  if (!key || ![401, 403, 429, 503, 504].includes(status)) return { error: status };
+  const b = timed(50000);
+  try {
+    const api = `https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&country_code=es&url=${encodeURIComponent(url.href)}`;
+    const r = await fetch(api, { signal: b.signal });
+    if (r.ok) return { html: await r.text(), via: "scraperapi" };
+    return { error: r.status, via: "scraperapi" };
+  } catch { return { error: 504, via: "scraperapi" }; } finally { b.done(); }
+}
+
 module.exports = async (req, res) => {
   let url;
   try { url = new URL(String((req.query && req.query.url) || "")); } catch { return res.status(400).json({ error: "El enlace no es válido." }); }
   if (!/^https?:$/.test(url.protocol) || PRIVATE.test(url.hostname)) return res.status(400).json({ error: "El enlace no es válido." });
-  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 9000);
-  try {
-    const r = await fetch(url.href, { signal: ctl.signal, redirect: "follow", headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml", "accept-language": "es-ES,es;q=0.9" } });
-    if (PRIVATE.test(new URL(r.url).hostname)) return res.status(400).json({ error: "El enlace no es válido." });
-    if (!r.ok) return res.status(502).json({ error: `La tienda no deja leer esta página (error ${r.status}).` });
-    const html = (await r.text()).slice(0, 4000000);
-    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
-    return res.status(200).json(extract(html, url));
-  } catch {
-    return res.status(504).json({ error: "La tienda ha tardado demasiado en responder." });
-  } finally {
-    clearTimeout(timer);
+  const page = await getPage(url);
+  if (page.error === 400) return res.status(400).json({ error: "El enlace no es válido." });
+  if (page.error === 504) return res.status(504).json({ error: "La tienda ha tardado demasiado en responder." });
+  if (page.error) {
+    const why = page.via ? `La tienda tampoco deja leer la página a través de ScraperAPI (error ${page.error}).` : `La tienda no deja leer esta página (error ${page.error}).`;
+    return res.status(502).json({ error: why });
   }
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  return res.status(200).json(extract(page.html.slice(0, 4000000), url));
 };
 module.exports.extract = extract;

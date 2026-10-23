@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/producto.js": { "maxDuration": 60 }
+  }
+}
