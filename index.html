@@ -376,6 +376,14 @@ table.cmp{border-collapse:separate;border-spacing:0;width:max-content;min-width:
 .qa-m{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .qa-link{background:var(--pink);color:var(--pink-ink);border-radius:999px;padding:1px 8px;font-weight:600}
 .el-img{width:34px;height:34px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px;float:left;margin-right:8px}
+details.need{display:block}
+details.need>*+*{margin-top:10px}
+details.need>summary{list-style:none;cursor:pointer}
+details.need>summary::-webkit-details-marker{display:none}
+details.need>summary h3::before{content:"";display:inline-block;width:8px;height:8px;border-right:2px solid var(--granate);border-bottom:2px solid var(--granate);transform:rotate(45deg);margin:0 10px 4px 2px;transition:transform .15s}
+details.need:not([open])>summary h3::before{transform:rotate(-45deg);margin-bottom:1px}
+details.need:not([open]){margin-bottom:8px}
+details.need:not([open])>summary{border-bottom-color:var(--line)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -575,7 +583,7 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), qa:{}, cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), foldedLists:new Set(), qa:{}, cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
 const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
@@ -1729,7 +1737,7 @@ function compareHTML(list){
     ${maxP!==null&&min!==null&&maxP>min?`<p class="muted" style="font-size:12px;margin:6px 0 0">Entre la opción más barata y la más cara hay ${eur.format(maxP-min)} de diferencia.</p>`:""}`;
 }
 function shopHTML(p,prods){
-  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right"><button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
   const emptyLists=listsOf(p.id).filter(l=>!prods.some(x=>x.busco===l.nombre));
   if(!prods.length&&!emptyLists.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
   const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
@@ -1742,9 +1750,9 @@ function shopHTML(p,prods){
     const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
     const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
     const canCmp=list.filter(x=>x.estado!=="descartado").length>1, cmpOn=canCmp&&S.cmpLists.has(n);
-    return `<section class="need"><div class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
+    return `<details class="need" data-fold="${esc(n)}"${S.foldedLists.has(n)?"":" open"}><summary class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
       <span class="sum">${list.length?`${list.length} opci${list.length>1?"ones":"ón"}`:"Lista vacía"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}
-        <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}${canCmp?`<button class="btn sm cmp-tg" type="button" data-view="${cmpOn?"cards":"cmp"}" data-vkey="${esc(n)}" aria-pressed="${cmpOn}" title="${cmpOn?"Volver a la lista":"Comparar opciones lado a lado"}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M6.5 9h0M17.5 9h0M6.5 13h0M17.5 13h0"/></svg>${cmpOn?"Ver lista":"Comparar"}</button>`:""}</span></div>
+        <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}${canCmp?`<button class="btn sm cmp-tg" type="button" data-view="${cmpOn?"cards":"cmp"}" data-vkey="${esc(n)}" aria-pressed="${cmpOn}" title="${cmpOn?"Volver a la lista":"Comparar opciones lado a lado"}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M6.5 9h0M17.5 9h0M6.5 13h0M17.5 13h0"/></svg>${cmpOn?"Ver lista":"Comparar"}</button>`:""}</span></summary>
       ${cmpOn?compareHTML(list):`<div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
         return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
@@ -1758,7 +1766,7 @@ function shopHTML(p,prods){
             ${url?`<a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}
             ${+x.ancho>0&&+x.fondo>0?`<button class="btn sm" type="button" data-place="${esc(x.id)}">Colocar en plano</button>`:""}
             ${x.estado!=="elegido"&&x.estado!=="comprado"&&x.estado!=="descartado"?`<button class="btn sm ghost" type="button" data-choose="${esc(x.id)}">Elegir</button>`:""}</div>
-        </article>`}).join("")}</div>`}</section>`;
+        </article>`}).join("")}</div>`}</details>`;
   }).join("");
 }
 
@@ -1958,6 +1966,7 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("details.cj")){ if(dd.open) S.closedCj.delete(dd.dataset.cj); else S.closedCj.add(dd.dataset.cj); }
   if(dd.matches?.("details.pr-more")) S.propsMore=dd.open;
+  if(dd.matches?.("details.need")){ if(dd.open) S.foldedLists.delete(dd.dataset.fold); else S.foldedLists.add(dd.dataset.fold); }
   if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
 $("fGasto").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
@@ -1975,6 +1984,7 @@ $("d_color").addEventListener("input",()=>{ $("d_color").dataset.set="1"; $("d_c
 $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ const c=colorFromName($("d_nombre").value); if(c){ $("d_color").value=c; $("d_colormsg").textContent="Sacado del nombre"; } } });
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
+  if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
   const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-rotby],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
@@ -2025,6 +2035,7 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "foldAll": { const keys=[...document.querySelectorAll("details.need")].map(d=>d.dataset.fold); const allF=keys.every(k=>S.foldedLists.has(k)); keys.forEach(k=>allF?S.foldedLists.delete(k):S.foldedLists.add(k)); render(); break; }
     case "install": { const ev=window.__pwaPrompt; if(ev){ ev.prompt(); ev.userChoice.catch(()=>{}).finally(()=>{ window.__pwaPrompt=null; render(); }); } break; }
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
     case "backProj": S.view="proyecto"; render(); break;
