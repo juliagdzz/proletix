@@ -216,7 +216,8 @@ dialog form{display:flex;flex-direction:column}
 .fig+.fig{border-left-color:rgb(109 1 1 / .12)}
 .field input,.field select,.field textarea,.props input,.props select{background:var(--beige);border-color:transparent}
 .cat button:hover{background:var(--surface)}
-.dlg-h{border-bottom:3px solid var(--beige)}
+.dlg-h{border-bottom:3px solid var(--beige);position:sticky;top:0;z-index:3;background:var(--surface)}
+.dlg-hb{display:flex;gap:6px;align-items:center}
 .prod .foot{border-top:1px dashed var(--line);padding-top:8px}
 .tick{border-color:var(--granate)}
 .kind b{border:1px solid var(--granate)}
@@ -468,12 +469,12 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <!-- Producto -->
 <dialog id="dlgProd"><form method="dialog" id="fProd">
-  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button><button class="btn primary" value="ok" id="d_ok">Añadir</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
     <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
-      <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí"></textarea>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm" type="button" id="d_fill">Rellenar ficha</button><span class="hint" id="d_fillmsg"></span></div>
+      <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí: la ficha se rellena sola"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm ghost" type="button" id="d_fill">Volver a rellenar</button><span class="hint" id="d_fillmsg"></span></div>
     </details>
     <div class="field"><label for="d_lista">Lista</label><select id="d_lista"></select><input id="d_busco" placeholder="Nombre de la lista nueva: Sofá del salón, Lámpara…" hidden><span class="hint">Los productos de la misma lista se comparan juntos</span></div>
     <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
@@ -490,7 +491,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
     <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="d_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok" id="d_ok">Añadir</button></div></div>
+    </div>
 </form></dialog>
 <datalist id="needs"></datalist><datalist id="shops"></datalist>
 
@@ -2026,7 +2027,7 @@ function openProd(x,preset={}){
   fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
   $("d_busco").value=""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
   fill($("d_forma"),FORMAS,x?.forma||""); fillLists(pid,x?.busco||preset.busco||S.lastList||"");
-  $("d_url").value=x?.url||""; $("d_img").value=x?.imagen||""; $("d_color").value=x?.color||colorFromName(x?.nombre)||"#b07a55"; $("d_color").dataset.set=x?.color?"1":""; $("d_colormsg").textContent=x?.color?"Color guardado":"Para pintarlo en el plano"; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
+  $("d_url").value=x?.url||""; lastUrl=x?.url||""; $("d_img").value=x?.imagen||""; $("d_color").value=x?.color||colorFromName(x?.nombre)||"#b07a55"; $("d_color").dataset.set=x?.color?"1":""; $("d_colormsg").textContent=x?.color?"Color guardado":"Para pintarlo en el plano"; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
   $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
   if(x) armDelete($("d_del"),async()=>{ for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id); await remove("productos",x.id); $("dlgProd").close(); toast("Producto eliminado"); });
@@ -2143,12 +2144,17 @@ $("fGasto").addEventListener("submit",async ev=>{
 addEventListener("beforeinstallprompt",()=>setTimeout(render,0));
 addEventListener("appinstalled",()=>setTimeout(render,0));
 $("d_fill").onclick=fillFromPaste;
+$("d_paste").addEventListener("paste",()=>{ fillFromPaste.lastPaste=Date.now(); clearTimeout(fillFromPaste.t); setTimeout(fillFromPaste,0); });
+$("d_paste").addEventListener("input",()=>{ clearTimeout(fillFromPaste.t); if(Date.now()-(fillFromPaste.lastPaste||0)<1500) return; if($("d_paste").value.trim().length>80) fillFromPaste.t=setTimeout(fillFromPaste,900); });
 function updFormaHint(){ const o=$("d_forma").options[0]; if(o) o.textContent="Automático: "+((FORMAS.find(x=>x[0]===detectForma(`${$("d_nombre").value} ${$("d_busco").value}`))||["","Bloque"])[1]); }
 ["d_nombre","d_busco"].forEach(i=>$(i).addEventListener("input",updFormaHint));
 $("d_lista").addEventListener("change",()=>{ syncListField(); if($("d_lista").value==="__new"){ $("d_busco").value=""; $("d_busco").focus(); } });
 $("d_color").addEventListener("input",()=>{ $("d_color").dataset.set="1"; $("d_colormsg").textContent="Color elegido por ti"; });
 $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ const c=colorFromName($("d_nombre").value); if(c){ $("d_color").value=c; $("d_colormsg").textContent="Sacado del nombre"; } } });
-$("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
+let lastUrl="";
+function onProdUrl(){ const u=$("d_url").value.trim(); if(!/^https?:\/\/\S+\.\S+/i.test(u)||u===lastUrl) return; lastUrl=u; if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre;  }
+$("d_url").addEventListener("change",onProdUrl);
+$("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t=setTimeout(onProdUrl,400); });
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
