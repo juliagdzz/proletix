@@ -13,7 +13,7 @@
 /* Layout: cabecera con logo y proyecto · franja de cifras · pestañas (plano 2D con catálogo lateral, compras comparadas, reforma, contactos) */
 :root{
   --bg:#FFF3FC; --surface:#FFFFFF; --sunk:#FFE4FB; --ink:#3B2832; --muted:#7A6371; --line:#F2D9EE;
-  --red:#F86C2F; --red-ink:#3B1A0E; --gold:#C0D6FF; --gold-ink:#2A2440; --pink:#FFD5FB; --pink-ink:#6D0101;
+  --red:#F86C2F; --red-ink:#3B1A0E; --gold:#C0D6FF; --gold-ink:#2A2440; --pink:#FFD5FB; --pink-ink:#6D0101; --beige:#F7EAE0; --granate:#6D0101;
   --ok:#2E7A4E; --warn:#9E5600; --bad:#B0201A;
   --floor:#FFFFFF; --wall:#6D0101; --grid:rgb(109 1 1 / .06);
   --f0:#C0D6FF; --f1:#FDBE9E; --f2:#FFD5FB; --f3:#EBCBC6; --f4:#F5E3D8; --f5:#ECE2E6;
@@ -24,13 +24,13 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#221920; --surface:#2D2129; --sunk:#3A2A35; --ink:#FCF4F0; --muted:#CFB3C2; --line:#4A3542;
-  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB;
+  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB; --beige:#3A2D27; --granate:#FFB4A9;
   --ok:#7CC79A; --warn:#F2B45A; --bad:#FF8A80;
   --floor:#2D2129; --wall:#FFD5FB; --grid:rgb(252 244 240 / .07);
   --f0:#2B3A5C; --f1:#5C2A14; --f2:#4F2A4C; --f3:#4A2222; --f4:#42302A; --f5:#3A2C30; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#221920; --surface:#2D2129; --sunk:#3A2A35; --ink:#FCF4F0; --muted:#CFB3C2; --line:#4A3542;
-  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB;
+  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB; --beige:#3A2D27; --granate:#FFB4A9;
   --ok:#7CC79A; --warn:#F2B45A; --bad:#FF8A80;
   --floor:#2D2129; --wall:#FFD5FB; --grid:rgb(252 244 240 / .07);
   --f0:#2B3A5C; --f1:#5C2A14; --f2:#4F2A4C; --f3:#4A2222; --f4:#42302A; --f5:#3A2C30; color-scheme:dark}
@@ -201,6 +201,20 @@ dialog form{display:flex;flex-direction:column}
 .field textarea{min-height:64px;resize:vertical}
 .field .hint{font-size:12px;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--pink);color:var(--pink-ink);font-weight:600;padding:10px 16px;border-radius:var(--r);font-size:14px;z-index:20;max-width:calc(100vw - 32px)}
+
+/* Detalles en beige y granate */
+.label,.field label,.props label,.cat-g{color:var(--granate)}
+.fig .v,.prod .price,.need-h h3,.panel h3{color:var(--granate)}
+.figures,.panel{background:var(--beige);border-color:transparent}
+.fig+.fig{border-left-color:rgb(109 1 1 / .12)}
+.field input,.field select,.field textarea,.props input,.props select{background:var(--beige);border-color:transparent}
+.cat button:hover{background:var(--surface)}
+.dlg-h{border-bottom:3px solid var(--beige)}
+.prod .foot{border-top:1px dashed var(--line);padding-top:8px}
+.tick{border-color:var(--granate)}
+.kind b{border:1px solid var(--granate)}
+.proj{border-top:3px double var(--granate)!important}
+@media (max-width:760px){.fig:nth-child(n+3){border-top-color:rgb(109 1 1 / .12)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
