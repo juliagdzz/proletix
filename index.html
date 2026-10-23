@@ -416,6 +416,16 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 @keyframes ld-roll{0%,100%{transform:translate(0,0)}50%{transform:translate(-6px,6px)}}
 @keyframes ld-fade{0%,100%{opacity:1}50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.ld-h,.ld-r,.loader span{animation:none}}
+.meds{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.med{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer}
+.med:hover{border-color:var(--muted)}
+.med-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.med-h h3{font-size:20px;color:var(--granate);overflow-wrap:anywhere}
+.med-d{display:flex;gap:16px;align-items:flex-end;background:var(--beige);border-radius:8px;padding:10px 12px}
+.med-d div{display:flex;flex-direction:column;gap:2px}.med-d b{font-size:24px;font-weight:500;color:var(--ink)}
+.med-u{font-family:var(--f-mono);font-size:13px;color:var(--muted);padding-bottom:4px}
+.med-n{margin:0;font-size:13px}
+.med-f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -529,6 +539,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
   <div class="dlg-b">
     <div class="field"><label for="l_nombre">Nombre</label><input id="l_nombre" required placeholder="Mueble de TV, sofá, lámpara de techo…"></div>
     <div class="field"><label for="l_room">Estancia</label><select id="l_room"></select></div>
+    <div class="field"><label for="l_med">Tiene que caber en</label><select id="l_med"></select><span class="hint">Elige una de tus medidas y cada producto te dirá si cabe</span></div>
     <p class="field hint" style="margin:0" id="l_hint">Se queda guardada para elegirla cada vez que añadas un producto.</p>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="l_del" hidden>Eliminar lista</button></div>
@@ -578,6 +589,21 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 <input type="file" id="dxfIn" accept=".dxf,.dwg" hidden>
 <input type="file" id="vcfIn" accept=".vcf,text/vcard,text/x-vcard" hidden>
 
+<!-- Medida -->
+<dialog id="dlgMed"><form method="dialog" id="fMed">
+  <div class="dlg-h"><h2 id="dlgMedT">Nueva medida</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
+  <div class="dlg-b">
+    <div class="field"><label for="m_nombre">Qué has medido</label><input id="m_nombre" required placeholder="Hueco de la lavadora, entre la ventana y la esquina…"></div>
+    <div class="field"><label for="m_room">Estancia</label><select id="m_room"></select></div>
+    <div class="field h2"><label for="m_ancho">Ancho (cm)</label><input id="m_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="m_fondo">Fondo (cm)</label><input id="m_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="m_alto">Alto (cm)</label><input id="m_alto" type="number" min="0" step="any" inputmode="decimal"></div>
+    <p class="field hint" style="margin:0">Pon solo las que necesites. Para un hueco, mide por el punto más estrecho.</p>
+    <div class="field"><label for="m_notas">Notas</label><textarea id="m_notas" placeholder="Hay un enchufe a 40 cm del suelo, el rodapié sobresale 1 cm…"></textarea></div>
+  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="m_del" hidden>Eliminar</button></div>
+</form></dialog>
+
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
   <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
@@ -622,9 +648,9 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), openCats:new Set(), foldedLists:new Set(), qa:{}, cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], medidas:[], conjuntos:[], closedCj:new Set(), openCats:new Set(), foldedLists:new Set(), qa:{}, cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
-const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
+const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos","medidas"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const eur2 = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:2});
 const fdate = d => d ? new Date(d+"T00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}) : "";
@@ -654,7 +680,7 @@ function deleteItem(it){
 
 /* ---------- Almacenamiento: base de datos de Claude o este navegador ---------- */
 // Historial para el botón «Atrás»: guarda cómo estaba cada cosa antes de cambiarla
-const HIST_COLS=["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
+const HIST_COLS=["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos","medidas"];
 const sameDoc=(a,b)=>{ if(!a||!b) return false; const ks=new Set([...Object.keys(a),...Object.keys(b)]); ks.delete("id"); for(const k of ks) if(JSON.stringify(a[k]??"")!==JSON.stringify(b[k]??"")) return false; return true; };
 function record(col,id,prev,next){
   if(S.undoing||!HIST_COLS.includes(col)) return;
@@ -752,9 +778,9 @@ function render(){
       </div>
       <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </section>
-    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["conjuntos","Conjuntos",S.conjuntos.filter(c=>c.proyectoId===p.id).length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
+    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["medidas","Medidas",S.medidas.filter(m=>m.proyectoId===p.id).length],["conjuntos","Conjuntos",S.conjuntos.filter(c=>c.proyectoId===p.id).length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
       .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}${c!==""?`<span class="n">${c}</span>`:""}</button>`).join("")}</nav>
-    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
+    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
 }
@@ -1681,6 +1707,8 @@ function openList(preset={}){
   edL=l?{nombre:l.nombre,estanciaId:l.estanciaId||""}:null;
   $("dlgListT").textContent=l?"Editar lista":"Nueva lista"; $("l_ok").textContent=l?"Guardar":"Crear lista";
   $("l_nombre").value=l?.nombre||""; fill($("l_room"),roomOpts(S.proyId),l?l.estanciaId||"":preset.estanciaId||"");
+  const ld=l?S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===l.nombre):null; if(edL) edL.medidaId=ld?.medidaId||"";
+  fill($("l_med"),[["","Ninguna"],...S.medidas.filter(m=>m.proyectoId===S.proyId).map(m=>[m.id,medText(m)])],ld?.medidaId||"");
   const n=l?S.productos.filter(x=>x.proyectoId===S.proyId&&x.busco===l.nombre).length:0;
   $("l_hint").textContent=l?(n?`Tiene ${n} producto${n>1?"s":""}. Si cambias el nombre o la estancia, se cambian también en ellos y en el plano.`:"Está vacía."):"Se queda guardada para elegirla cada vez que añadas un producto.";
   $("l_del").hidden=!l;
@@ -1694,12 +1722,13 @@ async function deleteList(nombre){
     await remove("productos",x.id); }
   for(const l of S.listas.filter(l=>l.proyectoId===pid&&l.nombre===nombre)) await remove("listas",l.id);
 }
-async function editList(old,nombre,estanciaId){
+async function editList(old,nombre,estanciaId,medidaId){
   const pid=S.proyId, moved=estanciaId!==old.estanciaId, renamed=nombre!==old.nombre;
   await held(async()=>{
     const docs=S.listas.filter(l=>l.proyectoId===pid&&l.nombre===old.nombre);
-    if(docs.length){ for(const l of docs){ const {id,...b}=l; await save("listas",id,{...b,nombre,estanciaId}); } }
-    else await save("listas",uid(),{proyectoId:pid,nombre,estanciaId,creado:Date.now()});
+    const mm=medidaId===undefined?{}:{medidaId};
+    if(docs.length){ for(const l of docs){ const {id,...b}=l; await save("listas",id,{...b,nombre,estanciaId,...mm}); } }
+    else await save("listas",uid(),{proyectoId:pid,nombre,estanciaId,...mm,creado:Date.now()});
     for(const x of S.productos.filter(x=>x.proyectoId===pid&&x.busco===old.nombre)){ const {id,...b}=x; await save("productos",id,{...b,busco:nombre,...(moved?{estanciaId}:{})}); }
     if(renamed){ const rids=new Set(roomsOf(pid).map(r=>r.id)); for(const it of S.items.filter(i=>rids.has(i.estanciaId)&&i.grupo===old.nombre)){ const {id,...b}=it; await save("items",id,{...b,grupo:nombre}); } }
   });
@@ -2020,11 +2049,54 @@ function toastAction(msg,label,fn){
   document.body.appendChild(t); setTimeout(()=>t.remove(),9000);
 }
 
+/* ---------- Medidas apuntadas: huecos y aparatos para buscar muebles que encajen ---------- */
+const medDims=m=>[["ancho","Ancho"],["fondo","Fondo"],["alto","Alto"]].filter(([k])=>+m[k]>0);
+const medText=m=>`${m.nombre}: ${medDims(m).map(([k])=>cm(m[k])).join(" × ")} cm${medDims(m).length<3?` (${medDims(m).map(([,n])=>n.toLowerCase()).join(", ")})`:""}`;
+// ¿Cabe el producto x en el hueco m? Compara cada medida que tengan los dos
+function fitsMed(x,m){
+  const ds=medDims(m).filter(([k])=>+x[k]>0); if(!ds.length) return null;
+  const diff=ds.map(([k,n])=>({n,d:+m[k]-+x[k]})), bad=diff.filter(e=>e.d<0);
+  const y=a=>a.length>1?a.slice(0,-1).join(", ")+" y "+a[a.length-1]:a[0]||"";
+  return bad.length?{ok:false,t:`No cabe: ${y(bad.map(e=>`${cm(-e.d)} cm de más de ${e.n.toLowerCase()}`))}`}
+    :{ok:true,t:`Cabe · ${y(diff.map(e=>e.d===0?`justo de ${e.n.toLowerCase()}`:`sobran ${cm(Math.round(e.d*10)/10)} cm de ${e.n.toLowerCase()}`))}`};
+}
+const listMed=(pid,nombre)=>{ const l=S.listas.find(l=>l.proyectoId===pid&&l.nombre===nombre); return l?.medidaId?S.medidas.find(m=>m.id===l.medidaId):null; };
+function medidasHTML(p){
+  const ms=S.medidas.filter(m=>m.proyectoId===p.id).sort((a,b)=>(a.creado||0)-(b.creado||0));
+  const head=`<div class="toolbar"><span class="label">Lo que has medido con el metro, para buscar muebles que encajen</span><button class="btn primary" type="button" data-act="newMed">Añadir medida</button></div>`;
+  if(!ms.length) return head+`<div class="blank"><h2>Apunta tus medidas</h2><p>El hueco de la lavadora, el espacio entre la ventana y la esquina, el ancho del pasillo… Guárdalas aquí con su ancho, fondo y alto. Luego puedes unir una lista de productos a un hueco y Proletia te dice qué opciones caben y cuánto sobra.</p></div>`;
+  const prods=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado");
+  return head+`<div class="meds">${ms.map(m=>{
+    const fitsN=prods.filter(x=>fitsMed(x,m)?.ok).length, lists=S.listas.filter(l=>l.proyectoId===p.id&&l.medidaId===m.id).map(l=>l.nombre);
+    return `<article class="med" data-editmed="${esc(m.id)}" role="button" tabindex="0">
+      <div class="med-h"><h3>${esc(m.nombre)}</h3><button class="icon-btn" type="button" data-copymed="${esc(m.id)}" title="Copiar las medidas" aria-label="Copiar las medidas"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button></div>
+      ${m.estanciaId?`<span class="muted" style="font-size:13px">${esc(roomName(m.estanciaId))}</span>`:""}
+      <div class="med-d">${[["ancho","Ancho"],["fondo","Fondo"],["alto","Alto"]].map(([k,n])=>`<div><span class="label">${n}</span><b class="num">${+m[k]>0?cm(m[k]):"—"}</b></div>`).join("")}<span class="med-u">cm</span></div>
+      ${m.notas?`<p class="med-n">${esc(m.notas)}</p>`:""}
+      <div class="med-f">${lists.length?`<span>Lista: <b>${lists.map(esc).join(", ")}</b></span>`:""}${prods.length?`<span>${fitsN} de tus productos ${fitsN===1?"cabe":"caben"}</span>`:""}</div>
+    </article>`; }).join("")}</div>`;
+}
+let edM=null;
+function openMed(m){
+  edM=m||null; $("dlgMedT").textContent=m?"Editar medida":"Nueva medida";
+  fill($("m_room"),roomOpts(m?.proyectoId||S.proyId),m?.estanciaId??(S.roomId||""));
+  $("m_nombre").value=m?.nombre||""; $("m_ancho").value=m?.ancho??""; $("m_fondo").value=m?.fondo??""; $("m_alto").value=m?.alto??""; $("m_notas").value=m?.notas||"";
+  $("m_del").hidden=!m;
+  if(m) armDelete($("m_del"),async()=>{ for(const l of S.listas.filter(l=>l.medidaId===m.id)){ const {id,...b}=l; await save("listas",id,{...b,medidaId:""}); } await remove("medidas",m.id); $("dlgMed").close(); });
+  $("dlgMed").showModal(); setTimeout(()=>$("m_nombre").focus(),50);
+}
+function copyMed(m){
+  const txt=medText(m);
+  const ok=()=>toast("Medidas copiadas: "+txt);
+  try{ navigator.clipboard.writeText(txt).then(ok,()=>toast(txt)); }catch{ toast(txt); }
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 // Comparador tipo tienda: una columna por producto y una fila por característica
 function compareHTML(list){
   const xs=list.filter(x=>x.estado!=="descartado"); if(xs.length<2) return "";
+  const hm=listMed(xs[0].proyectoId,xs[0].busco);
   const prices=xs.map(x=>+x.precio).filter(v=>v>0), min=prices.length?Math.min(...prices):null, maxP=prices.length?Math.max(...prices):null;
   const vals=xs.map(x=>+x.valor||0), bestV=Math.max(...vals), anyV=new Set(vals).size>1;
   const fits=x=>{ const r=S.estancias.find(e=>e.id===x.estanciaId); if(!r) return {t:"—"};
@@ -2043,6 +2115,7 @@ function compareHTML(list){
       ${row("Te gusta",x=>+x.valor?stars(x.valor):'<span class="muted">Sin valorar</span>',x=>anyV&&+x.valor===bestV&&bestV>0?"best":"")}
       ${row("Tienda",x=>esc(x.tienda||"—"))}
       ${row("Medidas",x=>`<span class="num">${dims(x)}</span>`)}
+      ${hm?row(`En «${esc(hm.nombre)}»`,x=>{ const f=fitsMed(x,hm); return f?`<span class="${f.ok?"ok":"bad"}">${f.ok?"✓":"✗"} ${esc(f.t)}</span>`:'<span class="muted">Faltan medidas</span>'; },x=>fitsMed(x,hm)?.ok?"best":""):""}
       ${row("¿Cabe?",x=>{ const f=fits(x); return `<span class="${f.c||""}">${esc(f.t)}</span>`; })}
       ${row("Color",x=>prodHex(x)?`<span class="cmp-dot" style="background:${prodHex(x)}"></span>`:"—")}
       ${row("Estado",x=>`<span class="st st-${x.estado||"visto"}">${(ESTADOS_P.find(e=>e[0]===x.estado)||ESTADOS_P[0])[1]}</span>`)}
@@ -2077,6 +2150,7 @@ function shopHTML(p,prods){
           <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}</span>${stars(x.valor)}</div>
           <span class="shop">${esc(x.tienda||"")}${x.estanciaId?` · ${esc(roomName(x.estanciaId))}`:""}</span>
           ${dims?`<span class="dims">${dims}</span>`:""}
+          ${(()=>{ const hm=listMed(x.proyectoId,x.busco), f=hm&&fitsMed(x,hm); return f?`<span class="fit ${f.ok?"ok":"bad"}">${f.ok?"✓":"✗"} ${esc(f.t.replace(/^Cabe · /,"Cabe en "+hm.nombre+" · ").replace(/^No cabe:/,"No cabe en "+hm.nombre+":"))}</span>`:""; })()}
           ${x.nota?`<span class="note">${esc(x.nota)}</span>`:""}
           <div class="foot"><button class="btn sm" type="button" data-editprod="${esc(x.id)}">Editar</button>
             ${url?`<a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}
@@ -2131,7 +2205,7 @@ function openProj(p){
   if(p) armDelete($("j_del"),async()=>{
     const rids=roomsOf(p.id).map(r=>r.id);
     for(const it of S.items.filter(i=>rids.includes(i.estanciaId))) await remove("items",it.id);
-    for(const col of ["estancias","productos","tareas","gastos","listas","conjuntos"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
+    for(const col of ["estancias","productos","tareas","gastos","listas","conjuntos","medidas"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
     await remove("proyectos",p.id); $("dlgProj").close(); S.proyId=null; lsSet("proletix:proy",null); toast("Proyecto eliminado");
   });
   $("dlgProj").showModal();
@@ -2244,8 +2318,8 @@ $("fList").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
   const n=$("l_nombre").value.trim(); if(!n) return;
   if(listsOf(S.proyId).some(l=>l.nombre===n&&(!edL||l.nombre!==edL.nombre))){ ev.preventDefault(); toast("Ya tienes una lista con ese nombre."); return; }
-  if(edL){ if(n!==edL.nombre||$("l_room").value!==edL.estanciaId) await editList(edL,n,$("l_room").value); return; }
-  await save("listas",uid(),{proyectoId:S.proyId,nombre:n,estanciaId:$("l_room").value,creado:Date.now()}).catch(()=>{}); S.lastList=n; toast(`Lista «${n}» creada`);
+  if(edL){ if(n!==edL.nombre||$("l_room").value!==edL.estanciaId||$("l_med").value!==(edL.medidaId||"")) await editList(edL,n,$("l_room").value,$("l_med").value); return; }
+  await save("listas",uid(),{proyectoId:S.proyId,nombre:n,estanciaId:$("l_room").value,medidaId:$("l_med").value,creado:Date.now()}).catch(()=>{}); S.lastList=n; toast(`Lista «${n}» creada`);
 });
 $("fCj").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
@@ -2292,6 +2366,12 @@ $("vcfIn").addEventListener("change",async()=>{
   try{ const list=parseVcf(await f.text()); if(!list.length){ toast("Ese archivo no tiene contactos en formato .vcf."); return; } importContacts(list); }
   catch{ toast("No se ha podido leer el archivo."); }
 });
+$("fMed").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return; holdHist();
+  const id=edM?.id||uid();
+  await save("medidas",id,{proyectoId:edM?.proyectoId||S.proyId,nombre:$("m_nombre").value.trim(),estanciaId:$("m_room").value,ancho:num($("m_ancho").value),fondo:num($("m_fondo").value),alto:num($("m_alto").value),notas:$("m_notas").value.trim(),creado:edM?.creado||Date.now()}).catch(()=>{});
+  toast(edM?"Medida guardada":"Medida apuntada");
+});
 $("fGasto").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edG?.id||uid();
@@ -2315,7 +2395,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -2329,6 +2409,8 @@ document.addEventListener("click",e=>{
     S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
+  if(d.copymed){ e.stopPropagation(); copyMed(S.medidas.find(m=>m.id===d.copymed)); return; }
+  if(d.editmed){ openMed(S.medidas.find(m=>m.id===d.editmed)); return; }
   if(d.editlist){ openList({edit:d.editlist}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
   if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
@@ -2367,6 +2449,7 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "newMed": openMed(null); break;
     case "dxf": $("dxfIn").value=""; $("dxfIn").click(); break;
     case "calcoShape": useCalcoShape(); break;
     case "calcoOff": if(r){ const {id,calco,...b}=r; save("estancias",id,b).then(()=>toast("Plano de fondo quitado",undo)).catch(()=>{}); } break;
@@ -2412,7 +2495,7 @@ document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==="z"&&!e.target.closest("input,textarea,select,dialog")){ e.preventDefault(); undo(); return; }
   if(e.key==="Enter"&&e.target.matches("[data-qa]")){ e.preventDefault(); quickAdd(e.target.dataset.qa); return; }
   if(e.key==="Enter"&&e.target.matches("[data-eledit]")){ const [cid,eid]=e.target.dataset.eledit.split("|"); openEl(cid,eid); return; }
-  if(e.key==="Enter"&&e.target.matches("tr[data-openbud]")) e.target.click();
+  if(e.key==="Enter"&&e.target.matches("tr[data-openbud],.med")) e.target.click();
   if(e.key==="Enter"&&e.target.matches("tr[data-editprod]")) openProd(S.productos.find(y=>y.id===e.target.dataset.editprod));
   if(e.key==="Enter"&&e.target.matches("tr[data-editgasto]")) openGasto(S.gastos.find(y=>y.id===e.target.dataset.editgasto));
   if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
@@ -2425,7 +2508,7 @@ document.addEventListener("keydown",e=>{
   }
 });
 
-S.tab=lsGet("proletix:tab","plano"); if(S.tab==="compras") S.tab="productos"; if(!["plano","productos","conjuntos","presupuesto","reforma","contactos"].includes(S.tab)) S.tab="plano"; S.vista=lsGet("proletix:vista","3d");
+S.tab=lsGet("proletix:tab","plano"); if(S.tab==="compras") S.tab="productos"; if(!["plano","productos","medidas","conjuntos","presupuesto","reforma","contactos"].includes(S.tab)) S.tab="plano"; S.vista=lsGet("proletix:vista","3d");
 boot();
 </script>
 
