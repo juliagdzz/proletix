@@ -327,7 +327,17 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .rotrow input[type=number]{width:64px;flex:none}
 .rotq{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
 .btn[aria-pressed="true"]{background:var(--pink);color:var(--pink-ink);border-color:var(--pink)}
-#projMenu .menu-p{min-width:250px;max-height:70vh;overflow:auto}
+#projMenu .menu-p{min-width:300px;max-height:80vh;overflow:auto}
+.app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 2px 6px}
+.menu-p .app-t{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 8px;text-align:center;font-size:12.5px;font-weight:600;color:var(--ink);border-radius:10px}
+.app-i{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--beige);color:var(--granate)}
+.menu-p .app-t[aria-current="page"] .app-i{background:var(--red);color:#fff}
+.menu-p .app-t[aria-current="page"]{color:var(--granate)}
+.app-n{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:10px;font-family:var(--f-mono);display:grid;place-items:center;padding:0 4px}
+.sec-h{display:inline-flex;align-items:center;gap:10px;background:none;border:0;padding:2px 0;cursor:pointer;font-family:var(--f-display);font-size:24px;font-weight:800;font-stretch:85%;color:var(--granate);align-self:flex-start}
+.sec-i{width:36px;height:36px;border-radius:11px;background:var(--red);color:#fff;display:grid;place-items:center}
+.sec-c{font-size:13px;color:var(--muted)}
+.sec-h:hover span:nth-child(2){text-decoration:underline;text-underline-offset:4px}
 #projMenu summary{font-size:15px;letter-spacing:normal;padding:8px 14px;line-height:1.45;display:inline-flex;align-items:center;gap:8px}
 #btnUndo{font-size:20px;width:40px;height:40px}
 .gear{width:42px;height:42px;color:var(--granate)}
@@ -809,8 +819,7 @@ function render(){
       </div>
       <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </section>
-    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["medidas","Medidas",S.medidas.filter(m=>m.proyectoId===p.id).length],["conjuntos","Conjuntos",S.conjuntos.filter(c=>c.proyectoId===p.id).length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
-      .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}${c!==""?`<span class="n">${c}</span>`:""}</button>`).join("")}</nav>
+    <button type="button" class="sec-h" data-act="openMenu" title="Cambiar de sección"><span class="sec-i">${secIcon(S.tab,20)}</span><span>${(sections(p).find(x=>x[0]===S.tab)||["","Plano"])[1]}</span><span class="sec-c" aria-hidden="true">▾</span></button>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
@@ -1847,9 +1856,24 @@ async function quickAdd(cid){
 }
 
 /* ---------- Menú de proyectos y presupuestos de todo ---------- */
+const SEC_IC={
+  plano:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h7v9M14 3v7h7"/>',
+  productos:'<path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+  medidas:'<path d="M3 17 17 3l4 4L7 21z"/><path d="m7 13 2 2M10 10l2 2M13 7l2 2"/>',
+  conjuntos:'<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  presupuesto:'<path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4 10h9M4 14h9"/>',
+  reforma:'<path d="M14 6l4 4-9 9H5v-4z"/><path d="M13 4l7 7"/>',
+  contactos:'<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21 20a6 6 0 0 0-4-5.6"/>'
+};
+const secIcon=(k,sz=22)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SEC_IC[k]||""}</svg>`;
+function sections(p){
+  const prods=S.productos.filter(x=>x.proyectoId===p.id), tasks=S.tareas.filter(x=>x.proyectoId===p.id);
+  return [["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["medidas","Medidas",S.medidas.filter(m=>m.proyectoId===p.id).length],["conjuntos","Conjuntos",S.conjuntos.filter(c=>c.proyectoId===p.id).length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]];
+}
 function projMenuHTML(){
-  const cur=S.proyId, ps=[...S.proyectos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es"));
-  return `${ps.length?`<span class="menu-l">Tus proyectos</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${S.view!=="presupuestos"&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}<hr>`:""}
+  const cur=S.proyId, ps=[...S.proyectos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")), pc=S.proyectos.find(x=>x.id===cur);
+  const grid=pc?`<span class="menu-l">${esc(pc.nombre)}</span><div class="app-grid">${sections(pc).map(([k,n,c])=>`<button type="button" role="menuitem" class="app-t" data-tab="${k}" aria-current="${S.view!=="presupuestos"&&S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}${c!==""&&c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</div><hr>`:"";
+  return `${grid}${ps.length?`<span class="menu-l">Tus proyectos</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${S.view!=="presupuestos"&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}<hr>`:""}
     <button type="button" role="menuitem" data-act="newProj">＋ Nuevo proyecto</button>
     <button type="button" role="menuitem" data-act="allBudgets"${S.view==="presupuestos"?' aria-checked="true"':""}>Presupuestos de todo</button>
     ${window.__pwaPrompt?`<hr><button type="button" role="menuitem" data-act="install">Instalar la app</button>`:""}`;
@@ -2521,7 +2545,7 @@ document.addEventListener("click",e=>{
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
   if(d.vista){ S.editShape=false; S.vista=d.vista; lsSet("proletix:vista",S.vista); render(); return; }
-  if(d.tab){ S.editShape=false; S.tab=d.tab; lsSet("proletix:tab",S.tab); render(); return; }
+  if(d.tab){ S.editShape=false; S.view="proyecto"; S.tab=d.tab; window.scrollTo(0,0); lsSet("proletix:tab",S.tab); render(); return; }
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||""}); return; }
   if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); return; }
@@ -2573,6 +2597,7 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "openMenu": { const m=$("projMenu"); m.open=true; fitMenu(m); break; }
     case "bell": openBell(); break;
     case "checkPrices": checkPrices(true); break;
     case "askNotify": try{ Notification.requestPermission().then(p=>{ toast(p==="granted"?"Te avisaré en el móvil cuando baje un precio.":"Sin permiso para avisos: los verás solo dentro de la app."); if($("dlgBell").open) $("bellBody").innerHTML=bellHTML(); }); }catch{ toast("Este navegador no permite avisos."); } break;
