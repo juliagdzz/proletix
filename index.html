@@ -35,19 +35,9 @@ addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = do
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --r:6px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#221920; --surface:#2D2129; --sunk:#3A2A35; --ink:#FCF4F0; --muted:#CFB3C2; --line:#4A3542;
-  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB; --beige:#3A2D27; --granate:#FFB4A9;
-  --ok:#7CC79A; --warn:#F2B45A; --bad:#FF8A80;
-  --floor:#2D2129; --wall:#FFD5FB; --grid:rgb(252 244 240 / .07);
-  --f0:#2B3A5C; --f1:#5C2A14; --f2:#4F2A4C; --f3:#4A2222; --f4:#42302A; --f5:#3A2C30; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#221920; --surface:#2D2129; --sunk:#3A2A35; --ink:#FCF4F0; --muted:#CFB3C2; --line:#4A3542;
-  --red:#F86C2F; --red-ink:#221920; --gold:#C0D6FF; --gold-ink:#221920; --pink:#6B3A63; --pink-ink:#FFD5FB; --beige:#3A2D27; --granate:#FFB4A9;
-  --ok:#7CC79A; --warn:#F2B45A; --bad:#FF8A80;
-  --floor:#2D2129; --wall:#FFD5FB; --grid:rgb(252 244 240 / .07);
-  --f0:#2B3A5C; --f1:#5C2A14; --f2:#4F2A4C; --f3:#4A2222; --f4:#42302A; --f5:#3A2C30; color-scheme:dark}
 
+/* Siempre en modo claro, también si el móvil o Claude están en oscuro */
+:root,:root[data-theme="dark"]{color-scheme:light}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
 .wrap{max-width:1240px;margin:0 auto;padding-block:16px 48px;
