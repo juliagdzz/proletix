@@ -259,6 +259,29 @@ table.budget tr.tot td{font-weight:700;border-top:2px solid var(--granate);borde
 table.budget .ok{color:var(--ok);font-weight:600}
 .tipo{font-size:12px;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .t-c{background:var(--pink);color:var(--pink-ink)}.t-r{background:var(--gold);color:var(--gold-ink)}.t-g{background:var(--beige);color:var(--granate)}
+.cjs{display:flex;flex-direction:column;gap:12px}
+.cj{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cj summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;cursor:pointer;list-style:none}
+.cj summary::-webkit-details-marker{display:none}
+.cj[open] summary{border-bottom:1px solid var(--line);background:var(--beige)}
+.cj-sw{width:34px;height:34px;border-radius:8px;border:1px solid rgb(0 0 0 / .1)}
+.cj-h b{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch:85%;color:var(--granate);display:block;line-height:1.1}
+.cj-h small,.cj-tot small{display:block;font-size:12px;color:var(--muted)}
+.cj-tot{text-align:right}.cj-tot .price{font-family:var(--f-display);font-size:24px;font-weight:800;font-stretch:85%;color:var(--granate)}
+.cj-b{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.el-g{display:flex;justify-content:space-between;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--granate);font-weight:600;padding:10px 0 4px;border-bottom:1px solid rgb(109 1 1 / .12)}
+.el{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;padding:7px 4px;border-bottom:1px dashed var(--line);cursor:pointer}
+.el:hover{background:var(--bg)}
+.el input{width:18px;height:18px;accent-color:var(--red)}
+.el-n{min-width:0;overflow-wrap:anywhere}.el-n small{display:block;font-size:12px;color:var(--muted)}
+.el-q{font-size:12px;color:var(--muted);white-space:nowrap}.el-t{font-size:14px;min-width:70px;text-align:right}
+.el.done .el-n{text-decoration:line-through;color:var(--muted)}
+@media (max-width:560px){.el{grid-template-columns:auto minmax(0,1fr) auto}.el-q{grid-column:2;grid-row:2}}
+.qa{display:grid;grid-template-columns:minmax(0,1fr) 70px 80px auto auto;gap:6px;margin-top:10px}
+.qa input,.qa select{background:var(--beige);border:0;border-radius:var(--r);padding:7px 10px;min-width:0}
+@media (max-width:560px){.qa{grid-template-columns:1fr 1fr 1fr}.qa input:first-child{grid-column:1/-1}}
+.cj-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.t-j{background:#E4F0D9;color:#2F5A1F}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -329,7 +352,7 @@ table.budget .ok{color:var(--ok);font-weight:600}
       <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí"></textarea>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm" type="button" id="d_fill">Rellenar ficha</button><span class="hint" id="d_fillmsg"></span></div>
     </details>
-    <div class="field"><label for="d_busco">¿Qué buscas?</label><input id="d_busco" required list="needs" placeholder="Sofá del salón"><span class="hint">Los productos con el mismo nombre aquí se comparan juntos</span></div>
+    <div class="field"><label for="d_lista">Lista</label><select id="d_lista"></select><input id="d_busco" placeholder="Nombre de la lista nueva: Sofá del salón, Lámpara…" hidden><span class="hint">Los productos de la misma lista se comparan juntos</span></div>
     <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
     <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
     <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
@@ -344,7 +367,7 @@ table.budget .ok{color:var(--ok);font-weight:600}
     <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="d_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+    <div class="right"><button class="btn primary" value="ok" id="d_ok">Añadir</button></div></div>
 </form></dialog>
 <datalist id="needs"></datalist><datalist id="shops"></datalist>
 
@@ -363,6 +386,53 @@ table.budget .ok{color:var(--ok);font-weight:600}
     <div class="field"><label for="t_notas">Notas</label><textarea id="t_notas"></textarea></div>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="t_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+</form></dialog>
+
+<!-- Lista -->
+<dialog id="dlgList"><form method="dialog" id="fList">
+  <div class="dlg-h"><h2>Nueva lista</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="l_nombre">Nombre</label><input id="l_nombre" required placeholder="Mueble de TV, sofá, lámpara de techo…"></div>
+    <div class="field"><label for="l_room">Estancia</label><select id="l_room"></select></div>
+    <p class="field hint" style="margin:0">Se queda guardada para elegirla cada vez que añadas un producto.</p>
+  </div>
+  <div class="dlg-f"><div class="right"><button class="btn primary" value="ok">Crear lista</button></div></div>
+</form></dialog>
+
+<!-- Conjunto -->
+<dialog id="dlgCj"><form method="dialog" id="fCj">
+  <div class="dlg-h"><h2 id="dlgCjT">Nuevo conjunto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="cj_nombre">Nombre</label><input id="cj_nombre" required placeholder="Escritorio a medida, estantería del recibidor…"></div>
+    <div class="field h3"><label for="cj_room">Estancia</label><select id="cj_room"></select></div>
+    <div class="field h3"><label for="cj_forma">Tipo de mueble</label><select id="cj_forma"></select></div>
+    <div class="field h2"><label for="cj_ancho">Ancho (cm)</label><input id="cj_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="cj_fondo">Fondo (cm)</label><input id="cj_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="cj_alto">Alto (cm)</label><input id="cj_alto" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h3"><label for="cj_color">Color</label><input id="cj_color" type="color" value="#b07a55" style="height:38px;padding:2px 4px"></div>
+    <p class="field h3 hint" style="margin:0;align-self:end">Las medidas del mueble terminado, para el plano</p>
+    <div class="field"><label for="cj_notas">Notas</label><textarea id="cj_notas" placeholder="Idea, medidas de cada pieza, pasos…"></textarea></div>
+  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="cj_del" hidden>Eliminar conjunto</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+</form></dialog>
+
+<!-- Elemento de un conjunto -->
+<dialog id="dlgEl"><form method="dialog" id="fEl">
+  <div class="dlg-h"><h2>Elemento</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="el_nombre">Nombre</label><input id="el_nombre" required></div>
+    <div class="field h3"><label for="el_tipo">Tipo</label><select id="el_tipo"><option value="pieza">Pieza (tablero, cajonera, patas…)</option><option value="material">Material o herraje (tornillos, masilla…)</option></select></div>
+    <div class="field h3"><label for="el_cant">Cantidad</label><input id="el_cant" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h3"><label for="el_ud">Unidad</label><select id="el_ud"></select></div>
+    <div class="field h3"><label for="el_precio">Precio por unidad (€)</label><input id="el_precio" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h3"><label for="el_tienda">Tienda</label><input id="el_tienda" list="shops"></div>
+    <div class="field h3"><label for="el_url">Enlace</label><input id="el_url" type="url" placeholder="https://"></div>
+    <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="el_comprado" style="width:auto"> Ya lo tengo</label>
+    <div class="field"><label for="el_notas">Notas</label><textarea id="el_notas" placeholder="Medida de corte, referencia…"></textarea></div>
+  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="el_del">Quitar del conjunto</button>
     <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
 </form></dialog>
 
@@ -410,9 +480,9 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[],
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
-const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos"];
+const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const eur2 = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:2});
 const fdate = d => d ? new Date(d+"T00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}) : "";
@@ -499,9 +569,9 @@ function render(){
       </div>
       <button class="btn" type="button" data-act="editProj">Editar proyecto</button>
     </section>
-    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
+    <nav class="tabs site-nav" role="tablist" aria-label="Secciones del proyecto">${[["plano","Plano",roomsOf(p.id).length],["productos","Productos",prods.filter(x=>x.estado!=="descartado").length],["conjuntos","Conjuntos",S.conjuntos.filter(c=>c.proyectoId===p.id).length],["presupuesto","Presupuesto",""],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
       .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}${c!==""?`<span class="n">${c}</span>`:""}</button>`).join("")}</nav>
-    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
+    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
 }
@@ -710,6 +780,7 @@ function planHTML(p,r){
       ${listsHTML(p,r)}`}
       ${es?"":`<div class="panel"><h3>Añadir al plano</h3>
         <div class="cat">
+          ${S.conjuntos.filter(c=>c.proyectoId===p.id&&+c.ancho>0&&+c.fondo>0).map((c,i)=>`${i?"":`<div class="cat-g">Mis conjuntos</div>`}<button class="prod" type="button" data-addcj="${esc(c.id)}"><span>${esc(c.nombre)}</span><span>${cm(c.ancho)}×${cm(c.fondo)}</span></button>`).join("")}
           ${myProds.length?`<div class="cat-g">Mis productos</div>${myProds.map(x=>`<button class="prod" type="button" data-addprod="${esc(x.id)}"><span>${esc(x.nombre)}</span><span>${cm(x.ancho)}×${cm(x.fondo)}</span></button>`).join("")}`:""}
           ${CATALOGO.map(([g,list],gi)=>`<div class="cat-g">${g}</div>${list.map((c,ci)=>`<button type="button" data-addgen="${gi}.${ci}"><span>${c[0]}</span><span>${c[1]}×${c[2]}</span></button>`).join("")}`).join("")}
         </div>
@@ -1152,14 +1223,15 @@ ${t.slice(0,60000)}`;
   const c=applyImport(data&&typeof data==="object"?data:parseText(t));
   msg.textContent=c?"Listo. Revisa los datos antes de guardar.":"No he encontrado precio ni medidas. Rellénalos a mano.";
 }
-const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x)); return g; };
+const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x));
+  S.listas.filter(l=>l.proyectoId===pid&&l.estanciaId===rid).forEach(l=>{ g[l.nombre] ||= []; }); return g; };
 function listsHTML(p,r){
   const g=groupsIn(p.id,r.id), names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
   const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
   const total=names.reduce((s,n)=>s+(+(win(n)?.precio)||0),0);
   return `<div class="panel"><div class="ph"><h3>Listas de ${esc(r.nombre)}</h3>${total?`<span class="num" title="Suma de lo elegido">${eur.format(total)}</span>`:""}</div>
     ${names.length?names.map(n=>{ const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9));
-      return `<div class="lst"><div class="lst-h"><b>${esc(n)}</b><button class="btn ghost sm" type="button" data-addopt="${esc(n)}">+ Opción</button></div>
+      return `<div class="lst"><div class="lst-h"><b>${esc(n)}</b><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(r.id)}">+ Opción</button></div>${list.length?"":`<span class="muted" style="font-size:12px;padding:2px 8px">Vacía: añade la primera opción</span>`}
         ${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0;
           return `<button type="button" class="opt" data-choose="${esc(x.id)}" aria-pressed="${on}"><span class="radio"></span><span class="on">${esc(x.nombre)}<small>${esc(x.tienda||"")}${fits?`${x.tienda?" · ":""}${cm(x.ancho)}×${cm(x.fondo)}`:`${x.tienda?" · ":""}sin medidas`}${x.estado==="comprado"?" · comprado":""}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></button>`}).join("")}</div>`}).join("")
     :`<p class="muted" style="margin:0;font-size:13px">Crea una lista por cada cosa que buscas aquí (mueble de TV, sofá, lámpara…), mete las opciones que vayas viendo y pulsa una para verla en el plano.</p>`}
@@ -1235,6 +1307,7 @@ function budgetRows(p){
   return [
     ...prods.map(x=>({concepto:x.nombre,sub:x.busco,room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:+x.precio||0,real:x.estado==="comprado"?+x.precio||0:0,attr:`data-editprod="${esc(x.id)}"`})),
     ...tasks.map(t=>({concepto:t.titulo,sub:S.contactos.find(c=>c.id===t.contactoId)?.nombre||"",room:t.estanciaId||"",tipo:"Reforma",estado:(ESTADOS_T.find(e=>e[0]===t.estado)||ESTADOS_T[0])[1],ok:t.estado==="hecha",prev:+t.prev||+t.real||0,real:+t.real||0,attr:`data-edittask="${esc(t.id)}"`})),
+    ...S.conjuntos.filter(c=>c.proyectoId===p.id&&(c.elementos||[]).length).map(c=>({concepto:c.nombre,sub:`${c.elementos.length} elementos`,room:c.estanciaId||"",tipo:"Conjunto",estado:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0?"Todo comprado":`${c.elementos.filter(e=>e.comprado).length}/${c.elementos.length} comprado`,ok:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0,prev:cjTotal(c),real:cjPaid(c),attr:`data-tab="conjuntos"`})),
     ...gastos.map(g=>({concepto:g.concepto,sub:g.notas||"",room:g.estanciaId||"",tipo:"Otro gasto",estado:g.pagado?"Pagado":"Pendiente",ok:!!g.pagado,prev:+g.importe||0,real:g.pagado?+g.importe||0:0,attr:`data-editgasto="${esc(g.id)}"`}))
   ];
 }
@@ -1252,7 +1325,7 @@ function budgetHTML(p){
     <div class="fig"><span class="label">${max?(left>=0?"Te queda":"Te pasas"):"Por decidir"}</span><span class="v" style="${max&&left<0?"color:var(--bad)":""}">${max?eur.format(Math.abs(left)):open.length}</span><span class="s">${max?(open.length?`y ${open.length} ${open.length>1?"listas":"lista"} sin elegir`:"todo decidido"):(open.length>1?"listas sin producto elegido":"lista sin producto elegido")}</span></div>
   </section>`;
   const head=`<div class="toolbar"><span class="label">Todo lo que cuesta este proyecto, por estancias</span><button class="btn primary" type="button" data-act="newGasto">Añadir gasto</button></div>`;
-  if(!rows.length) return figs+head+`<div class="blank"><h2>Aún no hay nada que sumar</h2><p>Aquí se suman solos los productos que elijas en cada lista, las tareas de la reforma con su coste y los gastos sueltos que añadas (transporte, montaje, licencia de obra…).</p></div>`;
+  if(!rows.length) return figs+head+`<div class="blank"><h2>Aún no hay nada que sumar</h2><p>Aquí se suman solos los productos que elijas en cada lista, tus conjuntos, las tareas de la reforma con su coste y los gastos sueltos que añadas (transporte, montaje, licencia de obra…).</p></div>`;
   const roomsOrder=["",...roomsOf(p.id).map(r=>r.id)];
   const extra=[...new Set(rows.map(r=>r.room))].filter(id=>!roomsOrder.includes(id));
   let body="";
@@ -1260,9 +1333,9 @@ function budgetHTML(p){
     const rs=rows.filter(r=>r.room===rid); if(!rs.length) return;
     const sp=rs.reduce((s,r)=>s+r.prev,0), sr=rs.reduce((s,r)=>s+r.real,0);
     body+=`<tr class="grp"><td colspan="3">${esc(roomName(rid)||"Toda la casa")}</td><td class="r num">${eur.format(sp)}</td><td class="r num">${eur.format(sr)}</td></tr>`;
-    const ord={Compra:0,Reforma:1,"Otro gasto":2};
+    const ord={Compra:0,Conjunto:1,Reforma:2,"Otro gasto":3};
     rs.sort((a,b)=>ord[a.tipo]-ord[b.tipo]||b.prev-a.prev).forEach(r=>{
-      body+=`<tr class="row" ${r.attr} tabindex="0"><td><b>${esc(r.concepto)}</b>${r.sub?`<small>${esc(r.sub)}</small>`:""}</td><td><span class="tipo t-${r.tipo==="Compra"?"c":r.tipo==="Reforma"?"r":"g"}">${r.tipo}</span></td>
+      body+=`<tr class="row" ${r.attr} tabindex="0"><td><b>${esc(r.concepto)}</b>${r.sub?`<small>${esc(r.sub)}</small>`:""}</td><td><span class="tipo t-${r.tipo==="Compra"?"c":r.tipo==="Reforma"?"r":r.tipo==="Conjunto"?"j":"g"}">${r.tipo}</span></td>
         <td><span class="${r.ok?"ok":"muted"}">${r.estado}</span></td><td class="r num">${eur.format(r.prev)}</td><td class="r num">${r.real?eur.format(r.real):"—"}</td></tr>`;
     });
   });
@@ -1280,12 +1353,106 @@ function openGasto(g){
   $("dlgGasto").showModal();
 }
 
+/* ---------- Listas guardadas ---------- */
+function listsOf(pid){
+  const m=new Map();
+  S.listas.filter(l=>l.proyectoId===pid).forEach(l=>m.set(l.nombre,{nombre:l.nombre,estanciaId:l.estanciaId||"",id:l.id}));
+  S.productos.filter(x=>x.proyectoId===pid&&x.busco).forEach(x=>{ if(!m.has(x.busco)) m.set(x.busco,{nombre:x.busco,estanciaId:x.estanciaId||""}); });
+  return [...m.values()].sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+}
+function fillLists(pid,val){
+  const ls=listsOf(pid), sel=$("d_lista");
+  sel.innerHTML=ls.map(l=>`<option value="${esc(l.nombre)}">${esc(l.nombre)}${l.estanciaId?` · ${esc(roomName(l.estanciaId))}`:""}</option>`).join("")+`<option value="__new">＋ Nueva lista…</option>`;
+  sel.value=ls.some(l=>l.nombre===val)?val:"__new";
+  if(sel.value==="__new"&&val) $("d_busco").value=val;
+  syncListField();
+}
+function syncListField(){
+  const isNew=$("d_lista").value==="__new";
+  $("d_busco").hidden=!isNew;
+  if(!isNew){ $("d_busco").value=$("d_lista").value;
+    const l=listsOf(edD?.proyectoId||S.proyId).find(x=>x.nombre===$("d_lista").value);
+    if(l&&l.estanciaId&&!$("d_room").value) $("d_room").value=l.estanciaId; }
+  updFormaHint();
+}
+async function ensureList(pid,nombre,estanciaId){
+  if(!nombre||S.listas.some(l=>l.proyectoId===pid&&l.nombre===nombre)) return;
+  await save("listas",uid(),{proyectoId:pid,nombre,estanciaId:estanciaId||"",creado:Date.now()}).catch(()=>{});
+}
+let edL=null;
+function openList(preset={}){
+  edL=null; $("l_nombre").value=""; fill($("l_room"),roomOpts(S.proyId),preset.estanciaId||"");
+  $("dlgList").showModal(); setTimeout(()=>$("l_nombre").focus(),50);
+}
+
+/* ---------- Conjuntos: bloques hechos de piezas y materiales ---------- */
+const UDS=[["ud","ud"],["m","m"],["m²","m²"],["kg","kg"],["l","l"],["caja","caja"],["paquete","paquete"]];
+const cjTotal=c=>(c.elementos||[]).reduce((s,e)=>s+(+e.cantidad||1)*(+e.precio||0),0);
+const cjPaid=c=>(c.elementos||[]).filter(e=>e.comprado).reduce((s,e)=>s+(+e.cantidad||1)*(+e.precio||0),0);
+function conjuntosHTML(p){
+  const list=S.conjuntos.filter(c=>c.proyectoId===p.id).sort((a,b)=>(a.creado||0)-(b.creado||0));
+  const head=`<div class="toolbar"><span class="label">Tus muebles hechos por piezas: lo que compras y lo que gastas en montarlos</span><button class="btn primary" type="button" data-act="newCj">Nuevo conjunto</button></div>`;
+  if(!list.length) return head+`<div class="blank"><h2>Crea tu primer conjunto</h2><p>Por ejemplo «Escritorio a medida»: añade las piezas (tablero, cajonera, patas) y los materiales (masilla, tornillos, lija) con su cantidad y precio. Verás el total, lo que te falta por comprar, y podrás colocar el conjunto en el plano como un solo mueble.</p></div>`;
+  return head+`<div class="cjs">${list.map(c=>{
+    const els=c.elementos||[], tot=cjTotal(c), paid=cjPaid(c), done=els.filter(e=>e.comprado).length, open=!S.closedCj?.has(c.id);
+    const grp=t=>els.filter(e=>(e.tipo||"pieza")===t);
+    const rows=t=>grp(t).map(e=>`<div class="el${e.comprado?" done":""}" data-eledit="${esc(c.id)}|${esc(e.id)}" role="button" tabindex="0">
+        <input type="checkbox" data-elchk="${esc(c.id)}|${esc(e.id)}" ${e.comprado?"checked":""} aria-label="Comprado: ${esc(e.nombre)}">
+        <span class="el-n">${esc(e.nombre)}${e.tienda||e.url?`<small>${esc(e.tienda||"")}${safeUrl(e.url)?` · <a href="${esc(e.url)}" target="_blank" rel="noopener" data-stop>ver ↗</a>`:""}</small>`:""}</span>
+        <span class="el-q num">${(+e.cantidad||1).toLocaleString("es-ES")} ${esc(e.ud||"ud")}${+e.precio?` × ${eur2.format(+e.precio)}`:""}</span>
+        <span class="el-t num">${+e.precio?eur2.format((+e.cantidad||1)*(+e.precio)):"—"}</span></div>`).join("");
+    const sect=(t,n)=>grp(t).length?`<div class="el-g">${n}<span class="num">${eur.format(grp(t).reduce((s,e)=>s+(+e.cantidad||1)*(+e.precio||0),0))}</span></div>${rows(t)}`:"";
+    const dims=+c.ancho>0&&+c.fondo>0;
+    return `<details class="cj" data-cj="${esc(c.id)}"${open?" open":""}>
+      <summary><span class="cj-sw" style="background:${/^#[0-9a-f]{6}$/i.test(c.color||"")?c.color:"var(--f4)"}"></span>
+        <span class="cj-h"><b>${esc(c.nombre)}</b><small>${[roomName(c.estanciaId),dims?`${cm(c.ancho)}×${cm(c.fondo)}${+c.alto?`×${cm(c.alto)}`:""} cm`:"",`${els.length} elemento${els.length===1?"":"s"}`].filter(Boolean).join(" · ")}</small></span>
+        <span class="cj-tot"><span class="price">${eur.format(tot)}</span><small>${els.length?`${done}/${els.length} comprado${tot-paid>0?` · faltan ${eur.format(tot-paid)}`:""}`:"vacío"}</small></span></summary>
+      <div class="cj-b">
+        ${els.length?`<div class="bar" style="margin-bottom:6px"><u style="width:${tot?paid/tot*100:done/els.length*100}%"></u></div>`:""}
+        ${sect("pieza","Piezas")}${sect("material","Materiales y herrajes")}
+        <div class="qa"><input id="qa_n_${esc(c.id)}" placeholder="Añadir: tablero, tornillos 4×30, masilla…" data-qa="${esc(c.id)}" aria-label="Nombre del elemento"><input id="qa_c_${esc(c.id)}" type="number" min="0" step="any" placeholder="Cant." data-qa="${esc(c.id)}" aria-label="Cantidad" inputmode="decimal"><input id="qa_p_${esc(c.id)}" type="number" min="0" step="any" placeholder="€/ud" data-qa="${esc(c.id)}" aria-label="Precio por unidad" inputmode="decimal"><select id="qa_t_${esc(c.id)}" aria-label="Tipo"><option value="pieza">Pieza</option><option value="material">Material</option></select><button class="btn sm" type="button" data-qadd="${esc(c.id)}">Añadir</button></div>
+        ${c.notas?`<p class="muted" style="margin:4px 0 0;font-size:13px">${esc(c.notas)}</p>`:""}
+        <div class="cj-f"><button class="btn sm" type="button" data-editcj="${esc(c.id)}">Editar conjunto</button>${dims?`<button class="btn sm" type="button" data-placecj="${esc(c.id)}">Colocar en plano</button>`:`<span class="muted" style="font-size:12px">Ponle medidas para colocarlo en el plano</span>`}<button class="btn sm ghost" type="button" data-dupcj="${esc(c.id)}">Duplicar</button></div>
+      </div></details>`;}).join("")}</div>`;
+}
+let edCj=null;
+function openCj(c){
+  edCj=c||null; $("dlgCjT").textContent=c?"Editar conjunto":"Nuevo conjunto";
+  fill($("cj_room"),roomOpts(c?.proyectoId||S.proyId),c?.estanciaId||S.roomId||""); fill($("cj_forma"),FORMAS,c?.forma||"");
+  $("cj_nombre").value=c?.nombre||""; $("cj_ancho").value=c?.ancho??""; $("cj_fondo").value=c?.fondo??""; $("cj_alto").value=c?.alto??"";
+  $("cj_color").value=/^#[0-9a-f]{6}$/i.test(c?.color||"")?c.color:"#b07a55"; $("cj_notas").value=c?.notas||"";
+  $("cj_del").hidden=!c;
+  if(c) armDelete($("cj_del"),async()=>{ for(const it of S.items.filter(i=>i.conjuntoId===c.id)) await remove("items",it.id); await remove("conjuntos",c.id); $("dlgCj").close(); toast("Conjunto eliminado"); });
+  $("dlgCj").showModal();
+}
+let edEl=null;
+function openEl(cid,eid){
+  const c=S.conjuntos.find(x=>x.id===cid), e=c?.elementos?.find(x=>x.id===eid); if(!e) return;
+  edEl={cid,eid}; fill($("el_ud"),UDS,e.ud||"ud");
+  $("el_nombre").value=e.nombre||""; $("el_tipo").value=e.tipo||"pieza"; $("el_cant").value=e.cantidad??1; $("el_precio").value=e.precio??"";
+  $("el_tienda").value=e.tienda||""; $("el_url").value=e.url||""; $("el_comprado").checked=!!e.comprado; $("el_notas").value=e.notas||"";
+  armDelete($("el_del"),async()=>{ await saveEls(c,(c.elementos||[]).filter(x=>x.id!==eid)); $("dlgEl").close(); toast("Elemento quitado"); });
+  $("dlgEl").showModal();
+}
+async function saveEls(c,els){ const {id,...b}=c; await save("conjuntos",id,{...b,elementos:els}).catch(()=>{}); }
+async function quickAdd(cid){
+  const c=S.conjuntos.find(x=>x.id===cid); if(!c) return;
+  const n=$("qa_n_"+cid).value.trim(); if(!n){ $("qa_n_"+cid).focus(); return; }
+  const el={id:uid(),nombre:n,cantidad:num($("qa_c_"+cid).value)||1,precio:num($("qa_p_"+cid).value),tipo:$("qa_t_"+cid).value,ud:"ud",comprado:false};
+  if(!$("qa_t_"+cid).dataset.touched&&/tornill|clav|taco|masilla|cola|pegament|lija|pintura|barniz|silicona|esc?uadra|bisagra|tirador|herraje|cinta|aceite|tinte/i.test(n)) el.tipo="material";
+  ["n","c","p"].forEach(k=>$(`qa_${k}_${cid}`).value="");
+  await saveEls(c,[...(c.elementos||[]),el]);
+  setTimeout(()=>$("qa_n_"+cid)?.focus(),30);
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 function shopHTML(p,prods){
-  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><button class="btn primary" type="button" data-act="newProd">Guardar producto</button></div>`;
-  if(!prods.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right"><button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
+  const emptyLists=listsOf(p.id).filter(l=>!prods.some(x=>x.busco===l.nombre));
+  if(!prods.length&&!emptyLists.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
   const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
+  emptyLists.forEach(l=>{ groups[l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")] ||= []; });
   const order=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es"));
   const rank={comprado:0,elegido:1,favorito:2,visto:3,descartado:4};
   return head+order.map(n=>{
@@ -1294,7 +1461,8 @@ function shopHTML(p,prods){
     const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
     const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
     return `<section class="need"><div class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
-      <span class="sum">${list.length} opci${list.length>1?"ones":"ón"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}</span></div>
+      <span class="sum">${list.length?`${list.length} opci${list.length>1?"ones":"ón"}`:"Lista vacía"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}
+        <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}</span></div>
       <div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
         return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
@@ -1357,7 +1525,7 @@ function openProj(p){
   if(p) armDelete($("j_del"),async()=>{
     const rids=roomsOf(p.id).map(r=>r.id);
     for(const it of S.items.filter(i=>rids.includes(i.estanciaId))) await remove("items",it.id);
-    for(const col of ["estancias","productos","tareas","gastos"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
+    for(const col of ["estancias","productos","tareas","gastos","listas","conjuntos"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
     await remove("proyectos",p.id); $("dlgProj").close(); S.proyId=null; lsSet("proletix:proy",null); toast("Proyecto eliminado");
   });
   $("dlgProj").showModal();
@@ -1396,13 +1564,13 @@ $("fRoom").addEventListener("submit",async ev=>{
 
 let edD=null;
 function openProd(x,preset={}){
-  edD=x||null; $("dlgProdT").textContent=x?"Editar producto":"Guardar producto";
+  edD=x||null; $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
   const pid=x?.proyectoId||S.proyId;
   $("needs").innerHTML=[...new Set(S.productos.filter(y=>y.proyectoId===pid).map(y=>y.busco))].map(n=>`<option value="${esc(n)}">`).join("");
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
   fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
-  $("d_busco").value=x?.busco||preset.busco||""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
-  fill($("d_forma"),FORMAS,x?.forma||""); updFormaHint();
+  $("d_busco").value=""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
+  fill($("d_forma"),FORMAS,x?.forma||""); fillLists(pid,x?.busco||preset.busco||S.lastList||"");
   $("d_url").value=x?.url||""; $("d_img").value=x?.imagen||""; $("d_color").value=x?.color||colorFromName(x?.nombre)||"#b07a55"; $("d_color").dataset.set=x?.color?"1":""; $("d_colormsg").textContent=x?.color?"Color guardado":"Para pintarlo en el plano"; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
   $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
@@ -1411,11 +1579,13 @@ function openProd(x,preset={}){
 }
 $("fProd").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
+  if(!$("d_busco").value.trim()){ ev.preventDefault(); $("d_busco").hidden=false; $("d_busco").focus(); toast("Elige una lista o escribe el nombre de una nueva."); return; }
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
     forma:$("d_forma").value,url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
     estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
   try{
+    S.lastList=data.busco; await ensureList(data.proyectoId,data.busco,data.estanciaId);
     await save("productos",id,data);
     // si el producto está en el plano, actualiza su tamaño
     for(const it of S.items.filter(i=>i.productoId===id)) if(+data.ancho>0&&+data.fondo>0&&(it.w!==+data.ancho||it.d!==+data.fondo||it.nombre!==data.nombre||(data.color&&it.hex!==data.color)||(it.forma||"")!==data.forma)){ const {id:iid,...b}=it; await save("items",iid,{...b,w:+data.ancho,d:+data.fondo,nombre:data.nombre,forma:data.forma,...(data.color?{hex:data.color}:{})}); }
@@ -1464,6 +1634,29 @@ $("fCont").addEventListener("submit",async ev=>{
 function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 $("btnNewProj").onclick=()=>openProj(null);
+$("fList").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const n=$("l_nombre").value.trim(); if(!n) return;
+  if(listsOf(S.proyId).some(l=>l.nombre===n)){ toast("Ya tienes una lista con ese nombre."); return; }
+  await save("listas",uid(),{proyectoId:S.proyId,nombre:n,estanciaId:$("l_room").value,creado:Date.now()}).catch(()=>{}); S.lastList=n; toast(`Lista «${n}» creada`);
+});
+$("fCj").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=edCj?.id||uid();
+  const data={proyectoId:edCj?.proyectoId||S.proyId,nombre:$("cj_nombre").value.trim(),estanciaId:$("cj_room").value,forma:$("cj_forma").value,ancho:num($("cj_ancho").value),fondo:num($("cj_fondo").value),alto:num($("cj_alto").value),
+    color:$("cj_color").value,notas:$("cj_notas").value.trim(),elementos:edCj?.elementos||[],creado:edCj?.creado||Date.now()};
+  try{ await save("conjuntos",id,data);
+    for(const it of S.items.filter(i=>i.conjuntoId===id)){ const {id:iid,...b}=it; await save("items",iid,{...b,nombre:data.nombre,w:+data.ancho||it.w,d:+data.fondo||it.d,h:+data.alto||"",forma:data.forma,hex:data.color}); }
+    if(!edCj){ S.tab="conjuntos"; render(); setTimeout(()=>$("qa_n_"+id)?.focus(),60); }
+    toast(edCj?"Conjunto guardado":"Conjunto creado: añade sus piezas y materiales"); }catch{}
+});
+$("fEl").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok"||!edEl) return;
+  const c=S.conjuntos.find(x=>x.id===edEl.cid); if(!c) return;
+  const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
+  await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
+});
+document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("details.cj")){ if(dd.open) S.closedCj.delete(dd.dataset.cj); else S.closedCj.add(dd.dataset.cj); } },true);
 $("fGasto").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
   const id=edG?.id||uid();
@@ -1475,11 +1668,12 @@ $("btnInstall").onclick=async()=>{ const ev=window.__pwaPrompt; if(!ev) return; 
 $("d_fill").onclick=fillFromPaste;
 function updFormaHint(){ const o=$("d_forma").options[0]; if(o) o.textContent="Automático: "+((FORMAS.find(x=>x[0]===detectForma(`${$("d_nombre").value} ${$("d_busco").value}`))||["","Bloque"])[1]); }
 ["d_nombre","d_busco"].forEach(i=>$(i).addEventListener("input",updFormaHint));
+$("d_lista").addEventListener("change",()=>{ syncListField(); if($("d_lista").value==="__new"){ $("d_busco").value=""; $("d_busco").focus(); } });
 $("d_color").addEventListener("input",()=>{ $("d_color").dataset.set="1"; $("d_colormsg").textContent="Color elegido por ti"; });
 $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ const c=colorFromName($("d_nombre").value); if(c){ $("d_color").value=c; $("d_colormsg").textContent="Sacado del nombre"; } } });
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -1492,7 +1686,16 @@ document.addEventListener("click",e=>{
     if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
     S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
-  if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:r?.id||""}); return; }
+  if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
+  if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
+  if(d.editcj){ openCj(S.conjuntos.find(x=>x.id===d.editcj)); return; }
+  if(d.qadd){ quickAdd(d.qadd); return; }
+  if(d.elchk){ e.stopPropagation(); const [cid,eid]=d.elchk.split("|"), c=S.conjuntos.find(x=>x.id===cid); if(c) saveEls(c,(c.elementos||[]).map(x=>x.id===eid?{...x,comprado:t.checked}:x)); return; }
+  if(d.eledit){ if(e.target.closest("a")) return; const [cid,eid]=d.eledit.split("|"); openEl(cid,eid); return; }
+  if(d.placecj||d.addcj){ const c=S.conjuntos.find(x=>x.id===(d.placecj||d.addcj)); const target=S.estancias.find(x=>x.id===c.estanciaId)||r;
+    if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
+    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:c.nombre,w:+c.ancho,d:+c.fondo,h:+c.alto||"",forma:c.forma||"",hex:/^#[0-9a-f]{6}$/i.test(c.color||"")?c.color:"",back:true,color:4,conjuntoId:c.id}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
+  if(d.dupcj){ const c=S.conjuntos.find(x=>x.id===d.dupcj); const {id,...b}=c; save("conjuntos",uid(),{...b,nombre:b.nombre+" (copia)",elementos:(b.elementos||[]).map(x=>({...x,id:uid(),comprado:false})),creado:Date.now()}).catch(()=>{}); toast("Conjunto duplicado"); return; }
   if(d.editprod){ openProd(S.productos.find(y=>y.id===d.editprod)); return; }
   if(d.cycle){ e.stopPropagation(); const x=S.tareas.find(y=>y.id===d.cycle); const nx={pendiente:"curso",curso:"hecha",hecha:"pendiente"}[x.estado||"pendiente"]; const {id,...b}=x; save("tareas",id,{...b,estado:nx}).catch(()=>{}); return; }
   if(d.editgasto){ openGasto(S.gastos.find(y=>y.id===d.editgasto)); return; }
@@ -1509,7 +1712,8 @@ document.addEventListener("click",e=>{
     case "editShape": S.editShape=true; S.vista="2d"; S.sel=null; S.shapeSel=null; render(); break;
     case "shapeDone": S.editShape=false; S.shapeSel=null; render(); break;
     case "delVtx": { const P0=pts(r).map(x=>[...x]); if(S.shapeSel?.t==="v"&&P0.length>3){ P0.splice(S.shapeSel.i,1); S.shapeSel=null; saveShape(r,P0); } break; }
-    case "newList": openProd(null,{estanciaId:r?.id||""}); setTimeout(()=>$("d_busco").focus(),50); break;
+    case "newList": openList({estanciaId:S.tab==="plano"?r?.id||"":""}); break;
+    case "newCj": openCj(null); break;
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "unsel": S.sel=null; render(); break;
@@ -1524,6 +1728,7 @@ document.addEventListener("change",e=>{
     if(P0&&S.shapeSel?.t==="s"&&+e.target.value>=10){ const a=P0[i], j=(i+1)%P0.length, b=P0[j], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1, nl=+e.target.value;
       P0[j]=[Math.round(a[0]+(b[0]-a[0])/l*nl),Math.round(a[1]+(b[1]-a[1])/l*nl)]; saveShape(r0,P0); } return; }
   if(id==="bud_max"){ const p0=proyecto(); if(p0){ const {id:pid,...b}=p0; save("proyectos",pid,{...b,presupuesto:num(e.target.value)||0}).catch(()=>{}); } return; }
+  if(/^qa_t_/.test(id)){ e.target.dataset.touched="1"; return; }
   if(id==="selProj"){ S.proyId=e.target.value; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); return; }
   const it=selItem(); if(!it) return;
   const v=e.target.value;
@@ -1538,6 +1743,8 @@ document.addEventListener("change",e=>{
   if(id==="pr_y"&&v!=="") saveItem(it,{y:+v});
 });
 document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.matches("[data-qa]")){ e.preventDefault(); quickAdd(e.target.dataset.qa); return; }
+  if(e.key==="Enter"&&e.target.matches("[data-eledit]")){ const [cid,eid]=e.target.dataset.eledit.split("|"); openEl(cid,eid); return; }
   if(e.key==="Enter"&&e.target.matches("tr[data-editprod]")) openProd(S.productos.find(y=>y.id===e.target.dataset.editprod));
   if(e.key==="Enter"&&e.target.matches("tr[data-editgasto]")) openGasto(S.gastos.find(y=>y.id===e.target.dataset.editgasto));
   if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
@@ -1550,7 +1757,7 @@ document.addEventListener("keydown",e=>{
   }
 });
 
-S.tab=lsGet("proletix:tab","plano"); if(S.tab==="compras") S.tab="productos"; if(!["plano","productos","presupuesto","reforma","contactos"].includes(S.tab)) S.tab="plano"; S.vista=lsGet("proletix:vista","3d");
+S.tab=lsGet("proletix:tab","plano"); if(S.tab==="compras") S.tab="productos"; if(!["plano","productos","conjuntos","presupuesto","reforma","contactos"].includes(S.tab)) S.tab="plano"; S.vista=lsGet("proletix:vista","3d");
 boot();
 </script>
 
