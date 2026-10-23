@@ -567,6 +567,8 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
   <div id="finBody" class="fin-b"></div>
 </form></dialog>
 
+<input type="file" id="vcfIn" accept=".vcf,text/vcard,text/x-vcard" hidden>
+
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
   <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
@@ -1871,6 +1873,47 @@ let finRoom=null;
 function openFin(r){ finRoom=r.id; $("dlgFinT").textContent=`Paredes y suelo de ${r.nombre}`; $("finBody").innerHTML=finHTML(r); if(S.vista!=="3d"){ S.vista="3d"; lsSet("proletix:vista","3d"); render(); } $("dlgFin").show(); }
 function saveFin(patch){ const r=S.estancias.find(e=>e.id===finRoom); if(!r) return; const {id,...b}=r; save("estancias",id,{...b,...patch}).then(()=>{ const r2=S.estancias.find(e=>e.id===finRoom); if(r2&&$("dlgFin").open) $("finBody").innerHTML=finHTML(r2); }).catch(()=>{}); }
 
+/* ---------- Importar contactos: agenda del móvil (Android) o archivo .vcf ---------- */
+const CAN_PICK=!!(navigator.contacts&&window.ContactsManager);
+function parseVcf(txt){
+  const lines=txt.replace(/\r\n[ \t]/g,"").replace(/\n[ \t]/g,"").split(/\r?\n/);
+  const out=[]; let c=null;
+  const dec=v=>v.replace(/\\n/gi," ").replace(/\\,/g,",").replace(/\;/g,";").trim();
+  const qp=v=>{ try{ return decodeURIComponent(v.replace(/=\r?\n/g,"").replace(/=([0-9A-F]{2})/gi,"%$1")); }catch{ return v; } };
+  for(const raw of lines){
+    if(/^BEGIN:VCARD/i.test(raw)){ c={tels:[],emails:[]}; continue; }
+    if(/^END:VCARD/i.test(raw)){ if(c&&(c.nombre||c.tels.length)) out.push(c); c=null; continue; }
+    if(!c) continue;
+    const i=raw.indexOf(":"); if(i<0) continue;
+    const head=raw.slice(0,i).toUpperCase(), key=head.split(";")[0].replace(/^ITEM\d+\./,""); let val=raw.slice(i+1);
+    if(/QUOTED-PRINTABLE/.test(head)) val=qp(val);
+    if(key==="FN") c.nombre=dec(val);
+    else if(key==="N"&&!c.nombre){ const p=val.split(";"); c.nombre=dec([p[1],p[0]].filter(Boolean).join(" ")); }
+    else if(key==="TEL") c.tels.push(dec(val));
+    else if(key==="EMAIL") c.emails.push(dec(val));
+    else if(key==="ORG") c.org=dec(val.split(";")[0]);
+    else if(key==="TITLE") c.cargo=dec(val);
+    else if(key==="NOTE") c.notas=dec(val);
+  }
+  return out;
+}
+const normTel=t=>String(t||"").replace(/[^\d+]/g,"").replace(/^0034|^\+34/,"");
+async function importContacts(list){
+  const have=new Set(S.contactos.map(c=>normTel(c.tel)).filter(Boolean)), haveN=new Set(S.contactos.map(c=>(c.nombre||"").toLowerCase()));
+  const nuevos=list.map(x=>({nombre:x.nombre||x.org||x.tels[0]||"Sin nombre",oficio:x.cargo||"",tel:x.tels[0]||"",email:x.emails[0]||"",notas:[x.org&&x.nombre?x.org:"",x.notas||""].filter(Boolean).join(" · ")}))
+    .filter(c=>!(c.tel&&have.has(normTel(c.tel)))&&!(!c.tel&&haveN.has(c.nombre.toLowerCase())));
+  const rep=list.length-nuevos.length;
+  if(!nuevos.length){ toast(rep?"Esos contactos ya estaban en Proletia.":"No había contactos que importar."); return; }
+  await held(async()=>{ for(const c of nuevos) await save("contactos",uid(),c).catch(()=>{}); });
+  toast(`${nuevos.length} contacto${nuevos.length>1?"s":""} importado${nuevos.length>1?"s":""}${rep?` (${rep} ya estaba${rep>1?"n":""})`:""}`,undo);
+}
+async function pickContacts(){
+  try{
+    const res=await navigator.contacts.select(["name","tel","email"],{multiple:true});
+    importContacts(res.map(r=>({nombre:(r.name||[])[0]||"",tels:r.tel||[],emails:r.email||[]})));
+  }catch{ toast("No se ha podido abrir la agenda. Prueba con un archivo de contactos (.vcf)."); }
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 // Comparador tipo tienda: una columna por producto y una fila por característica
@@ -1954,8 +1997,8 @@ function taskHTML(p,tasks){
 
 /* ---------- Contactos ---------- */
 function peopleHTML(tasks){
-  const head=`<div class="toolbar"><span class="label">Compartidos entre todos tus proyectos</span><button class="btn primary" type="button" data-act="newCont">Añadir contacto</button></div>`;
-  if(!S.contactos.length) return head+`<div class="blank"><h2>Ten a mano a quién llamar</h2><p>Fontanero, electricista, la tienda del sofá, el montador… Luego los asignas a las tareas de la reforma.</p></div>`;
+  const head=`<div class="toolbar"><span class="label">Compartidos entre todos tus proyectos</span><span class="tb-right">${CAN_PICK?`<button class="btn" type="button" data-act="pickCont">Importar del teléfono</button>`:""}<button class="btn" type="button" data-act="vcfCont" title="Archivo de contactos exportado desde el móvil">${CAN_PICK?"Desde archivo .vcf":"Importar contactos (.vcf)"}</button><button class="btn primary" type="button" data-act="newCont">Añadir contacto</button></span></div>`;
+  if(!S.contactos.length) return head+`<div class="blank"><h2>Ten a mano a quién llamar</h2><p>Fontanero, electricista, la tienda del sofá, el montador… Puedes añadirlos a mano o importarlos de tu móvil. Luego los asignas a las tareas de la reforma.</p></div>`;
   return head+`<div class="people">${[...S.contactos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")).map(c=>{
     const mine=tasks.filter(t=>t.contactoId===c.id);
     return `<article class="person"><div class="row"><h3>${esc(c.nombre)}</h3><button class="btn ghost sm" type="button" data-editcont="${esc(c.id)}">Editar</button></div>
@@ -2135,6 +2178,11 @@ document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("deta
   if(dd.matches?.("details.cat-d")){ if(dd.open) S.openCats.add(dd.dataset.cat); else S.openCats.delete(dd.dataset.cat); }
   if(dd.matches?.("details.need")){ if(dd.open) S.foldedLists.delete(dd.dataset.fold); else S.foldedLists.add(dd.dataset.fold); }
   if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
+$("vcfIn").addEventListener("change",async()=>{
+  const f=$("vcfIn").files[0]; if(!f) return;
+  try{ const list=parseVcf(await f.text()); if(!list.length){ toast("Ese archivo no tiene contactos en formato .vcf."); return; } importContacts(list); }
+  catch{ toast("No se ha podido leer el archivo."); }
+});
 $("fGasto").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
   const id=edG?.id||uid();
@@ -2209,6 +2257,8 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "pickCont": pickContacts(); break;
+    case "vcfCont": $("vcfIn").value=""; $("vcfIn").click(); break;
     case "finishes": if(r) openFin(r); break;
     case "foldAll": { const keys=[...document.querySelectorAll("details.need")].map(d=>d.dataset.fold); const allF=keys.every(k=>S.foldedLists.has(k)); keys.forEach(k=>allF?S.foldedLists.delete(k):S.foldedLists.add(k)); render(); break; }
     case "install": { const ev=window.__pwaPrompt; if(ev){ ev.prompt(); ev.userChoice.catch(()=>{}).finally(()=>{ window.__pwaPrompt=null; render(); }); } break; }
