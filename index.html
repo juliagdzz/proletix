@@ -315,6 +315,11 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .menu-p button{background:none;border:0;text-align:left;padding:9px 12px;border-radius:6px;cursor:pointer;font-size:14px}
 .menu-p button:hover{background:var(--bg)}
 .menu-p hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+.rotrow{display:flex;align-items:center;gap:8px}
+.rotrow input[type=range]{flex:1;min-width:0;accent-color:var(--red);padding:0;background:none;border:0}
+.rotrow input[type=number]{width:64px;flex:none}
+.rotq{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.btn[aria-pressed="true"]{background:var(--pink);color:var(--pink-ink);border-color:var(--pink)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -507,7 +512,7 @@ const CATALOGO = [
   ["Comedor",[["Mesa 6 personas",160,90,0,4],["Mesa redonda",110,110,0,4],["Silla",45,50,1,4],["Aparador",160,45,1,4]]],
   ["Dormitorio",[["Cama 150",160,205,1,3],["Cama 135",145,200,1,3],["Cama 90",100,200,1,3],["Mesita de noche",45,40,1,4],["Armario 2 puertas",100,60,1,4],["Armario 3 puertas",150,60,1,4],["Cómoda",100,48,1,4],["Escritorio",120,60,1,4]]],
   ["Cocina y baño",[["Frigorífico",60,66,1,5],["Módulo bajo 60",60,60,1,5],["Lavadora",60,60,1,5],["Lavavajillas",60,60,1,5],["Isla",180,90,0,5],["Plato de ducha",120,80,0,0],["Bañera",170,70,0,0],["Inodoro",38,65,1,5],["Lavabo con mueble",80,46,1,5]]],
-  ["Huecos",[["Puerta 80",80,80,0,-1,"puerta"],["Puerta 70",70,70,0,-1,"puerta"],["Ventana 120",120,12,0,-1,"ventana"],["Balconera 160",160,12,0,-1,"ventana"]]]
+  ["Huecos",[["Puerta 70",70,70,0,-1,"puerta"],["Puerta 80",80,80,0,-1,"puerta"],["Puerta 90",90,90,0,-1,"puerta"],["Puerta 100",100,100,0,-1,"puerta"],["Puerta doble 140",140,70,0,-1,"puerta2"],["Ventana 120",120,12,0,-1,"ventana"],["Balconera 160",160,12,0,-1,"ventana"]]]
 ];
 const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido"],["comprado","Comprado"],["descartado","Descartado"]];
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
@@ -632,46 +637,63 @@ function figuresHTML(p,prods,tasks){
 }
 
 /* ---------- Plano ---------- */
-function footprint(it){ const r=(it.rot||0)%180!==0; return {fw:r?it.d:it.w, fd:r?it.w:it.d}; }
+const isHueco=it=>/^(puerta|puerta2|ventana)$/.test(it.tipo||"");
+const isPuerta=it=>/^puerta/.test(it.tipo||"");
+// Caja que ocupa el mueble girado (x, y del objeto son su esquina superior izquierda)
+function footprint(it){
+  const a=((((+it.rot||0)%360)+360)%360)*Math.PI/180, c=Math.abs(Math.cos(a)), s=Math.abs(Math.sin(a)), w=+it.w, d=+it.d, r2=v=>Math.round(v*100)/100;
+  return {fw:r2(w*c+d*s), fd:r2(w*s+d*c)};
+}
+// Las cuatro esquinas reales del mueble girado
+function corners(it,x=it.x,y=it.y,inset=0){
+  const {fw,fd}=footprint(it), cx=x+fw/2, cy=y+fd/2, a=(+it.rot||0)*Math.PI/180, co=Math.cos(a), si=Math.sin(a), hw=+it.w/2-inset, hd=+it.d/2-inset;
+  return [[-hw,-hd],[hw,-hd],[hw,hd],[-hw,hd]].map(([u,v])=>[cx+u*co-v*si,cy+u*si+v*co]);
+}
+function itemFits(it,x,y,P){
+  const C=corners(it,x,y,1);
+  return C.every(([a,b])=>inPoly(a,b,P))&&!P.some(([a,b])=>inPoly(a,b,C));
+}
+function quadsOverlap(A,B){
+  for(const Q of [A,B]) for(let i=0;i<4;i++){
+    const [x1,y1]=Q[i],[x2,y2]=Q[(i+1)%4], nx=y2-y1, ny=x1-x2;
+    let a1=Infinity,a2=-Infinity,b1=Infinity,b2=-Infinity;
+    for(const [x,y] of A){ const p=x*nx+y*ny; a1=Math.min(a1,p); a2=Math.max(a2,p); }
+    for(const [x,y] of B){ const p=x*nx+y*ny; b1=Math.min(b1,p); b2=Math.max(b2,p); }
+    if(a2<=b1||b2<=a1) return false;
+  }
+  return true;
+}
 function problems(items,rm){
-  const bad=new Set(), P=pts(rm);
+  const bad=new Set(), P=pts(rm), rug=i=>/alfombra/i.test(i.nombre||"")||["alfombra","alfombraR"].includes(i.forma);
   items.forEach(a=>{
-    const A=footprint(a);
-    if(a.tipo!=="ventana"&&a.tipo!=="puerta"&&!rectFits(a.x,a.y,A.fw,A.fd,P)) bad.add(a.id);
-    if(a.tipo==="ventana"||a.tipo==="alfombra"||/alfombra/i.test(a.nombre)) return;
-    items.forEach(b=>{
-      if(a===b||b.tipo==="ventana"||/alfombra/i.test(b.nombre)) return;
-      const B=footprint(b);
-      if(a.x<b.x+B.fw-1&&b.x<a.x+A.fw-1&&a.y<b.y+B.fd-1&&b.y<a.y+A.fd-1) bad.add(a.id);
-    });
+    if(!isHueco(a)&&!itemFits(a,a.x,a.y,P)) bad.add(a.id);
+    if(a.tipo==="ventana"||rug(a)) return;
+    const A=corners(a,a.x,a.y,1);
+    items.forEach(b=>{ if(a===b||b.tipo==="ventana"||rug(b)) return; if(quadsOverlap(A,corners(b,b.x,b.y,1))) bad.add(a.id); });
   });
   return bad;
 }
 function itemSVG(it,bad){
-  const {fw,fd}=footprint(it), sel=S.sel===it.id, rot=it.rot||0;
+  const {fw,fd}=footprint(it), sel=S.sel===it.id, rot=+it.rot||0, w0=+it.w, d0=+it.d;
   const stroke=bad?"var(--bad)":sel?"var(--red)":"var(--ink)", sw=sel?3:1.5, dash=bad?' stroke-dasharray="6 4"':"";
+  const local=`translate(${fw/2} ${fd/2}) rotate(${rot}) translate(${-w0/2} ${-d0/2})${it.espejo?` translate(${w0} 0) scale(-1 1)`:""}`;
   let body="";
-  if(it.tipo==="puerta"){
-    const s=it.w;
-    body=`<g transform="rotate(${rot} ${s/2} ${s/2})"><rect x="0" y="-11" width="${s}" height="12" fill="var(--floor)"/>
-      <rect x="0" y="0" width="${s}" height="${s}" fill="transparent"/>
-      <path d="M0 0L0 ${s}A${s} ${s} 0 0 0 ${s} 0" fill="none" stroke="${stroke}" stroke-width="${sw}"${dash}/>
-      <line x1="0" y1="0" x2="0" y2="${s}" stroke="${stroke}" stroke-width="4"/></g>`;
+  if(isPuerta(it)){
+    const two=it.tipo==="puerta2", L=two?w0/2:w0;
+    const leaf=(ox,flip)=>`<path d="M${ox} 0L${ox} ${L}A${L} ${L} 0 0 ${flip?1:0} ${flip?ox-L:ox+L} 0" fill="none" stroke="${stroke}" stroke-width="${sw}"${dash}/><line x1="${ox}" y1="0" x2="${ox}" y2="${L}" stroke="${stroke}" stroke-width="4"/>`;
+    body=`<rect x="0" y="0" width="${fw}" height="${fd}" fill="transparent"/><g transform="${local}"><rect x="0" y="-11" width="${w0}" height="12" fill="var(--floor)"/>${two?leaf(0,false)+leaf(w0,true):leaf(0,false)}</g>`;
   } else if(it.tipo==="ventana"){
-    const h=fw>fd;
-    body=`<rect x="0" y="0" width="${fw}" height="${fd}" fill="var(--surface)" stroke="${stroke}" stroke-width="${sw}"${dash}/>
-      ${h?`<line x1="0" y1="${fd/2}" x2="${fw}" y2="${fd/2}" stroke="${stroke}" stroke-width="1"/>`:`<line x1="${fw/2}" y1="0" x2="${fw/2}" y2="${fd}" stroke="${stroke}" stroke-width="1"/>`}`;
+    body=`<rect x="0" y="0" width="${fw}" height="${fd}" fill="transparent"/><g transform="${local}"><rect x="0" y="0" width="${w0}" height="${d0}" fill="var(--surface)" stroke="${stroke}" stroke-width="${sw}"${dash}/><line x1="0" y1="${d0/2}" x2="${w0}" y2="${d0/2}" stroke="${stroke}" stroke-width="1"/></g>`;
   } else {
     const fill=/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:`var(${FILLS[it.color??0]||"--f0"})`, tst=isDark(it.hex)?' style="fill:#fff"':"";
-    const S3=shape3d(it), shp=S3.f, round=ROUND2D.has(shp), w0=+it.w, d0=+it.d;
-    const back=`<g transform="translate(${fw/2} ${fd/2}) rotate(${rot}) translate(${-w0/2} ${-d0/2})">${symbol2d(shp,w0,d0,isDark(it.hex)?"#fff":"var(--ink)",S3.lado)}</g>`;
-    const fs=Math.max(9,Math.min(16,Math.min(fw,fd)/4.2));
+    const S3=shape3d(it), shp=S3.f, round=ROUND2D.has(shp);
+    const fs=Math.max(9,Math.min(16,Math.min(w0,d0)/4.2));
     const rug=shp==="alfombra"||shp==="alfombraR", ly=rug?fd-fs*2.1:fd/2-fs*.15;
-    const label=Math.min(fw,fd)>=34?`<text x="${fw/2}" y="${ly}" font-size="${fs}" text-anchor="middle" font-weight="600"${tst}>${esc(it.nombre.length>22?it.nombre.slice(0,21)+"…":it.nombre)}</text>
+    const label=Math.min(w0,d0)>=34?`<text x="${fw/2}" y="${ly}" font-size="${fs}" text-anchor="middle" font-weight="600"${tst}>${esc(it.nombre.length>22?it.nombre.slice(0,21)+"…":it.nombre)}</text>
       <text x="${fw/2}" y="${ly+fs*1.2}" font-size="${fs*.8}" text-anchor="middle" opacity=".65"${tst}>${cm(it.w)}×${cm(it.d)}</text>`:"";
-    body=`${round?`<rect x="0" y="0" width="${fw}" height="${fd}" fill="transparent"/><ellipse cx="${fw/2}" cy="${fd/2}" rx="${fw/2}" ry="${fd/2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`:`<rect x="0" y="0" width="${fw}" height="${fd}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`}${back}${label}`;
+    body=`<g transform="${local}">${round?`<ellipse cx="${w0/2}" cy="${d0/2}" rx="${w0/2}" ry="${d0/2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`:`<rect x="0" y="0" width="${w0}" height="${d0}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`}${symbol2d(shp,w0,d0,isDark(it.hex)?"#fff":"var(--ink)",S3.lado)}</g>${label}`;
   }
-  return `<g class="it" data-item="${esc(it.id)}" transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm</title>${body}</g>`;
+  return `<g class="it" data-item="${esc(it.id)}" transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm${rot?` · ${rot}°`:""}</title>${body}</g>`;
 }
 /* ---------- Forma de la estancia (polígono en cm) ---------- */
 function pts(r){
@@ -693,13 +715,13 @@ function rectFits(x,y,w,d,P){
 }
 // Las paredes bloquean el movimiento: si el mueble está dentro, no puede salir; se desliza pegado a la pared
 function constrain(it,nx,ny,r){
-  if(!r||it.tipo==="puerta"||it.tipo==="ventana") return [nx,ny];
-  const P=pts(r), {fw,fd}=footprint(it);
-  if(!rectFits(it.x,it.y,fw,fd,P)||rectFits(nx,ny,fw,fd,P)) return [nx,ny];
+  if(!r||isHueco(it)) return [nx,ny];
+  const P=pts(r);
+  if(!itemFits(it,it.x,it.y,P)||itemFits(it,nx,ny,P)) return [nx,ny];
   let x=it.x, y=it.y; const sx=Math.sign(nx-x)*5, sy=Math.sign(ny-y)*5;
-  while(Math.abs(nx-x)>=5&&rectFits(x+sx,y,fw,fd,P)) x+=sx;
-  while(Math.abs(ny-y)>=5&&rectFits(x,y+sy,fw,fd,P)) y+=sy;
-  while(Math.abs(nx-x)>=5&&rectFits(x+sx,y,fw,fd,P)) x+=sx;
+  while(Math.abs(nx-x)>=5&&itemFits(it,x+sx,y,P)) x+=sx;
+  while(Math.abs(ny-y)>=5&&itemFits(it,x,y+sy,P)) y+=sy;
+  while(Math.abs(nx-x)>=5&&itemFits(it,x+sx,y,P)) x+=sx;
   return [x,y];
 }
 function roomGeomSVG(P,pad){
@@ -831,12 +853,14 @@ function propsHTML(it){
       ${it.tipo?"":`<div><label for="pr_h">Alto (cm)</label><input id="pr_h" type="number" min="1" step="1" value="${shape3d(it).h}" inputmode="numeric"></div><div></div>`}
       ${it.tipo?"":`<div class="full"><label for="pr_forma">Tipo de mueble</label><select id="pr_forma">${FORMAS.map(([k,n])=>`<option value="${k}"${(it.forma||"")===k?" selected":""}>${k?n:`${n}: ${(FORMAS.find(x=>x[0]===detectForma(`${it.nombre} ${it.grupo||""}`))||["","Bloque"])[1]}`}</option>`).join("")}</select></div>
       ${["chaise","rinconera"].includes(shape3d(it).f)?`<div class="full"><label for="pr_lado">Lado de la chaise</label><select id="pr_lado"><option value="der"${shape3d(it).lado==="der"?" selected":""}>Derecha</option><option value="izq"${shape3d(it).lado==="izq"?" selected":""}>Izquierda</option></select></div>`:""}`}
+      <div class="full"><label for="pr_rot">Giro</label><div class="rotrow"><input type="range" id="pr_rot" min="0" max="359" step="1" value="${Math.round(+it.rot||0)}"><input type="number" id="pr_rotn" min="0" max="359" step="1" value="${Math.round(+it.rot||0)}" inputmode="numeric" aria-label="Grados"><span>°</span></div>
+        <div class="rotq">${[-90,-15,15,90].map(v=>`<button class="btn sm" type="button" data-rotby="${v}">${v>0?"+":"−"}${Math.abs(v)}°</button>`).join("")}</div></div>
       <div><label for="pr_x">Desde la izq. (cm)</label><input id="pr_x" type="number" step="1" value="${Math.round(it.x)}" inputmode="numeric"></div>
       <div><label for="pr_y">Desde arriba (cm)</label><input id="pr_y" type="number" step="1" value="${Math.round(it.y)}" inputmode="numeric"></div>
       ${it.tipo?"":`<div class="full"><label>Color</label><div class="swatches">${FILLS.map((f,i)=>`<button type="button" aria-label="Color ${i+1}" data-color="${i}" aria-pressed="${!it.hex&&(it.color??0)===i}" style="background:var(${f})"></button>`).join("")}<input type="color" id="pr_hex" value="${/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:"#b07a55"}" aria-label="Elegir color exacto" title="Color exacto"></div></div>`}
     </div>
     ${prod?`<p style="margin:0;font-size:13px" class="muted">Es tu producto de «${esc(prod.busco)}»${prod.precio?` · ${eur2.format(+prod.precio)}`:""}${prod.tienda?` · ${esc(prod.tienda)}`:""}</p>`:""}
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="rotate">Girar 90°</button><button class="btn sm" type="button" data-act="dup">Duplicar</button><button class="btn sm danger" type="button" data-act="delItem">Quitar</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}">⇋ Simetría</button><button class="btn sm" type="button" data-act="dup">Duplicar</button><button class="btn sm danger" type="button" data-act="delItem">Quitar</button></div>
   </div>`;
 }
 function addItem(r,base){
@@ -1151,12 +1175,14 @@ function build3dRoom(r){
   const items=S.items.filter(i=>i.estanciaId===r.id);
   items.forEach(it=>{
     const sel=it.id===S.sel, glow=sel?{emissive:0xF86C2F,emissiveIntensity:.3}:{};
-    if(it.tipo==="puerta"||it.tipo==="ventana"){
+    if(isHueco(it)){
       const {fw,fd}=footprint(it), cx=it.x+fw/2, cz=it.y+fd/2;
       let best=null; segs.forEach(sg=>{ if(sg.len<1) return; const dx=sg.q[0]-sg.p[0], dz=sg.q[1]-sg.p[1]; const t=Math.max(0,Math.min(1,((cx-sg.p[0])*dx+(cz-sg.p[1])*dz)/(sg.len*sg.len))); const dist=Math.hypot(cx-sg.p[0]-dx*t,cz-sg.p[1]-dz*t); if(!best||dist<best.dist) best={sg,t,dist}; });
       const wd=+it.w;
       const add=(w,h,y,c,off,o)=>{const m=new T.Mesh(new T.PlaneGeometry(w,h),mat(c,{...glow,...o})); m.userData.itemId=it.id; putOn(m,best.sg,best.t,y,off); G.add(m); return m;};
-      if(it.tipo==="puerta"){ add(wd+10,210,105,0xFFF8EF,.4); add(wd-4,203,101.5,0x8A5A3C,.8); add(4,4,100,0xC9A089,1.4).position.x+=0; }
+      if(it.tipo==="puerta2"){ add(wd+10,210,105,0xFFF8EF,.4); const dt=wd/4/best.sg.len;
+        [-1,1].forEach(k=>{ const m=new T.Mesh(new T.PlaneGeometry(wd/2-3,203),mat(0x8A5A3C,glow)); m.userData.itemId=it.id; putOn(m,best.sg,best.t+k*dt,101.5,.8); G.add(m); }); }
+      else if(isPuerta(it)){ add(wd+10,210,105,0xFFF8EF,.4); add(wd-4,203,101.5,0x8A5A3C,.8); }
       else { add(wd+10,130,155,0xFFF8EF,.4); add(wd-6,118,155,0xC0D6FF,.8,{emissive:0x9DBBF0,emissiveIntensity:.35,roughness:.2}); add(3,118,155,0xFFF8EF,1.1); add(wd+16,5,88,0xFFF8EF,1.2); }
       return;
     }
@@ -1164,7 +1190,7 @@ function build3dRoom(r){
     const base=new T.Color(/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:(COL3D[it.color??0]??COL3D[0]));
     furniture3d(T,g,it,f,h,w,d,base,glow,mat,lado);
     g.traverse(o=>{ if(o.isMesh) o.userData.itemId=it.id; });
-    place3d(g,it); V.objs[it.id]=g; G.add(g);
+    place3d(g,it); if(it.espejo) g.scale.x=-1; V.objs[it.id]=g; G.add(g);
   });
   const m=Math.max(W,L);
   V.sun.position.set(W*.15,H*3,L*1.3); V.sun.target.position.set(W/2,0,L/2);
@@ -1346,15 +1372,23 @@ function colorFromImage(src){
 }
 const isDark=hex=>{ const m=/^#([0-9a-f]{6})$/i.exec(hex||""); if(!m) return false; const n=parseInt(m[1],16); return ((n>>16)*.299+((n>>8)&255)*.587+(n&255)*.114)<120; };
 const prodHex=x=>x?.color||colorFromName(x?.nombre)||"";
-function rotateItem(it){
-  const p0=proyecto(), r=p0&&room(p0), {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2;
-  const rot=((it.rot||0)+90)%360, f2=footprint({...it,rot});
-  let x=Math.round((cx-f2.fw/2)/5)*5, y=Math.round((cy-f2.fd/2)/5)*5;
-  if(r&&it.tipo!=="puerta"&&it.tipo!=="ventana"){ const P=pts(r);
-    if(rectFits(it.x,it.y,fw,fd,P)&&!rectFits(x,y,f2.fw,f2.fd,P)){ let found=null;
-      for(let s=5;s<=150&&!found;s+=5) for(const [dx,dy] of [[s,0],[-s,0],[0,s],[0,-s],[s,s],[-s,s],[s,-s],[-s,-s]]) if(rectFits(x+dx,y+dy,f2.fw,f2.fd,P)){ found=[x+dx,y+dy]; break; }
+// Gira el mueble sobre su centro a cualquier ángulo; si choca con una pared, lo aparta lo justo
+function rotateTo(it,rot){
+  rot=((Math.round(rot)%360)+360)%360;
+  const p0=proyecto(), r=p0&&room(p0), {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2, n={...it,rot}, f2=footprint(n);
+  let x=Math.round((cx-f2.fw/2)*10)/10, y=Math.round((cy-f2.fd/2)*10)/10;
+  if(r&&!isHueco(it)){ const P=pts(r);
+    if(!itemFits(n,x,y,P)){ let found=null;
+      for(let s=5;s<=150&&!found;s+=5) for(const [dx,dy] of [[s,0],[-s,0],[0,s],[0,-s],[s,s],[-s,s],[s,-s],[-s,-s]]) if(itemFits(n,x+dx,y+dy,P)){ found=[x+dx,y+dy]; break; }
       if(found) [x,y]=found; } }
-  saveItem(it,{rot,x,y});
+  S.dragging=false; saveItem(it,{rot,x,y});
+}
+function rotateItem(it){ rotateTo(it,Math.round((+it.rot||0)/90)*90+90); }
+// Vista previa mientras se arrastra la barra de giro, sin guardar
+function rotPreview(it,rot){
+  const {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2; it.rot=rot; const f2=footprint(it); it.x=cx-f2.fw/2; it.y=cy-f2.fd/2;
+  const el=document.querySelector(`#plan [data-item="${CSS.escape(it.id)}"]`); if(el) el.outerHTML=itemSVG(it,false);
+  if(V.objs&&V.objs[it.id]){ place3d(V.objs[it.id],it); draw3d(); }
 }
 
 /* ---------- Presupuesto ---------- */
@@ -1713,6 +1747,10 @@ $("fEl").addEventListener("submit",async ev=>{
   const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
   await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
 });
+document.addEventListener("input",e=>{
+  if(e.target.id!=="pr_rot") return; const it=selItem(); if(!it) return;
+  S.dragging=true; rotPreview(it,+e.target.value); const n=$("pr_rotn"); if(n) n.value=e.target.value;
+});
 document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("details.cj")){ if(dd.open) S.closedCj.delete(dd.dataset.cj); else S.closedCj.add(dd.dataset.cj); }
   if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
 $("fGasto").addEventListener("submit",async ev=>{
@@ -1732,7 +1770,7 @@ $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ con
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-rotby],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -1747,6 +1785,7 @@ document.addEventListener("click",e=>{
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
+  if(d.rotby){ const it=selItem(); if(it) rotateTo(it,(+it.rot||0)+(+d.rotby)); return; }
   if(d.editcj){ openCj(S.conjuntos.find(x=>x.id===d.editcj)); return; }
   if(d.qadd){ quickAdd(d.qadd); return; }
   if(d.elchk){ e.stopPropagation(); const [cid,eid]=d.elchk.split("|"), c=S.conjuntos.find(x=>x.id===cid); if(c) saveEls(c,(c.elementos||[]).map(x=>x.id===eid?{...x,comprado:t.checked}:x)); return; }
@@ -1777,6 +1816,7 @@ document.addEventListener("click",e=>{
     case "newGasto": openGasto(null); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
+    case "mirror": { const it=selItem(); if(it) saveItem(it,{espejo:!it.espejo}); break; }
     case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
     case "delItem": { const it=selItem(); if(it){ S.sel=null; remove("items",it.id).catch(()=>{}); } break; }
   }
@@ -1795,6 +1835,7 @@ document.addEventListener("change",e=>{
   if(id==="pr_w"&&+v>=5) saveItem(it,{w:+v});
   if(id==="pr_d"&&+v>=5) saveItem(it,{d:+v});
   if(id==="pr_h"&&+v>=1) saveItem(it,{h:+v});
+  if(id==="pr_rot"||id==="pr_rotn"){ if(v!=="") rotateTo(it,+v); return; }
   if(id==="pr_forma") saveItem(it,{forma:v,h:""});
   if(id==="pr_lado") saveItem(it,{lado:v});
   if(id==="pr_hex"&&/^#[0-9a-f]{6}$/i.test(v)) saveItem(it,{hex:v});
