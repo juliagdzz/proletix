@@ -513,12 +513,13 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <!-- Lista -->
 <dialog id="dlgList"><form method="dialog" id="fList">
-  <div class="dlg-h"><h2>Nueva lista</h2><div class="dlg-hb"><button class="btn primary" value="ok">Crear lista</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
+  <div class="dlg-h"><h2 id="dlgListT">Nueva lista</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="l_ok">Crear lista</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="l_nombre">Nombre</label><input id="l_nombre" required placeholder="Mueble de TV, sofá, lámpara de techo…"></div>
     <div class="field"><label for="l_room">Estancia</label><select id="l_room"></select></div>
-    <p class="field hint" style="margin:0">Se queda guardada para elegirla cada vez que añadas un producto.</p>
+    <p class="field hint" style="margin:0" id="l_hint">Se queda guardada para elegirla cada vez que añadas un producto.</p>
   </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="l_del" hidden>Eliminar lista</button></div>
 </form></dialog>
 
 <!-- Conjunto -->
@@ -1491,7 +1492,7 @@ function roomListsHTML(p,r){
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
           <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":""].filter(Boolean).map(esc).join(" · ")}</small></span>
           <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span><span class="radio"></span></button>`; }).join("")}
-        <button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button><button class="btn ghost sm" type="button" data-editlist="${esc(n)}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar lista</button></div></div>
     </details>`; }).join("")}
     ${total?`<div class="rl-tot"><span>Lo elegido en ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
 }
@@ -1660,8 +1661,34 @@ async function ensureList(pid,nombre,estanciaId){
 }
 let edL=null;
 function openList(preset={}){
-  edL=null; $("l_nombre").value=""; fill($("l_room"),roomOpts(S.proyId),preset.estanciaId||"");
+  const l=preset.edit?listsOf(S.proyId).find(x=>x.nombre===preset.edit):null;
+  edL=l?{nombre:l.nombre,estanciaId:l.estanciaId||""}:null;
+  $("dlgListT").textContent=l?"Editar lista":"Nueva lista"; $("l_ok").textContent=l?"Guardar":"Crear lista";
+  $("l_nombre").value=l?.nombre||""; fill($("l_room"),roomOpts(S.proyId),l?l.estanciaId||"":preset.estanciaId||"");
+  const n=l?S.productos.filter(x=>x.proyectoId===S.proyId&&x.busco===l.nombre).length:0;
+  $("l_hint").textContent=l?(n?`Tiene ${n} producto${n>1?"s":""}. Si cambias el nombre o la estancia, se cambian también en ellos y en el plano.`:"Está vacía."):"Se queda guardada para elegirla cada vez que añadas un producto.";
+  $("l_del").hidden=!l;
+  if(l) armDelete($("l_del"),async()=>{ await deleteList(l.nombre); $("dlgList").close(); });
   $("dlgList").showModal(); setTimeout(()=>$("l_nombre").focus(),50);
+}
+async function deleteList(nombre){
+  const pid=S.proyId;
+  for(const x of S.productos.filter(x=>x.proyectoId===pid&&x.busco===nombre)){
+    for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id);
+    await remove("productos",x.id); }
+  for(const l of S.listas.filter(l=>l.proyectoId===pid&&l.nombre===nombre)) await remove("listas",l.id);
+}
+async function editList(old,nombre,estanciaId){
+  const pid=S.proyId, moved=estanciaId!==old.estanciaId, renamed=nombre!==old.nombre;
+  await held(async()=>{
+    const docs=S.listas.filter(l=>l.proyectoId===pid&&l.nombre===old.nombre);
+    if(docs.length){ for(const l of docs){ const {id,...b}=l; await save("listas",id,{...b,nombre,estanciaId}); } }
+    else await save("listas",uid(),{proyectoId:pid,nombre,estanciaId,creado:Date.now()});
+    for(const x of S.productos.filter(x=>x.proyectoId===pid&&x.busco===old.nombre)){ const {id,...b}=x; await save("productos",id,{...b,busco:nombre,...(moved?{estanciaId}:{})}); }
+    if(renamed){ const rids=new Set(roomsOf(pid).map(r=>r.id)); for(const it of S.items.filter(i=>rids.has(i.estanciaId)&&i.grupo===old.nombre)){ const {id,...b}=it; await save("items",id,{...b,grupo:nombre}); } }
+  });
+  if(S.lastList===old.nombre) S.lastList=nombre;
+  toast(`Lista «${nombre}» guardada`,undo);
 }
 
 /* ---------- Conjuntos: bloques hechos de piezas y materiales ---------- */
@@ -2024,6 +2051,7 @@ function shopHTML(p,prods){
     const canCmp=list.filter(x=>x.estado!=="descartado").length>1, cmpOn=canCmp&&S.cmpLists.has(n);
     return `<details class="need" data-fold="${esc(n)}"${S.foldedLists.has(n)?"":" open"}><summary class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
       <span class="sum">${list.length?`${list.length} opci${list.length>1?"ones":"ón"}`:"Lista vacía"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}
+        <button class="btn ghost sm" type="button" data-editlist="${esc(n.split("\u0001")[0])}" title="Editar lista"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar</button>
         <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}${canCmp?`<button class="btn sm cmp-tg" type="button" data-view="${cmpOn?"cards":"cmp"}" data-vkey="${esc(n)}" aria-pressed="${cmpOn}" title="${cmpOn?"Volver a la lista":"Comparar opciones lado a lado"}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M6.5 9h0M17.5 9h0M6.5 13h0M17.5 13h0"/></svg>${cmpOn?"Ver lista":"Comparar"}</button>`:""}</span></summary>
       ${cmpOn?compareHTML(list):`<div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
@@ -2199,7 +2227,8 @@ function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,..
 $("fList").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
   const n=$("l_nombre").value.trim(); if(!n) return;
-  if(listsOf(S.proyId).some(l=>l.nombre===n)){ toast("Ya tienes una lista con ese nombre."); return; }
+  if(listsOf(S.proyId).some(l=>l.nombre===n&&(!edL||l.nombre!==edL.nombre))){ ev.preventDefault(); toast("Ya tienes una lista con ese nombre."); return; }
+  if(edL){ if(n!==edL.nombre||$("l_room").value!==edL.estanciaId) await editList(edL,n,$("l_room").value); return; }
   await save("listas",uid(),{proyectoId:S.proyId,nombre:n,estanciaId:$("l_room").value,creado:Date.now()}).catch(()=>{}); S.lastList=n; toast(`Lista «${n}» creada`);
 });
 $("fCj").addEventListener("submit",async ev=>{
@@ -2270,7 +2299,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -2284,6 +2313,7 @@ document.addEventListener("click",e=>{
     S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
+  if(d.editlist){ openList({edit:d.editlist}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
   if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
   if(d.openbud){ S.proyId=d.openbud; S.view="proyecto"; S.tab="presupuesto"; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); window.scrollTo(0,0); return; }
