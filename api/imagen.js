@@ -1,4 +1,4 @@
-// Sirve la foto de un producto desde Proletix para poder sacar su color principal en el navegador.
+// Sirve la foto de un producto desde Proletia para poder sacar su color principal en el navegador.
 // Uso: /api/imagen?url=https://.../foto.jpg
 const PRIVATE = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:|metadata\.)/i;
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
