@@ -215,6 +215,21 @@ dialog form{display:flex;flex-direction:column}
 .kind b{border:1px solid var(--granate)}
 .proj{border-top:3px double var(--granate)!important}
 @media (max-width:760px){.fig:nth-child(n+3){border-top-color:rgb(109 1 1 / .12)}}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ph .num{font-size:14px;color:var(--granate);font-weight:500}
+.lst{display:flex;flex-direction:column;gap:2px;border-top:1px solid rgb(109 1 1 / .12);padding-top:8px}
+.lst-h{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.lst-h b{color:var(--granate);font-size:14px}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;background:none;border:1px solid transparent;border-radius:6px;padding:6px 8px;cursor:pointer;text-align:left;width:100%}
+.opt:hover{background:var(--surface)}
+.opt[aria-pressed="true"]{background:var(--surface);border-color:var(--red)}
+.opt .radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--granate);flex:none}
+.opt[aria-pressed="true"] .radio{border-color:var(--red);background:radial-gradient(circle,var(--red) 0 40%,transparent 46%)}
+.opt .on{min-width:0;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.opt small{display:block;color:var(--muted);font-size:12px}
+.opt .num{font-size:13px}
+details.field summary{cursor:pointer;font-size:13px;color:var(--granate);font-weight:600}
+details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);border:0;border-radius:var(--r);padding:8px 10px;width:100%}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -279,11 +294,15 @@ dialog form{display:flex;flex-direction:column}
 <dialog id="dlgProd"><form method="dialog" id="fProd">
   <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
   <div class="dlg-b">
+    <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint">Al pegarlo se rellenan la tienda y el nombre</span></div>
+    <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
+      <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm" type="button" id="d_fill">Rellenar ficha</button><span class="hint" id="d_fillmsg"></span></div>
+    </details>
     <div class="field"><label for="d_busco">¿Qué buscas?</label><input id="d_busco" required list="needs" placeholder="Sofá del salón"><span class="hint">Los productos con el mismo nombre aquí se comparan juntos</span></div>
     <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
     <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
     <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field"><label for="d_url">Enlace</label><input id="d_url" type="url" placeholder="https://"></div>
     <div class="field h2"><label for="d_ancho">Ancho (cm)</label><input id="d_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field h2"><label for="d_fondo">Fondo (cm)</label><input id="d_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field h2"><label for="d_alto">Alto (cm)</label><input id="d_alto" type="number" min="0" step="any" inputmode="decimal"></div>
@@ -384,6 +403,7 @@ async function boot(){
   render();
   let db=null;
   try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch{ db=null; }
+  try{ window.claude?.use && window.claude.use("sample").then(sm=>{ SAMPLE=sm||null; }).catch(()=>{}); }catch{}
   if(db){
     S.db=db; S.mode="db";
     COLS.forEach(col=>db.collection(col).onSnapshot(snap=>{
@@ -535,6 +555,7 @@ function planHTML(p,r){
     </div>
     <div class="side">
       ${sel?propsHTML(sel):""}
+      ${listsHTML(p,r)}
       <div class="panel"><h3>Añadir al plano</h3>
         <div class="cat">
           ${myProds.length?`<div class="cat-g">Mis productos</div>${myProds.map(x=>`<button class="prod" type="button" data-addprod="${esc(x.id)}"><span>${esc(x.nombre)}</span><span>${cm(x.ancho)}×${cm(x.fondo)}</span></button>`).join("")}`:""}
@@ -751,12 +772,97 @@ function mount3d(r){
   draw3d();
 }
 
+/* ---------- Importar productos y listas por estancia ---------- */
+let SAMPLE=null;
+const SHOPS={ikea:"IKEA",leroymerlin:"Leroy Merlin",maisonsdumonde:"Maisons du Monde",elcorteingles:"El Corte Inglés",conforama:"Conforama",amazon:"Amazon",zarahome:"Zara Home",sklum:"Sklum",kavehome:"Kave Home",westwing:"Westwing",jysk:"JYSK",bauhaus:"Bauhaus",laredoute:"La Redoute",carrefour:"Carrefour",mueblesboom:"Muebles BOOM",tuco:"Tuco",merkamueble:"Merkamueble",habitat:"Habitat",aliexpress:"AliExpress",wallapop:"Wallapop",milanuncios:"Milanuncios",temu:"Temu",shein:"Shein",lidl:"Lidl",action:"Action",casashops:"Casa",hm:"H&M Home",vidaxl:"vidaXL",miliboo:"Miliboo",ventaunica:"Venta Única",brico:"Bricodepot",bricomart:"Bricomart",mediamarkt:"MediaMarkt"};
+function fromUrl(u){
+  try{
+    const url=new URL(u), host=url.hostname.replace(/^www\d?\./,""), parts=host.split(".");
+    const key=parts.map(p=>p.replace(/-/g,"")).find(p=>SHOPS[p]);
+    const tienda=key?SHOPS[key]:(parts.length>1?parts[parts.length-2]:parts[0]).replace(/^./,c=>c.toUpperCase());
+    const segs=url.pathname.split("/").filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}})
+      .filter(s=>!/^(p|dp|gp|product|products|producto|productos|item|art|articulo|catalog|catalogo)$/i.test(s)&&!/^[a-z]{2}([-_][a-z]{2})?$/i.test(s)&&/[a-z]{3}/i.test(s));
+    let slug=[...segs].sort((a,b)=>(b.match(/[-_ ]/g)||[]).length-(a.match(/[-_ ]/g)||[]).length)[0]||"";
+    slug=slug.replace(/\.(html?|aspx?|php)$/i,"").replace(/[-_+]+/g," ").replace(/\b[a-z]{0,3}\d{5,}[a-z0-9]*\b/gi,"").replace(/\s+/g," ").trim();
+    return {tienda,nombre:slug.length>3?(slug.charAt(0).toUpperCase()+slug.slice(1)).slice(0,90):""};
+  }catch{ return {}; }
+}
+function parseText(t){
+  const n=v=>+String(v).replace(/[.\s](?=\d{3}\b)/g,"").replace(",",".");
+  const out={};
+  const pm=t.match(/(\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?)\s?€/)||t.match(/€\s?(\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?)/);
+  if(pm) out.precio=n(pm[1]);
+  const g=re=>{const m=t.match(re);return m?n(m[1]):null};
+  out.ancho=g(/(?:ancho|anchura)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
+  out.fondo=g(/(?:fondo|profundidad)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
+  out.alto=g(/(?:alto|altura)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
+  if(!out.ancho){ const m=t.match(/(\d{2,3}(?:[.,]\d)?)\s*[x×]\s*(\d{2,3}(?:[.,]\d)?)(?:\s*[x×]\s*(\d{2,3}(?:[.,]\d)?))?\s*cm/i);
+    if(m){ out.ancho=n(m[1]); out.fondo=n(m[2]); if(m[3]) out.alto=n(m[3]); } }
+  return out;
+}
+function applyImport(d){
+  let c=0; const set=(id,v)=>{ if(v!==null&&v!==undefined&&v!==""&&!(typeof v==="number"&&!(v>0))){ $(id).value=v; c++; } };
+  set("d_nombre",d.nombre); set("d_tienda",d.tienda); set("d_precio",d.precio); set("d_ancho",d.ancho); set("d_fondo",d.fondo); set("d_alto",d.alto);
+  if(d.nota&&!$("d_nota").value) set("d_nota",d.nota);
+  return c;
+}
+async function fillFromPaste(){
+  const t=$("d_paste").value.trim(), msg=$("d_fillmsg"), btn=$("d_fill");
+  if(!t){ msg.textContent="Pega primero el texto de la página del producto."; return; }
+  let data=null;
+  if(SAMPLE){
+    msg.textContent="Claude está leyendo la página…"; btn.disabled=true;
+    const prompt=`Extrae los datos de este producto de una tienda de muebles o decoración. Responde SOLO con un objeto JSON con estas claves:
+"nombre": nombre corto con modelo y color (máx. 70 caracteres),
+"tienda": nombre de la tienda,
+"precio": precio actual de venta en euros como número (sin envío; si hay oferta, el precio rebajado),
+"ancho": ancho en cm (medida frontal), "fondo": fondo o profundidad en cm, "alto": alto en cm (números; null si no aparecen),
+"nota": lo más útil para decidir en máx. 120 caracteres (material, plazo de entrega, montaje, variantes).
+Enlace: ${$("d_url").value||"desconocido"}
+
+Texto copiado de la página:
+${t.slice(0,60000)}`;
+    try{ data=await SAMPLE.json(prompt,{modelTier:"quick"}); }
+    catch(e){ data=null; if(e?.code==="not_granted") SAMPLE=null; }
+    btn.disabled=false;
+  }
+  const c=applyImport(data&&typeof data==="object"?data:parseText(t));
+  msg.textContent=c?"Listo. Revisa los datos antes de guardar.":"No he encontrado precio ni medidas. Rellénalos a mano.";
+}
+const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x)); return g; };
+function listsHTML(p,r){
+  const g=groupsIn(p.id,r.id), names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
+  const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
+  const total=names.reduce((s,n)=>s+(+(win(n)?.precio)||0),0);
+  return `<div class="panel"><div class="ph"><h3>Listas de ${esc(r.nombre)}</h3>${total?`<span class="num" title="Suma de lo elegido">${eur.format(total)}</span>`:""}</div>
+    ${names.length?names.map(n=>{ const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9));
+      return `<div class="lst"><div class="lst-h"><b>${esc(n)}</b><button class="btn ghost sm" type="button" data-addopt="${esc(n)}">+ Opción</button></div>
+        ${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0;
+          return `<button type="button" class="opt" data-choose="${esc(x.id)}" aria-pressed="${on}"><span class="radio"></span><span class="on">${esc(x.nombre)}<small>${esc(x.tienda||"")}${fits?`${x.tienda?" · ":""}${cm(x.ancho)}×${cm(x.fondo)}`:`${x.tienda?" · ":""}sin medidas`}${x.estado==="comprado"?" · comprado":""}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></button>`}).join("")}</div>`}).join("")
+    :`<p class="muted" style="margin:0;font-size:13px">Crea una lista por cada cosa que buscas aquí (mueble de TV, sofá, lámpara…), mete las opciones que vayas viendo y pulsa una para verla en el plano.</p>`}
+    <button class="btn sm" type="button" data-act="newList">+ Nueva lista</button></div>`;
+}
+async function choose(id){
+  const x=S.productos.find(y=>y.id===id); if(!x) return;
+  const group=S.productos.filter(y=>y.proyectoId===x.proyectoId&&y.busco===x.busco&&(y.estanciaId||"")===(x.estanciaId||""));
+  for(const y of group) if(y.id!==id&&y.estado==="elegido"){ const {id:yid,...b}=y; await save("productos",yid,{...b,estado:"favorito"}).catch(()=>{}); }
+  if(x.estado!=="elegido"&&x.estado!=="comprado"){ const {id:_,...b}=x; await save("productos",id,{...b,estado:"elegido"}).catch(()=>{}); }
+  const room=S.estancias.find(e=>e.id===x.estanciaId);
+  if(!room){ toast("Elegido. Asígnale una estancia para verlo en el plano."); return; }
+  if(!(+x.ancho>0&&+x.fondo>0)){ toast("Elegido. Añade sus medidas para verlo en el plano."); return; }
+  const ids=new Set(group.map(y=>y.id));
+  const it=S.items.find(i=>i.estanciaId===room.id&&(i.grupo===x.busco||ids.has(i.productoId)));
+  const dims={nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",productoId:x.id,grupo:x.busco};
+  if(it){ if(it.productoId!==x.id){ const {id:iid,...b}=it; await save("items",iid,{...b,...dims}).catch(()=>{}); toast(`${x.busco}: ahora ves «${x.nombre}» en el plano`); } }
+  else { S.roomId=room.id; addItem(room,{...dims,back:true,color:4}); toast(`Colocado en ${room.nombre}. Arrástralo a su sitio.`); }
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 function shopHTML(p,prods){
   const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><button class="btn primary" type="button" data-act="newProd">Guardar producto</button></div>`;
   if(!prods.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
-  const groups={}; prods.forEach(x=>(groups[x.busco||"Sin agrupar"] ||= []).push(x));
+  const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
   const order=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es"));
   const rank={comprado:0,elegido:1,favorito:2,visto:3,descartado:4};
   return head+order.map(n=>{
@@ -764,7 +870,7 @@ function shopHTML(p,prods){
     const vivos=list.filter(x=>x.estado!=="descartado"&&+x.precio>0);
     const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
     const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
-    return `<section class="need"><div class="need-h"><h3>${esc(n)}</h3>
+    return `<section class="need"><div class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
       <span class="sum">${list.length} opci${list.length>1?"ones":"ón"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}</span></div>
       <div class="prods">${list.map(x=>{
         const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
@@ -870,7 +976,7 @@ function openProd(x,preset={}){
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
   fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
   $("d_busco").value=x?.busco||preset.busco||""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
-  $("d_url").value=x?.url||""; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
+  $("d_url").value=x?.url||""; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
   $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
   if(x) armDelete($("d_del"),async()=>{ for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id); await remove("productos",x.id); $("dlgProd").close(); toast("Producto eliminado"); });
@@ -931,8 +1037,10 @@ $("fCont").addEventListener("submit",async ev=>{
 function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 $("btnNewProj").onclick=()=>openProj(null);
+$("d_fill").onclick=fillFromPaste;
+$("d_url").addEventListener("change",()=>{ const f=fromUrl($("d_url").value.trim()); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.vista){ S.vista=d.vista; lsSet("proletix:vista",S.vista); render(); return; }
@@ -942,8 +1050,9 @@ document.addEventListener("click",e=>{
   if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,back:true,color:4,productoId:x.id}); return; }
   if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
     if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
-    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,back:true,color:4,productoId:x.id}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
-  if(d.choose){ const x=S.productos.find(y=>y.id===d.choose); const {id,...b}=x; save("productos",id,{...b,estado:"elegido"}).catch(()=>{}); return; }
+    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
+  if(d.choose){ choose(d.choose); return; }
+  if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:r?.id||""}); return; }
   if(d.editprod){ openProd(S.productos.find(y=>y.id===d.editprod)); return; }
   if(d.cycle){ e.stopPropagation(); const x=S.tareas.find(y=>y.id===d.cycle); const nx={pendiente:"curso",curso:"hecha",hecha:"pendiente"}[x.estado||"pendiente"]; const {id,...b}=x; save("tareas",id,{...b,estado:nx}).catch(()=>{}); return; }
   if(d.edittask){ openTask(S.tareas.find(y=>y.id===d.edittask)); return; }
@@ -956,6 +1065,7 @@ document.addEventListener("click",e=>{
     case "editRoom": openRoom(r); break;
     case "newProd": openProd(null,{estanciaId:""}); break;
     case "newTask": openTask(null); break;
+    case "newList": openProd(null,{estanciaId:r?.id||""}); setTimeout(()=>$("d_busco").focus(),50); break;
     case "newCont": openCont(null); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) saveItem(it,{rot:((it.rot||0)+90)%360}); break; }
