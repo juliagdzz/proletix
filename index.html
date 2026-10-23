@@ -132,7 +132,9 @@ svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
 .cat button span:last-child{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none}
 .cat button.prod span:first-child::before{content:"★ ";color:var(--gold)}
 .props{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.props .full{grid-column:span 2}
+.props .full{grid-column:1/-1}
+.plan-main #props{border:2px solid var(--red);background:var(--surface)}
+.plan-main #props .props{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .swatches{display:flex;gap:6px}
 .swatches input[type=color]{width:28px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
 .swatches button{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);cursor:pointer}
@@ -846,9 +848,9 @@ function planHTML(p,r){
       </svg>
       <span class="hint">${area} m² · cuadrícula de 50 cm · ${es?"cotas en cm":"arrastra para mover · pulsa otra vez para girar"}</span>`}
       ${bad.size&&!es?`<span class="warn">${bad.size} ${bad.size>1?"muebles no caben o se solapan":"mueble no cabe o se solapa"}</span>`:""}
-    </div>${es?"":roomListsHTML(p,r)}</div>
+    </div>${es?"":`${sel?propsHTML(sel):""}${roomListsHTML(p,r)}`}</div>
     <div class="side">
-      ${es?shapePanel(r,P):`${sel?propsHTML(sel):""}`}
+      ${es?shapePanel(r,P):""}
       ${es?"":`<div class="panel"><h3>Añadir al plano</h3>
         <div class="cat">
           ${S.conjuntos.filter(c=>c.proyectoId===p.id&&+c.ancho>0&&+c.fondo>0).map((c,i)=>`${i?"":`<div class="cat-g">Mis conjuntos</div>`}<button class="prod" type="button" data-addcj="${esc(c.id)}"><span>${esc(c.nombre)}</span><span>${cm(c.ancho)}×${cm(c.fondo)}</span></button>`).join("")}
