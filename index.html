@@ -367,6 +367,9 @@ table.cmp{border-collapse:separate;border-spacing:0;width:max-content;min-width:
 .cmp-n{font-size:13px;overflow-wrap:anywhere}
 .cmp-a td{border-bottom:0;display:table-cell}.cmp-a td .btn{margin:0 4px 4px 0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.qa-m{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qa-link{background:var(--pink);color:var(--pink-ink);border-radius:999px;padding:1px 8px;font-weight:600}
+.el-img{width:34px;height:34px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px;float:left;margin-right:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -514,7 +517,8 @@ table.cmp{border-collapse:separate;border-spacing:0;width:max-content;min-width:
     <div class="field h3"><label for="el_ud">Unidad</label><select id="el_ud"></select></div>
     <div class="field h3"><label for="el_precio">Precio por unidad (€)</label><input id="el_precio" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field h3"><label for="el_tienda">Tienda</label><input id="el_tienda" list="shops"></div>
-    <div class="field h3"><label for="el_url">Enlace</label><input id="el_url" type="url" placeholder="https://"></div>
+    <div class="field h3"><label for="el_url">Enlace</label><input id="el_url" type="url" placeholder="https://"><span class="hint" id="el_urlmsg"></span></div>
+    <div class="field h3"><label for="el_medidas">Medidas</label><input id="el_medidas" placeholder="240 × 4,4 × 2,2 cm"></div>
     <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="el_comprado" style="width:auto"> Ya lo tengo</label>
     <div class="field"><label for="el_notas">Notas</label><textarea id="el_notas" placeholder="Medida de corte, referencia…"></textarea></div>
   </div>
@@ -566,7 +570,7 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), qa:{}, cmpLists:new Set(), hist:[], histGroup:null, undoing:false, preEdit:null, openLists:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
 const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
@@ -1582,7 +1586,7 @@ function conjuntosHTML(p){
     const grp=t=>els.filter(e=>(e.tipo||"pieza")===t);
     const rows=t=>grp(t).map(e=>`<div class="el${e.comprado?" done":""}" data-eledit="${esc(c.id)}|${esc(e.id)}" role="button" tabindex="0">
         <input type="checkbox" data-elchk="${esc(c.id)}|${esc(e.id)}" ${e.comprado?"checked":""} aria-label="Comprado: ${esc(e.nombre)}">
-        <span class="el-n">${esc(e.nombre)}${e.tienda||e.url?`<small>${esc(e.tienda||"")}${safeUrl(e.url)?` · <a href="${esc(e.url)}" target="_blank" rel="noopener" data-stop>ver ↗</a>`:""}</small>`:""}</span>
+        <span class="el-n">${safeUrl(e.imagen)?`<img class="el-img" src="${esc(e.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}${esc(e.nombre)}${e.tienda||e.url||e.medidas?`<small>${esc([e.tienda,e.medidas].filter(Boolean).join(" · "))}${safeUrl(e.url)?` · <a href="${esc(e.url)}" target="_blank" rel="noopener" data-stop>ver ↗</a>`:""}</small>`:""}</span>
         <span class="el-q num">${(+e.cantidad||1).toLocaleString("es-ES")} ${esc(e.ud||"ud")}${+e.precio?` × ${eur2.format(+e.precio)}`:""}</span>
         <span class="el-t num">${+e.precio?eur2.format((+e.cantidad||1)*(+e.precio)):"—"}</span></div>`).join("");
     const sect=(t,n)=>grp(t).length?`<div class="el-g">${n}<span class="num">${eur.format(grp(t).reduce((s,e)=>s+(+e.cantidad||1)*(+e.precio||0),0))}</span></div>${rows(t)}`:"";
@@ -1594,7 +1598,7 @@ function conjuntosHTML(p){
       <div class="cj-b">
         ${els.length?`<div class="bar" style="margin-bottom:6px"><u style="width:${tot?paid/tot*100:done/els.length*100}%"></u></div>`:""}
         ${sect("pieza","Piezas")}${sect("material","Materiales y herrajes")}
-        <div class="qa"><input id="qa_n_${esc(c.id)}" placeholder="Añadir: tablero, tornillos 4×30, masilla…" data-qa="${esc(c.id)}" aria-label="Nombre del elemento"><input id="qa_c_${esc(c.id)}" type="number" min="0" step="any" placeholder="Cant." data-qa="${esc(c.id)}" aria-label="Cantidad" inputmode="decimal"><input id="qa_p_${esc(c.id)}" type="number" min="0" step="any" placeholder="€/ud" data-qa="${esc(c.id)}" aria-label="Precio por unidad" inputmode="decimal"><select id="qa_t_${esc(c.id)}" aria-label="Tipo"><option value="pieza">Pieza</option><option value="material">Material</option></select><button class="btn sm" type="button" data-qadd="${esc(c.id)}">Añadir</button></div>
+        ${(()=>{ const q=S.qa[c.id]||{}; return `<div class="qa"><input id="qa_n_${esc(c.id)}" value="${esc(q.nombre||"")}" placeholder="Añadir: escribe o pega un enlace (listones, tablero, tornillos…)" data-qa="${esc(c.id)}" aria-label="Nombre o enlace del elemento"><input id="qa_c_${esc(c.id)}" value="${esc(q.cantidad||"")}" type="number" min="0" step="any" placeholder="Cant." data-qa="${esc(c.id)}" aria-label="Cantidad" inputmode="decimal"><input id="qa_p_${esc(c.id)}" value="${esc(q.precio||"")}" type="number" min="0" step="any" placeholder="€/ud" data-qa="${esc(c.id)}" aria-label="Precio por unidad" inputmode="decimal"><select id="qa_t_${esc(c.id)}" aria-label="Tipo"><option value="pieza">Pieza</option><option value="material">Material</option></select><button class="btn sm" type="button" data-qadd="${esc(c.id)}">Añadir</button></div>${q.msg?`<div class="qa-m">${q.url?`<span class="qa-link">🔗 ${esc(q.tienda||"Enlace")}</span>`:""}${esc(q.msg)}</div>`:""}`; })()}
         ${c.notas?`<p class="muted" style="margin:4px 0 0;font-size:13px">${esc(c.notas)}</p>`:""}
         <div class="cj-f"><button class="btn sm" type="button" data-editcj="${esc(c.id)}">Editar conjunto</button>${dims?`<button class="btn sm" type="button" data-placecj="${esc(c.id)}">Colocar en plano</button>`:`<span class="muted" style="font-size:12px">Ponle medidas para colocarlo en el plano</span>`}<button class="btn sm ghost" type="button" data-dupcj="${esc(c.id)}">Duplicar</button></div>
       </div></details>`;}).join("")}</div>`;
@@ -1614,15 +1618,34 @@ function openEl(cid,eid){
   const c=S.conjuntos.find(x=>x.id===cid), e=c?.elementos?.find(x=>x.id===eid); if(!e) return;
   edEl={cid,eid}; fill($("el_ud"),UDS,e.ud||"ud");
   $("el_nombre").value=e.nombre||""; $("el_tipo").value=e.tipo||"pieza"; $("el_cant").value=e.cantidad??1; $("el_precio").value=e.precio??"";
-  $("el_tienda").value=e.tienda||""; $("el_url").value=e.url||""; $("el_comprado").checked=!!e.comprado; $("el_notas").value=e.notas||"";
+  $("el_tienda").value=e.tienda||""; $("el_url").value=e.url||""; $("el_medidas").value=e.medidas||""; $("el_urlmsg").textContent=""; $("el_comprado").checked=!!e.comprado; $("el_notas").value=e.notas||"";
   armDelete($("el_del"),async()=>{ await saveEls(c,(c.elementos||[]).filter(x=>x.id!==eid)); $("dlgEl").close(); toast("Elemento quitado"); });
   $("dlgEl").showModal();
 }
 async function saveEls(c,els){ const {id,...b}=c; await save("conjuntos",id,{...b,elementos:els}).catch(()=>{}); }
+// Pegar un enlace en «Añadir»: saca nombre y tienda del enlace y, en Vercel, lee precio, medidas y foto
+const dimsText=d=>[d.ancho,d.fondo,d.alto].some(v=>+v>0)?`${[d.ancho,d.fondo,d.alto].filter(v=>+v>0).map(v=>cm(v)).join(" × ")} cm`:"";
+async function qaUrl(cid,u){
+  const f=fromUrl(u), q=S.qa[cid]={...(S.qa[cid]||{}),url:u,tienda:f.tienda||"",nombre:f.nombre||"",imagen:"",medidas:""};
+  q.msg=HAS_API?"Leyendo la página de la tienda…":"Nombre y tienda sacados del enlace. Pon la cantidad y el precio, y pulsa Añadir.";
+  render(); setTimeout(()=>$("qa_c_"+cid)?.focus(),30);
+  if(!HAS_API) return;
+  try{
+    const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
+    if(S.qa[cid]?.url!==u) return;
+    if(r.ok&&!d.error){ if(d.nombre) q.nombre=d.nombre; if(d.precio) q.precio=d.precio; q.imagen=d.imagen||""; q.medidas=dimsText(d);
+      q.msg=d.precio?"Leído. Pon la cantidad y pulsa Añadir.":"Leído, pero sin precio. Escríbelo y pulsa Añadir."; }
+    else q.msg=`${d.error||"No se ha podido leer la página."} He puesto el nombre del enlace; añade el precio a mano.`;
+  }catch{ q.msg="No se ha podido leer la página. Añade el precio a mano."; }
+  render();
+}
 async function quickAdd(cid){
   const c=S.conjuntos.find(x=>x.id===cid); if(!c) return;
   const n=$("qa_n_"+cid).value.trim(); if(!n){ $("qa_n_"+cid).focus(); return; }
-  const el={id:uid(),nombre:n,cantidad:num($("qa_c_"+cid).value)||1,precio:num($("qa_p_"+cid).value),tipo:$("qa_t_"+cid).value,ud:"ud",comprado:false};
+  const q=S.qa[cid]||{};
+  const el={id:uid(),nombre:n,cantidad:num($("qa_c_"+cid).value)||1,precio:num($("qa_p_"+cid).value),tipo:$("qa_t_"+cid).value,ud:"ud",comprado:false,
+    ...(q.url?{url:q.url,tienda:q.tienda||"",imagen:q.imagen||"",medidas:q.medidas||""}:{})};
+  delete S.qa[cid];
   if(!$("qa_t_"+cid).dataset.touched&&/tornill|clav|taco|masilla|cola|pegament|lija|pintura|barniz|silicona|esc?uadra|bisagra|tirador|herraje|cinta|aceite|tinte/i.test(n)) el.tipo="material";
   ["n","c","p"].forEach(k=>$(`qa_${k}_${cid}`).value="");
   await saveEls(c,[...(c.elementos||[]),el]);
@@ -1903,13 +1926,25 @@ $("fCj").addEventListener("submit",async ev=>{
     if(!edCj){ S.tab="conjuntos"; render(); setTimeout(()=>$("qa_n_"+id)?.focus(),60); }
     toast(edCj?"Conjunto guardado":"Conjunto creado: añade sus piezas y materiales"); }catch{}
 });
+$("el_url").addEventListener("change",async()=>{
+  const u=$("el_url").value.trim(); if(!/^https?:\/\//i.test(u)) return;
+  const f=fromUrl(u); if(!$("el_tienda").value) $("el_tienda").value=f.tienda||"";
+  if(!HAS_API) return; $("el_urlmsg").textContent="Leyendo…";
+  try{ const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
+    if(r.ok&&!d.error){ if(d.precio&&!$("el_precio").value) $("el_precio").value=d.precio; if(!$("el_medidas").value) $("el_medidas").value=dimsText(d); $("el_urlmsg").textContent="Leído"; }
+    else $("el_urlmsg").textContent=d.error||"No se ha podido leer"; }catch{ $("el_urlmsg").textContent="No se ha podido leer"; }
+});
 $("fEl").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok"||!edEl) return;
   const c=S.conjuntos.find(x=>x.id===edEl.cid); if(!c) return;
-  const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
+  const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),medidas:$("el_medidas").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
   await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
 });
 document.addEventListener("input",e=>{
+  const qm=/^qa_([ncp])_(.+)$/.exec(e.target.id||"");
+  if(qm){ const [,k,cid]=qm, v=e.target.value, q=S.qa[cid]=S.qa[cid]||{};
+    if(k==="n"&&/^https?:\/\/\S+$/i.test(v.trim())){ qaUrl(cid,v.trim()); return; }
+    q[{n:"nombre",c:"cantidad",p:"precio"}[k]]=v; if(k==="n"&&!v) delete S.qa[cid]; return; }
   if(e.target.id!=="pr_rot") return; const it=selItem(); if(!it) return;
   if(!S.preEdit||S.preEdit.id!==it.id) S.preEdit={...it};
   let v=+e.target.value; const q=Math.round(v/90)*90; if(Math.abs(v-q)<=4){ v=q%360; e.target.value=v; }
