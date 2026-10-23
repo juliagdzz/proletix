@@ -283,7 +283,7 @@ details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);bo
     <div class="field h2"><label for="r_ancho">Ancho (cm)</label><input id="r_ancho" type="number" min="50" max="3000" step="1" required inputmode="numeric"></div>
     <div class="field h2"><label for="r_largo">Largo (cm)</label><input id="r_largo" type="number" min="50" max="3000" step="1" required inputmode="numeric"></div>
     <div class="field h2"><label for="r_alto">Techo (cm)</label><input id="r_alto" type="number" min="180" max="600" step="1" inputmode="numeric" placeholder="250"></div>
-    <p class="field hint" style="margin:0">Mide de pared a pared por dentro. Las puertas y ventanas las colocas luego desde el catálogo.</p>
+    <p class="field hint" style="margin:0">Mide de pared a pared por dentro. Si no es rectangular, pon el ancho y el largo máximos y luego pulsa «Dibujar forma» en el plano. Las puertas y ventanas las colocas desde el catálogo.</p>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="r_del" hidden>Eliminar estancia</button>
     <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
@@ -458,7 +458,7 @@ function render(){
       .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}<span class="n">${c}</span></button>`).join("")}</nav>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="compras"?shopHTML(p,prods):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
-  if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else bindPlan(r); }
+  if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
 }
 
 function figuresHTML(p,prods,tasks){
@@ -486,10 +486,10 @@ function figuresHTML(p,prods,tasks){
 /* ---------- Plano ---------- */
 function footprint(it){ const r=(it.rot||0)%180!==0; return {fw:r?it.d:it.w, fd:r?it.w:it.d}; }
 function problems(items,rm){
-  const bad=new Set();
+  const bad=new Set(), P=pts(rm);
   items.forEach(a=>{
     const A=footprint(a);
-    if(a.tipo!=="ventana"&&a.tipo!=="puerta"&&(a.x<0||a.y<0||a.x+A.fw>rm.ancho||a.y+A.fd>rm.largo)) bad.add(a.id);
+    if(a.tipo!=="ventana"&&a.tipo!=="puerta"&&!rectFits(a.x,a.y,A.fw,A.fd,P)) bad.add(a.id);
     if(a.tipo==="ventana"||a.tipo==="alfombra"||/alfombra/i.test(a.nombre)) return;
     items.forEach(b=>{
       if(a===b||b.tipo==="ventana"||/alfombra/i.test(b.nombre)) return;
@@ -526,6 +526,107 @@ function itemSVG(it,bad){
   }
   return `<g class="it" data-item="${esc(it.id)}" transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm</title>${body}</g>`;
 }
+/* ---------- Forma de la estancia (polígono en cm) ---------- */
+function pts(r){
+  if(S.tmpPts&&S.tmpPts.id===r.id) return S.tmpPts.P;
+  return Array.isArray(r.puntos)&&r.puntos.length>=3 ? r.puntos.map(p=>[+p.x,+p.y]) : [[0,0],[+r.ancho,0],[+r.ancho,+r.largo],[0,+r.largo]];
+}
+function inPoly(x,y,P){ let c=false; for(let i=0,j=P.length-1;i<P.length;j=i++){ const [xi,yi]=P[i],[xj,yj]=P[j]; if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
+function polyArea(P){ let a=0; P.forEach((p,i)=>{ const q=P[(i+1)%P.length]; a+=p[0]*q[1]-q[0]*p[1]; }); return Math.abs(a)/2; }
+function inward(P,i){
+  const p=P[i], q=P[(i+1)%P.length], dx=q[0]-p[0], dy=q[1]-p[1], l=Math.hypot(dx,dy)||1;
+  let nx=-dy/l, ny=dx/l; const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2;
+  if(!inPoly(mx+nx*2,my+ny*2,P)){ nx=-nx; ny=-ny; } return [nx,ny];
+}
+function bbox(P){ return {W:Math.max(...P.map(p=>p[0])),L:Math.max(...P.map(p=>p[1]))}; }
+function rectFits(x,y,w,d,P){
+  const c=[[x+1,y+1],[x+w-1,y+1],[x+w-1,y+d-1],[x+1,y+d-1]];
+  if(!c.every(([a,b])=>inPoly(a,b,P))) return false;
+  return !P.some(([a,b])=>a>x+1&&a<x+w-1&&b>y+1&&b<y+d-1);
+}
+function roomGeomSVG(P,pad){
+  const {W,L}=bbox(P), d="M"+P.map(p=>p.join(" ")).join("L")+"Z";
+  const lines=[]; for(let x=50;x<W;x+=50) lines.push(`M${x} 0V${L}`); for(let y=50;y<L;y+=50) lines.push(`M0 ${y}H${W}`);
+  const fs=pad*.3;
+  const labels=P.map((p,i)=>{
+    const q=P[(i+1)%P.length], len=Math.hypot(q[0]-p[0],q[1]-p[1]); if(len<25) return "";
+    const [nx,ny]=inward(P,i), mx=(p[0]+q[0])/2-nx*pad*.5, my=(p[1]+q[1])/2-ny*pad*.5;
+    let ang=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI; if(ang>90) ang-=180; if(ang<=-90) ang+=180;
+    return `<text transform="translate(${mx} ${my}) rotate(${ang})" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" opacity=".75">${cm(Math.round(len))}</text>`;
+  }).join("");
+  return `<defs><clipPath id="roomClip"><path d="${d}"/></clipPath>
+      <mask id="wallMask" maskUnits="userSpaceOnUse" x="${-pad*3}" y="${-pad*3}" width="${W+pad*6}" height="${L+pad*6}"><rect x="${-pad*3}" y="${-pad*3}" width="${W+pad*6}" height="${L+pad*6}" fill="white"/><path d="${d}" fill="black"/></mask></defs>
+    <path d="${d}" fill="var(--floor)"/>
+    <path d="${lines.join("")}" stroke="var(--grid)" stroke-width="1" fill="none" clip-path="url(#roomClip)"/>
+    <path d="${d}" fill="none" stroke="var(--wall)" stroke-width="24" stroke-linejoin="miter" stroke-miterlimit="8" mask="url(#wallMask)"/>
+    <g>${labels}</g>`;
+}
+function shapeHandlesSVG(P,hs){
+  const sel=S.shapeSel||{};
+  return P.map((p,i)=>{ const q=P[(i+1)%P.length];
+    return `<line data-seg="${i}" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${sel.t==="s"&&sel.i===i?"var(--red)":"transparent"}" stroke-width="${hs*1.6}" stroke-linecap="round" style="cursor:pointer"/>`; }).join("")
+  + P.map((p,i)=>{ const q=P[(i+1)%P.length], mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2;
+    return Math.hypot(q[0]-p[0],q[1]-p[1])<hs*5?"":`<g data-mid="${i}" style="cursor:copy"><circle cx="${mx}" cy="${my}" r="${hs*.75}" fill="var(--surface)" stroke="var(--red)" stroke-width="${hs*.2}"/><path d="M${mx-hs*.4} ${my}H${mx+hs*.4}M${mx} ${my-hs*.4}V${my+hs*.4}" stroke="var(--red)" stroke-width="${hs*.22}"/></g>`; }).join("")
+  + P.map((p,i)=>`<circle data-vtx="${i}" cx="${p[0]}" cy="${p[1]}" r="${hs}" fill="${sel.t==="v"&&sel.i===i?"var(--red)":"var(--surface)"}" stroke="var(--red)" stroke-width="${hs*.3}" style="cursor:move"/>`).join("");
+}
+function shapePanel(r,P){
+  const sel=S.shapeSel||{};
+  let extra="";
+  if(sel.t==="s"&&P[sel.i]){ const p=P[sel.i], q=P[(sel.i+1)%P.length];
+    extra=`<div class="props"><div class="full"><label for="sh_len">Largo de esta pared (cm)</label><input id="sh_len" type="number" min="10" step="1" value="${Math.round(Math.hypot(q[0]-p[0],q[1]-p[1]))}" inputmode="numeric"></div></div>`; }
+  if(sel.t==="v"&&P[sel.i]) extra=`<button class="btn sm danger" type="button" data-act="delVtx"${P.length<=3?" disabled":""}>Quitar esta esquina</button>`;
+  return `<div class="panel"><div class="ph"><h3>Forma de ${esc(r.nombre)}</h3><span class="num">${(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1})} m²</span></div>
+    <p class="muted" style="margin:0;font-size:13px">Arrastra los puntos para mover las esquinas. Pulsa un <b>+</b> para añadir una esquina en mitad de una pared. Pulsa una pared para escribir su largo exacto.</p>
+    ${extra}
+    <span class="label">Empezar desde una plantilla</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${[["rect","Rectángulo"],["L","En L"],["U","En U"],["chaflan","Esquina en chaflán"]].map(([k,n])=>`<button class="btn sm" type="button" data-tpl="${k}">${n}</button>`).join("")}</div>
+    <button class="btn primary" type="button" data-act="shapeDone">Listo</button></div>`;
+}
+function template(k,W,L){
+  const R=v=>Math.round(v/5)*5;
+  if(k==="L") return [[0,0],[W,0],[W,R(L*.55)],[R(W*.55),R(L*.55)],[R(W*.55),L],[0,L]];
+  if(k==="U") return [[0,0],[W,0],[W,L],[R(W*.68),L],[R(W*.68),R(L*.45)],[R(W*.32),R(L*.45)],[R(W*.32),L],[0,L]];
+  if(k==="chaflan"){ const c=R(Math.min(W,L)*.25); return [[0,0],[W-c,0],[W,c],[W,L],[0,L]]; }
+  return [[0,0],[W,0],[W,L],[0,L]];
+}
+async function saveShape(r,P){
+  P=P.filter((p,i)=>{ const q=P[(i+1)%P.length]; return P.length<=3||Math.hypot(q[0]-p[0],q[1]-p[1])>=1; });
+  if(P.length<3) return;
+  const mx=Math.min(...P.map(p=>p[0])), my=Math.min(...P.map(p=>p[1]));
+  if(mx||my){
+    P=P.map(([x,y])=>[x-mx,y-my]);
+    for(const it of S.items.filter(i=>i.estanciaId===r.id)){ const {id,...b}=it; await save("items",id,{...b,x:it.x-mx,y:it.y-my}).catch(()=>{}); }
+  }
+  const {W,L}=bbox(P); const {id,...b}=r;
+  S.tmpPts=null;
+  await save("estancias",id,{...b,puntos:P.map(([x,y])=>({x,y})),ancho:W,largo:L}).catch(()=>{});
+}
+function bindShape(r){
+  const svg=$("plan"); if(!svg) return;
+  const toCm=e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())};
+  const pad=+svg.dataset.pad, hs=+svg.dataset.hs;
+  let drag=null;
+  const redraw=P=>{ $("roomGeom").innerHTML=roomGeomSVG(P,pad); $("shapeLayer").innerHTML=shapeHandlesSVG(P,hs); };
+  svg.addEventListener("pointerdown",e=>{
+    const v=e.target.closest("[data-vtx]"), m=e.target.closest("[data-mid]"), sg=e.target.closest("[data-seg]");
+    const P=pts(r).map(p=>[...p]);
+    if(m){ const i=+m.dataset.mid, p=P[i], q=P[(i+1)%P.length];
+      P.splice(i+1,0,[Math.round((p[0]+q[0])/10)*5,Math.round((p[1]+q[1])/10)*5]); S.shapeSel={t:"v",i:i+1}; saveShape(r,P); return; }
+    if(v){ e.preventDefault(); const i=+v.dataset.vtx; S.shapeSel={t:"v",i}; drag={i,P,moved:false}; S.dragging=true; svg.setPointerCapture(e.pointerId); redraw(P); return; }
+    if(sg){ S.shapeSel={t:"s",i:+sg.dataset.seg}; render(); setTimeout(()=>$("sh_len")?.select(),30); return; }
+    if(S.shapeSel){ S.shapeSel=null; render(); }
+  });
+  svg.addEventListener("pointermove",e=>{
+    if(!drag) return; const c=toCm(e), P=drag.P, n=P.length;
+    let x=Math.round(c.x/5)*5, y=Math.round(c.y/5)*5;
+    for(const o of [P[(drag.i-1+n)%n],P[(drag.i+1)%n]]){ if(Math.abs(x-o[0])<12) x=o[0]; if(Math.abs(y-o[1])<12) y=o[1]; }
+    if(x===P[drag.i][0]&&y===P[drag.i][1]) return;
+    P[drag.i]=[x,y]; drag.moved=true; S.tmpPts={id:r.id,P}; redraw(P);
+  });
+  const end=()=>{ if(!drag) return; const d=drag; drag=null; S.dragging=false; if(d.moved) saveShape(r,d.P); else { S.tmpPts=null; render(); } };
+  svg.addEventListener("pointerup",end); svg.addEventListener("pointercancel",end);
+}
+
 function planHTML(p,r){
   const rs=roomsOf(p.id);
   const chips=`<div class="rooms">${rs.map(x=>`<button class="room-chip" type="button" data-room="${esc(x.id)}" aria-pressed="${r&&x.id===r.id}">${esc(x.nombre)} <small>${cm(x.ancho)}×${cm(x.largo)}</small></button>`).join("")}
@@ -533,35 +634,31 @@ function planHTML(p,r){
   if(!r) return `<div class="toolbar">${chips}</div><div class="blank"><h2>Dibuja tu primera estancia</h2><p>Solo necesitas el ancho y el largo en centímetros. Después arrastras muebles encima y ves si caben.</p><button class="btn primary" type="button" data-act="newRoom">Añadir estancia</button></div>`;
   const items=S.items.filter(i=>i.estanciaId===r.id);
   const bad=problems(items,r);
-  const W=+r.ancho, L=+r.largo, pad=Math.max(40,Math.max(W,L)*.07);
-  const lines=[]; for(let x=50;x<W;x+=50) lines.push(`M${x} 0V${L}`); for(let y=50;y<L;y+=50) lines.push(`M0 ${y}H${W}`);
+  const P=pts(r), {W,L}=bbox(P), pad=Math.max(40,Math.max(W,L)*.07), hs=Math.max(7,Math.max(W,L)/50), es=!!S.editShape&&S.vista!=="3d";
   const sel=items.find(i=>i.id===S.sel);
   const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
-  const area=(W*L/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
+  const area=(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
   const v3=S.vista==="3d";
-  return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div><button class="btn sm" type="button" data-act="editRoom">Medidas de ${esc(r.nombre)}</button></div></div>
+  return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="btn sm" type="button" data-act="editShape">Dibujar forma</button>`}<button class="btn sm" type="button" data-act="editRoom">Medidas de ${esc(r.nombre)}</button></div></div>
   <div class="planner">
     <div class="canvas">
-      ${v3?`<div id="view3d"></div><span class="hint">Arrastra un mueble para moverlo · arrastra el fondo para girar · rueda o pellizco para acercar</span>`:`<svg id="plan" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
-        <rect x="0" y="0" width="${W}" height="${L}" fill="var(--floor)"/>
-        <path d="${lines.join("")}" stroke="var(--grid)" stroke-width="1" fill="none"/>
-        <rect x="-6" y="-6" width="${W+12}" height="${L+12}" fill="none" stroke="var(--wall)" stroke-width="12"/>
-        <g font-size="${pad*.32}"><text x="${W/2}" y="${-pad*.45}" text-anchor="middle" class="num" opacity=".7">${cm(W)} cm</text>
-        <text transform="translate(${-pad*.45} ${L/2}) rotate(-90)" text-anchor="middle" opacity=".7">${cm(L)} cm</text></g>
-        <g id="itemsLayer">${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
+      ${v3?`<div id="view3d"></div><span class="hint">Arrastra un mueble para moverlo · arrastra el fondo para girar · rueda o pellizco para acercar</span>`:`<svg id="plan" data-pad="${pad}" data-hs="${hs}" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
+        <g id="roomGeom">${roomGeomSVG(P,pad)}</g>
+        <g id="itemsLayer"${es?' opacity=".3" style="pointer-events:none"':""}>${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
+        ${es?`<g id="shapeLayer">${shapeHandlesSVG(P,hs)}</g>`:""}
       </svg>
-      <span class="hint">${area} m² · cuadrícula de 50 cm · arrastra para mover</span>`}
-      ${bad.size?`<span class="warn">${bad.size} ${bad.size>1?"muebles no caben o se solapan":"mueble no cabe o se solapa"}</span>`:""}
+      <span class="hint">${area} m² · cuadrícula de 50 cm · ${es?"cotas en cm":"arrastra para mover"}</span>`}
+      ${bad.size&&!es?`<span class="warn">${bad.size} ${bad.size>1?"muebles no caben o se solapan":"mueble no cabe o se solapa"}</span>`:""}
     </div>
     <div class="side">
-      ${sel?propsHTML(sel):""}
-      ${listsHTML(p,r)}
-      <div class="panel"><h3>Añadir al plano</h3>
+      ${es?shapePanel(r,P):`${sel?propsHTML(sel):""}
+      ${listsHTML(p,r)}`}
+      ${es?"":`<div class="panel"><h3>Añadir al plano</h3>
         <div class="cat">
           ${myProds.length?`<div class="cat-g">Mis productos</div>${myProds.map(x=>`<button class="prod" type="button" data-addprod="${esc(x.id)}"><span>${esc(x.nombre)}</span><span>${cm(x.ancho)}×${cm(x.fondo)}</span></button>`).join("")}`:""}
           ${CATALOGO.map(([g,list],gi)=>`<div class="cat-g">${g}</div>${list.map((c,ci)=>`<button type="button" data-addgen="${gi}.${ci}"><span>${c[0]}</span><span>${c[1]}×${c[2]}</span></button>`).join("")}`).join("")}
         </div>
-      </div>
+      </div>`}
     </div>
   </div>`;
 }
@@ -713,21 +810,24 @@ function build3dRoom(r){
   G.traverse(o=>{ o.geometry?.dispose(); if(o.material){ o.material.map?.dispose(); o.material.dispose(); } });
   G.clear(); V.objs={};
   const mat=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.85,metalness:0,...o});
-  const floor=new T.Mesh(new T.PlaneGeometry(W,L),mat(0xffffff,{map:floorTex(T,W,L)}));
-  floor.rotation.x=-Math.PI/2; floor.position.set(W/2,0,L/2); floor.receiveShadow=true; G.add(floor);
+  const P=pts(r), shp=new T.Shape(); P.forEach(([x,y],i)=>i?shp.lineTo(x,-y):shp.moveTo(x,-y));
+  const ftex=floorTex(T,W,L); ftex.repeat.set(1/200,1/200);
+  const floor=new T.Mesh(new T.ShapeGeometry(shp),mat(0xffffff,{map:ftex})); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; G.add(floor);
+  const segs=P.map((p,i)=>{ const q=P[(i+1)%P.length], [nx,nz]=inward(P,i); return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1]),nx,nz,rot:Math.atan2(nx,nz)}; });
+  const putOn=(m,sg,t,y,off)=>{ m.position.set(sg.p[0]+(sg.q[0]-sg.p[0])*t+sg.nx*off,y,sg.p[1]+(sg.q[1]-sg.p[1])*t+sg.nz*off); m.rotation.y=sg.rot; };
   const wallM=mat(0xFFF6FC,{emissive:0xFFF6FC,emissiveIntensity:.45});
-  [["n",W],["s",W],["o",L],["e",L]].forEach(([side,len])=>{
-    const wall=new T.Mesh(new T.PlaneGeometry(len,H),wallM); wall.receiveShadow=true; onWall(wall,side,len/2,H/2,W,L,0); G.add(wall);
-    const sk=new T.Mesh(new T.PlaneGeometry(len,8),mat(0xFFF8EF)); onWall(sk,side,len/2,4,W,L,.3); G.add(sk);
+  segs.forEach(sg=>{ if(sg.len<1) return;
+    const wall=new T.Mesh(new T.PlaneGeometry(sg.len,H),wallM); wall.receiveShadow=true; putOn(wall,sg,.5,H/2,0); G.add(wall);
+    const sk=new T.Mesh(new T.PlaneGeometry(sg.len,8),mat(0xFFF8EF)); putOn(sk,sg,.5,4,.3); G.add(sk);
   });
   const items=S.items.filter(i=>i.estanciaId===r.id);
   items.forEach(it=>{
     const sel=it.id===S.sel, glow=sel?{emissive:0xF86C2F,emissiveIntensity:.3}:{};
     if(it.tipo==="puerta"||it.tipo==="ventana"){
       const {fw,fd}=footprint(it), cx=it.x+fw/2, cz=it.y+fd/2;
-      const side=[["n",Math.abs(it.y)],["s",Math.abs(L-it.y-fd)],["o",Math.abs(it.x)],["e",Math.abs(W-it.x-fw)]].sort((a,b)=>a[1]-b[1])[0][0];
-      const along=side==="n"||side==="s"?cx:cz, wd=+it.w;
-      const add=(w,h,y,c,off,o)=>{const m=new T.Mesh(new T.PlaneGeometry(w,h),mat(c,{...glow,...o})); m.userData.itemId=it.id; onWall(m,side,along,y,W,L,off); G.add(m); return m;};
+      let best=null; segs.forEach(sg=>{ if(sg.len<1) return; const dx=sg.q[0]-sg.p[0], dz=sg.q[1]-sg.p[1]; const t=Math.max(0,Math.min(1,((cx-sg.p[0])*dx+(cz-sg.p[1])*dz)/(sg.len*sg.len))); const dist=Math.hypot(cx-sg.p[0]-dx*t,cz-sg.p[1]-dz*t); if(!best||dist<best.dist) best={sg,t,dist}; });
+      const wd=+it.w;
+      const add=(w,h,y,c,off,o)=>{const m=new T.Mesh(new T.PlaneGeometry(w,h),mat(c,{...glow,...o})); m.userData.itemId=it.id; putOn(m,best.sg,best.t,y,off); G.add(m); return m;};
       if(it.tipo==="puerta"){ add(wd+10,210,105,0xFFF8EF,.4); add(wd-4,203,101.5,0x8A5A3C,.8); add(4,4,100,0xC9A089,1.4).position.x+=0; }
       else { add(wd+10,130,155,0xFFF8EF,.4); add(wd-6,118,155,0xC0D6FF,.8,{emissive:0x9DBBF0,emissiveIntensity:.35,roughness:.2}); add(3,118,155,0xFFF8EF,1.1); add(wd+16,5,88,0xFFF8EF,1.2); }
       return;
@@ -964,7 +1064,10 @@ function openRoom(r){
 $("fRoom").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
   const id=edR?.id||uid();
-  try{ await save("estancias",id,{proyectoId:edR?.proyectoId||S.proyId,nombre:$("r_nombre").value.trim(),ancho:+$("r_ancho").value,largo:+$("r_largo").value,alto:+$("r_alto").value||250,creado:edR?.creado||Date.now()});
+  const nw=+$("r_ancho").value, nl=+$("r_largo").value;
+  let puntos=edR?.puntos;
+  if(Array.isArray(puntos)&&puntos.length>=3&&(nw!==+edR.ancho||nl!==+edR.largo)) puntos=puntos.map(q=>({x:Math.round(q.x*nw/(+edR.ancho||nw)),y:Math.round(q.y*nl/(+edR.largo||nl))}));
+  try{ await save("estancias",id,{proyectoId:edR?.proyectoId||S.proyId,nombre:$("r_nombre").value.trim(),ancho:nw,largo:nl,alto:+$("r_alto").value||250,...(puntos?{puntos}:{}),creado:edR?.creado||Date.now()});
     S.roomId=id; render(); toast(edR?"Medidas guardadas":"Estancia añadida"); }catch{}
 });
 
@@ -1040,12 +1143,13 @@ $("btnNewProj").onclick=()=>openProj(null);
 $("d_fill").onclick=fillFromPaste;
 $("d_url").addEventListener("change",()=>{ const f=fromUrl($("d_url").value.trim()); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
-  if(d.vista){ S.vista=d.vista; lsSet("proletix:vista",S.vista); render(); return; }
-  if(d.tab){ S.tab=d.tab; lsSet("proletix:tab",S.tab); render(); return; }
-  if(d.room){ S.roomId=d.room; S.sel=null; render(); return; }
+  if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
+  if(d.vista){ S.editShape=false; S.vista=d.vista; lsSet("proletix:vista",S.vista); render(); return; }
+  if(d.tab){ S.editShape=false; S.tab=d.tab; lsSet("proletix:tab",S.tab); render(); return; }
+  if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||""}); return; }
   if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,back:true,color:4,productoId:x.id}); return; }
   if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
@@ -1065,6 +1169,9 @@ document.addEventListener("click",e=>{
     case "editRoom": openRoom(r); break;
     case "newProd": openProd(null,{estanciaId:""}); break;
     case "newTask": openTask(null); break;
+    case "editShape": S.editShape=true; S.vista="2d"; S.sel=null; S.shapeSel=null; render(); break;
+    case "shapeDone": S.editShape=false; S.shapeSel=null; render(); break;
+    case "delVtx": { const P0=pts(r).map(x=>[...x]); if(S.shapeSel?.t==="v"&&P0.length>3){ P0.splice(S.shapeSel.i,1); S.shapeSel=null; saveShape(r,P0); } break; }
     case "newList": openProd(null,{estanciaId:r?.id||""}); setTimeout(()=>$("d_busco").focus(),50); break;
     case "newCont": openCont(null); break;
     case "unsel": S.sel=null; render(); break;
@@ -1075,6 +1182,9 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const id=e.target.id;
+  if(id==="sh_len"){ const p0=proyecto(), r0=p0&&room(p0), P0=r0&&pts(r0).map(x=>[...x]), i=S.shapeSel?.i;
+    if(P0&&S.shapeSel?.t==="s"&&+e.target.value>=10){ const a=P0[i], j=(i+1)%P0.length, b=P0[j], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1, nl=+e.target.value;
+      P0[j]=[Math.round(a[0]+(b[0]-a[0])/l*nl),Math.round(a[1]+(b[1]-a[1])/l*nl)]; saveShape(r0,P0); } return; }
   if(id==="selProj"){ S.proyId=e.target.value; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); return; }
   const it=selItem(); if(!it) return;
   const v=e.target.value;
