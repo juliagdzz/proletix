@@ -436,6 +436,15 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 .med-u{font-family:var(--f-mono);font-size:13px;color:var(--muted);padding-bottom:4px}
 .med-n{margin:0;font-size:13px}
 .med-f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+#btnBell{position:relative;color:var(--granate)}
+s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
+.tag.drop{background:var(--red);color:#fff;align-self:flex-start}
+.bell-l{display:flex;flex-direction:column;gap:6px}
+.bell-i{display:flex;flex-direction:column;gap:3px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
+.bell-i.new{border-color:var(--red);background:#FFF4EE}
+.bell-i small{color:var(--muted);font-size:12px}.bell-i strong{color:var(--granate)}
+.bell-f{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -462,6 +471,7 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
       <div class="wordmark">Proletia<small>Casa, reformas y compras</small></div></div>
     <div class="actions">
       <span class="mode" id="mode" hidden>Conectando…</span>
+      <button class="icon-btn" id="btnBell" type="button" data-act="bell" aria-label="Rebajas de tus productos" title="Rebajas de tus productos" hidden><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellN"></span></button>
       <button class="icon-btn" id="btnUndo" type="button" data-act="undo" disabled title="Deshacer el último cambio (Ctrl+Z)" aria-label="Atrás: deshacer el último cambio">↶</button>
       <details class="menu" id="projMenu"><summary class="btn" aria-label="Menú"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="lbl">Menú</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
@@ -618,6 +628,11 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 
 <dialog id="dlgPh" class="ph-dlg" aria-label="Foto"><form method="dialog"><img id="phImg" alt=""><button class="btn" value="cancel">Cerrar</button></form></dialog>
 
+<dialog id="dlgBell"><form method="dialog">
+  <div class="dlg-h"><h2>Rebajas</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
+  <div class="dlg-b" style="display:block" id="bellBody"></div>
+</form></dialog>
+
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
   <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
@@ -744,6 +759,7 @@ async function boot(){
     },()=>toast("Se ha perdido la conexión con los datos. Recarga la página.")));
   } else {
     S.mode="local"; COLS.forEach(col=>S[col]=lsGet("proletix:"+col,[])); render();
+    if(HAS_API){ setTimeout(()=>checkPrices(false),2500); setInterval(()=>checkPrices(false),6*3600e3); }
   }
 }
 
@@ -774,6 +790,7 @@ function render(){
   if(S.mode==="loading"){ if(!main.querySelector(".loader")) main.innerHTML=LOADER; return; }
   const p=proyecto(); S.proyId=p?.id||null;
   $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
+  { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=!(HAS_API||nd.length); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
   if(!p){
     main.innerHTML=`<section class="blank"><h2>Crea tu primer proyecto</h2>
@@ -2129,6 +2146,59 @@ function drawMFotos(){
 }
 function showPhoto(src){ $("phImg").src=src; $("dlgPh").showModal(); }
 
+/* ---------- Vigilar precios: comprueba los productos elegidos y favoritos con enlace (solo fuera de Claude) ---------- */
+const PRICE_EVERY=12*3600e3;
+let checking=false;
+const dropOf=x=>+x.precioAntes>0&&+x.precio>0&&+x.precioAntes>+x.precio?Math.round((1-x.precio/x.precioAntes)*100):0;
+const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<2?"ahora mismo":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} días`; };
+function saveQuiet(col,id,data){ S.undoing=true; const p=save(col,id,data); S.undoing=false; return p; }
+async function checkPrices(force){
+  if(!HAS_API||checking||S.mode==="loading") return;
+  const now=Date.now(), due=S.productos.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado)&&(force||now-(+x.check||0)>PRICE_EVERY));
+  if(!due.length){ if(force) toast("No hay productos elegidos o favoritos con enlace que comprobar."); return; }
+  checking=true; if(force) toast(`Comprobando ${due.length} precio${due.length>1?"s":""}…`);
+  const drops=[]; let fails=0;
+  for(const x of due.slice(0,force?30:10)){
+    try{
+      const r=await fetch("/api/producto?url="+encodeURIComponent(x.url)), d=await r.json().catch(()=>({}));
+      const cur=S.productos.find(y=>y.id===x.id); if(!cur) continue;
+      const {id,...b}=cur, patch={check:Date.now()}, old=+cur.precio||0, nw=+d.precio||0;
+      if(!r.ok||!nw) fails++;
+      else if(Math.abs(nw-old)>=.01){
+        patch.precio=nw; patch.historial=[...(cur.historial||[]),{f:Date.now(),p:nw}].slice(-20);
+        if(old&&nw<old){ patch.precioAntes=Math.max(old,+cur.precioAntes||0); patch.bajadaVista=false; drops.push({...cur,...patch}); }
+        else if(+cur.precioAntes&&nw>=+cur.precioAntes){ patch.precioAntes=""; }
+      }
+      await saveQuiet("productos",id,{...b,...patch});
+    }catch{ fails++; }
+    await new Promise(r=>setTimeout(r,700));
+  }
+  checking=false;
+  if(drops.length) notifyDrops(drops);
+  else if(force) toast(fails===due.length?"No he podido leer los precios: las tiendas bloquean la lectura.":"Precios al día: ninguno ha bajado.");
+}
+function notifyDrops(drops){
+  const one=drops[0];
+  toastAction(drops.length===1?`¡${one.nombre} ha bajado a ${eur2.format(one.precio)}!`:`${drops.length} de tus productos han bajado de precio`,"Ver",()=>openBell());
+  try{
+    if("Notification" in window&&Notification.permission==="granted"&&navigator.serviceWorker)
+      navigator.serviceWorker.ready.then(reg=>drops.forEach(x=>reg.showNotification("Ha bajado de precio",{body:`${x.nombre}: ${eur2.format(x.precioAntes)} → ${eur2.format(x.precio)} (−${dropOf(x)} %)`,icon:"/icons/icon-192.png",badge:"/icons/icon-192.png",tag:"precio-"+x.id,data:{url:"/"}})));
+  }catch{}
+}
+function bellHTML(){
+  const ds=S.productos.filter(x=>dropOf(x)).sort((a,b)=>dropOf(b)-dropOf(a));
+  const canNotify=HAS_API&&"Notification" in window&&Notification.permission==="default";
+  return `${ds.length?`<div class="bell-l">${ds.map(x=>`<button type="button" class="bell-i${x.bajadaVista?"":" new"}" data-goprod="${esc(x.id)}">
+      <b>${esc(x.nombre)}</b><span><s>${eur2.format(+x.precioAntes)}</s> → <strong>${eur2.format(+x.precio)}</strong> <span class="tag cheap">−${dropOf(x)} %</span></span>
+      <small>${esc([S.proyectos.find(p=>p.id===x.proyectoId)?.nombre,x.busco,x.tienda].filter(Boolean).join(" · "))}${x.check?` · ${ago(+x.check)}`:""}</small></button>`).join("")}</div>`
+    :`<p class="muted" style="margin:0">Ninguno de tus productos ha bajado de precio. Se comprueban los <b>elegidos</b> y <b>favoritos</b> que tienen enlace, cada vez que abres la app.</p>`}
+    <div class="bell-f">${HAS_API?`<button class="btn sm" type="button" data-act="checkPrices">Comprobar ahora</button>`:`<span class="muted" style="font-size:12px">Los precios se vigilan en la app instalada desde Vercel.</span>`}${canNotify?`<button class="btn sm primary" type="button" data-act="askNotify">Avisarme también en el móvil</button>`:""}</div>`;
+}
+function openBell(){
+  $("bellBody").innerHTML=bellHTML(); $("dlgBell").showModal();
+  S.productos.filter(x=>dropOf(x)&&!x.bajadaVista).forEach(x=>{ const {id,...b}=x; saveQuiet("productos",id,{...b,bajadaVista:true}).catch(()=>{}); });
+}
+
 /* ---------- Compras ---------- */
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 // Comparador tipo tienda: una columna por producto y una fila por característica
@@ -2149,7 +2219,7 @@ function compareHTML(list){
       ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="cmp-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}
       <b>${esc(x.nombre)}</b>${safeUrl(x.url)?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}</th>`).join("")}</tr></thead>
     <tbody>
-      ${row("Precio",x=>`<span class="cmp-p">${+x.precio>0?eur2.format(+x.precio):"—"}</span>${prices.length>1&&+x.precio===min?' <span class="tag cheap">Más barato</span>':+x.precio>0&&min!==null&&+x.precio>min?`<small>+${eur.format(+x.precio-min)}</small>`:""}`,x=>prices.length>1&&+x.precio===min?"best":"")}
+      ${row("Precio",x=>`<span class="cmp-p">${+x.precio>0?eur2.format(+x.precio):"—"}</span>${dropOf(x)?` <s class="old">${eur2.format(+x.precioAntes)}</s> <span class="tag drop">−${dropOf(x)} %</span>`:""}${prices.length>1&&+x.precio===min?' <span class="tag cheap">Más barato</span>':+x.precio>0&&min!==null&&+x.precio>min?`<small>+${eur.format(+x.precio-min)}</small>`:""}`,x=>prices.length>1&&+x.precio===min?"best":"")}
       ${row("Te gusta",x=>+x.valor?stars(x.valor):'<span class="muted">Sin valorar</span>',x=>anyV&&+x.valor===bestV&&bestV>0?"best":"")}
       ${row("Tienda",x=>esc(x.tienda||"—"))}
       ${row("Medidas",x=>`<span class="num">${dims(x)}</span>`)}
@@ -2163,7 +2233,7 @@ function compareHTML(list){
     ${maxP!==null&&min!==null&&maxP>min?`<p class="muted" style="font-size:12px;margin:6px 0 0">Entre la opción más barata y la más cara hay ${eur.format(maxP-min)} de diferencia.</p>`:""}`;
 }
 function shopHTML(p,prods){
-  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${HAS_API?`<button class="btn ghost" type="button" data-act="checkPrices" title="Mira si han bajado tus elegidos y favoritos">Comprobar precios</button>`:""}${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
   const emptyLists=listsOf(p.id).filter(l=>!prods.some(x=>x.busco===l.nombre));
   if(!prods.length&&!emptyLists.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
   const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
@@ -2185,7 +2255,8 @@ function shopHTML(p,prods){
         return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
           <div class="row"><span class="st st-${x.estado||"visto"}">${(ESTADOS_P.find(e=>e[0]===x.estado)||ESTADOS_P[0])[1]}</span>${min!==null&&+x.precio===min&&x.estado!=="descartado"?'<span class="tag cheap">Más barato</span>':""}</div>
           <h4>${esc(x.nombre)}</h4>
-          <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}</span>${stars(x.valor)}</div>
+          <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}${dropOf(x)?` <s class="old">${eur2.format(+x.precioAntes)}</s>`:""}</span>${stars(x.valor)}</div>
+          ${dropOf(x)?`<span class="tag drop">Ha bajado un ${dropOf(x)} %</span>`:""}${x.check&&safeUrl(x.url)?`<span class="dims">Precio comprobado ${ago(+x.check)}</span>`:""}
           <span class="shop">${esc(x.tienda||"")}${x.estanciaId?` · ${esc(roomName(x.estanciaId))}`:""}</span>
           ${dims?`<span class="dims">${dims}</span>`:""}
           ${(()=>{ const hm=listMed(x.proyectoId,x.busco), f=hm&&fitsMed(x,hm); return f?`<span class="fit ${f.ok?"ok":"bad"}">${f.ok?"✓":"✗"} ${esc(f.t.replace(/^Cabe · /,"Cabe en "+hm.nombre+" · ").replace(/^No cabe:/,"No cabe en "+hm.nombre+":"))}</span>`:""; })()}
@@ -2445,7 +2516,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -2463,6 +2534,7 @@ document.addEventListener("click",e=>{
   if(d.rmfoto){ mFotos.splice(+d.rmfoto,1); drawMFotos(); return; }
   if(d.copymed){ e.stopPropagation(); copyMed(S.medidas.find(m=>m.id===d.copymed)); return; }
   if(d.editmed){ openMed(S.medidas.find(m=>m.id===d.editmed)); return; }
+  if(d.goprod){ const x=S.productos.find(y=>y.id===d.goprod); $("dlgBell").close(); if(x){ S.proyId=x.proyectoId; S.view="proyecto"; S.tab="productos"; lsSet("proletix:proy",S.proyId); render(); } return; }
   if(d.editlist){ openList({edit:d.editlist}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
   if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
@@ -2501,6 +2573,9 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "bell": openBell(); break;
+    case "checkPrices": checkPrices(true); break;
+    case "askNotify": try{ Notification.requestPermission().then(p=>{ toast(p==="granted"?"Te avisaré en el móvil cuando baje un precio.":"Sin permiso para avisos: los verás solo dentro de la app."); if($("dlgBell").open) $("bellBody").innerHTML=bellHTML(); }); }catch{ toast("Este navegador no permite avisos."); } break;
     case "newMed": openMed(null); break;
     case "dxf": $("dxfIn").value=""; $("dxfIn").click(); break;
     case "calcoShape": useCalcoShape(); break;

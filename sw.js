@@ -1,5 +1,5 @@
 // Guarda la app para que abra rápido y funcione sin conexión. Sube CACHE al cambiar este archivo.
-const CACHE = "proletia-v2";
+const CACHE = "proletia-v3";
 const SHELL = [
   "/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/favicon.svg",
   "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js",
@@ -26,4 +26,13 @@ self.addEventListener("fetch", e => {
     if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return r;
   })));
+});
+
+// Al tocar un aviso de rebaja, abre la app (o la trae al frente si ya está abierta)
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    for (const c of list) if ("focus" in c) return c.focus();
+    return self.clients.openWindow("/");
+  }));
 });
