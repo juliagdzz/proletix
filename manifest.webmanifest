@@ -1,0 +1,17 @@
+{
+  "name": "Proletix",
+  "short_name": "Proletix",
+  "description": "Casa, reformas y compras: plano 2D y 3D, listas de muebles por estancia y tareas de reforma.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF3FC",
+  "theme_color": "#FFF3FC",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

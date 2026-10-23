@@ -3,6 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#FFF3FC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Proletix">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.__pwaPrompt = e; const b = document.getElementById("btnInstall"); if (b) b.hidden = false; });
+addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = document.getElementById("btnInstall"); if (b) b.hidden = true; });
+</script>
 </head>
 <body>
 <title>Proletix</title>
@@ -256,6 +269,7 @@ details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);bo
       <div class="wordmark">Proletix<small>Casa, reformas y compras</small></div></div>
     <div class="actions">
       <span class="mode" id="mode">Conectando…</span>
+      <button class="btn" id="btnInstall" type="button" hidden>Instalar app</button>
       <button class="btn" id="btnNewProj" type="button">Nuevo proyecto</button>
     </div>
   </header>
@@ -1168,6 +1182,8 @@ $("fCont").addEventListener("submit",async ev=>{
 function selItem(){ return S.items.find(i=>i.id===S.sel); }
 function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
 $("btnNewProj").onclick=()=>openProj(null);
+if(window.__pwaPrompt) $("btnInstall").hidden=false;
+$("btnInstall").onclick=async()=>{ const ev=window.__pwaPrompt; if(!ev) return; ev.prompt(); try{ await ev.userChoice; }catch{} window.__pwaPrompt=null; $("btnInstall").hidden=true; };
 $("d_fill").onclick=fillFromPaste;
 $("d_url").addEventListener("change",()=>{ const u=$("d_url").value.trim(); if(HAS_API&&/^https?:\/\//i.test(u)) readUrl(u); const f=fromUrl(u); if(f.tienda&&!$("d_tienda").value) $("d_tienda").value=f.tienda; if(f.nombre&&!$("d_nombre").value) $("d_nombre").value=f.nombre; });
 document.addEventListener("click",e=>{
