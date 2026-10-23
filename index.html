@@ -282,6 +282,32 @@ table.budget .ok{color:var(--ok);font-weight:600}
 @media (max-width:560px){.qa{grid-template-columns:1fr 1fr 1fr}.qa input:first-child{grid-column:1/-1}}
 .cj-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .t-j{background:#E4F0D9;color:#2F5A1F}
+.plan-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rl{display:flex;flex-direction:column;gap:6px}
+.rl-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:4px 2px}
+.rl-h h3{font-size:20px;color:var(--granate)}
+.rl-empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:14px;font-size:14px;color:var(--muted)}
+.rl-d{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rl-d summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;cursor:pointer;list-style:none}
+.rl-d summary::-webkit-details-marker{display:none}
+.rl-d summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--granate);border-bottom:2px solid var(--granate);transform:rotate(-45deg);transition:transform .15s}
+.rl-d[open] summary::before{transform:rotate(45deg)}
+.rl-d[open] summary{background:var(--beige)}
+.rl-n{font-family:var(--f-display);font-size:18px;font-weight:800;font-stretch:85%;color:var(--granate)}
+.rl-d summary{grid-template-columns:auto auto minmax(0,1fr) auto}
+.rl-s{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rl-s i{color:var(--muted)}
+.rl-c{font-size:12px;color:var(--muted)}
+.rl-b{display:flex;flex-direction:column;gap:4px;padding:8px 10px 10px}
+.rl-o{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;width:100%}
+.rl-o:hover{background:var(--bg)}
+.rl-o[aria-pressed="true"]{border-color:var(--red);background:var(--surface)}
+.rl-o img,.rl-sw{width:44px;height:44px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+.rl-t{min-width:0}.rl-t b{display:block;font-weight:600;overflow-wrap:anywhere}.rl-t small{display:block;font-size:12px;color:var(--muted)}
+.rl-p{font-size:14px}
+.rl-o .radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--granate)}
+.rl-o[aria-pressed="true"] .radio{border-color:var(--red);background:radial-gradient(circle,var(--red) 0 40%,transparent 46%)}
+.rl-tot{display:flex;justify-content:space-between;padding:8px 14px;font-size:14px;color:var(--granate)}
+@media (max-width:560px){.rl-d summary{grid-template-columns:auto minmax(0,1fr) auto}.rl-s{grid-column:2/-1;grid-row:2}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -480,7 +506,7 @@ const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido
 const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
 const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), lastList:"",
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[], gastos:[], listas:[], conjuntos:[], closedCj:new Set(), openLists:new Set(), lastList:"",
   proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
 const COLS = ["proyectos","estancias","items","productos","tareas","contactos","gastos","listas","conjuntos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
@@ -766,7 +792,7 @@ function planHTML(p,r){
   const v3=S.vista==="3d";
   return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="btn sm" type="button" data-act="editShape">Dibujar forma</button>`}<button class="btn sm" type="button" data-act="editRoom">Medidas de ${esc(r.nombre)}</button></div></div>
   <div class="planner">
-    <div class="canvas">
+    <div class="plan-main"><div class="canvas">
       ${v3?`<div id="view3d"></div><span class="hint">Arrastra un mueble para moverlo · púlsalo otra vez para girarlo · arrastra el fondo para girar la vista</span>`:`<svg id="plan" data-pad="${pad}" data-hs="${hs}" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
         <g id="roomGeom">${roomGeomSVG(P,pad)}</g>
         <g id="itemsLayer"${es?' opacity=".3" style="pointer-events:none"':""}>${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
@@ -774,10 +800,9 @@ function planHTML(p,r){
       </svg>
       <span class="hint">${area} m² · cuadrícula de 50 cm · ${es?"cotas en cm":"arrastra para mover · pulsa otra vez para girar"}</span>`}
       ${bad.size&&!es?`<span class="warn">${bad.size} ${bad.size>1?"muebles no caben o se solapan":"mueble no cabe o se solapa"}</span>`:""}
-    </div>
+    </div>${es?"":roomListsHTML(p,r)}</div>
     <div class="side">
-      ${es?shapePanel(r,P):`${sel?propsHTML(sel):""}
-      ${listsHTML(p,r)}`}
+      ${es?shapePanel(r,P):`${sel?propsHTML(sel):""}`}
       ${es?"":`<div class="panel"><h3>Añadir al plano</h3>
         <div class="cat">
           ${S.conjuntos.filter(c=>c.proyectoId===p.id&&+c.ancho>0&&+c.fondo>0).map((c,i)=>`${i?"":`<div class="cat-g">Mis conjuntos</div>`}<button class="prod" type="button" data-addcj="${esc(c.id)}"><span>${esc(c.nombre)}</span><span>${cm(c.ancho)}×${cm(c.fondo)}</span></button>`).join("")}
@@ -1225,6 +1250,30 @@ ${t.slice(0,60000)}`;
 }
 const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x));
   S.listas.filter(l=>l.proyectoId===pid&&l.estanciaId===rid).forEach(l=>{ g[l.nombre] ||= []; }); return g; };
+// Listas de la estancia bajo el plano: cada una se despliega con todos sus productos; pulsar uno lo pone en el plano
+function roomListsHTML(p,r){
+  const g={}, pid=p.id;
+  S.productos.filter(x=>x.proyectoId===pid&&x.estado!=="descartado"&&(x.estanciaId===r.id||!x.estanciaId)).forEach(x=>(g[x.busco||"Sin lista"] ||= []).push(x));
+  S.listas.filter(l=>l.proyectoId===pid&&(l.estanciaId===r.id||!l.estanciaId)).forEach(l=>{ g[l.nombre] ||= []; });
+  const names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
+  const head=`<div class="rl-h"><h3>Muebles de ${esc(r.nombre)}</h3><span class="muted" style="font-size:13px">Abre una lista y pulsa un producto para verlo en el plano</span></div>`;
+  if(!names.length) return `<section class="rl">${head}<div class="rl-empty">Aún no hay listas para esta estancia. Créalas en <button class="btn sm" type="button" data-tab="productos">Productos</button> (por ejemplo «Mueble de TV» o «Sofá»), mete las opciones que veas y aparecerán aquí para elegir.</div></section>`;
+  const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
+  const total=names.reduce((s,n)=>s+(+(win(n)?.precio)||0),0);
+  return `<section class="rl">${head}${names.map(n=>{
+    const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9)), w=win(n), open=S.openLists.has(n);
+    const lid=list[0]?.estanciaId??(S.listas.find(l=>l.proyectoId===pid&&l.nombre===n)?.estanciaId||"");
+    return `<details class="rl-d" data-rl="${esc(n)}"${open?" open":""}>
+      <summary><span class="rl-n">${esc(n)}</span><span class="rl-s">${w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Sin elegir":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
+      <div class="rl-b">${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0, sw=prodHex(x);
+        return `<button type="button" class="rl-o" data-choose="${esc(x.id)}" aria-pressed="${on}">
+          ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
+          <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":""].filter(Boolean).map(esc).join(" · ")}</small></span>
+          <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span><span class="radio"></span></button>`; }).join("")}
+        <button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button></div>
+    </details>`; }).join("")}
+    ${total?`<div class="rl-tot"><span>Lo elegido en ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
+}
 function listsHTML(p,r){
   const g=groupsIn(p.id,r.id), names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
   const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
@@ -1242,7 +1291,7 @@ async function choose(id){
   const group=S.productos.filter(y=>y.proyectoId===x.proyectoId&&y.busco===x.busco&&(y.estanciaId||"")===(x.estanciaId||""));
   for(const y of group) if(y.id!==id&&y.estado==="elegido"){ const {id:yid,...b}=y; await save("productos",yid,{...b,estado:"favorito"}).catch(()=>{}); }
   if(x.estado!=="elegido"&&x.estado!=="comprado"){ const {id:_,...b}=x; await save("productos",id,{...b,estado:"elegido"}).catch(()=>{}); }
-  const room=S.estancias.find(e=>e.id===x.estanciaId);
+  const room=S.estancias.find(e=>e.id===x.estanciaId)||(S.tab==="plano"?S.estancias.find(e=>e.id===S.roomId):null);
   if(!room){ toast("Elegido. Asígnale una estancia para verlo en el plano."); return; }
   if(!(+x.ancho>0&&+x.fondo>0)){ toast("Elegido. Añade sus medidas para verlo en el plano."); return; }
   const ids=new Set(group.map(y=>y.id));
@@ -1656,7 +1705,8 @@ $("fEl").addEventListener("submit",async ev=>{
   const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
   await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
 });
-document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("details.cj")){ if(dd.open) S.closedCj.delete(dd.dataset.cj); else S.closedCj.add(dd.dataset.cj); } },true);
+document.addEventListener("toggle",e=>{ const dd=e.target; if(dd.matches?.("details.cj")){ if(dd.open) S.closedCj.delete(dd.dataset.cj); else S.closedCj.add(dd.dataset.cj); }
+  if(dd.matches?.("details.rl-d")){ if(dd.open) S.openLists.add(dd.dataset.rl); else S.openLists.delete(dd.dataset.rl); } },true);
 $("fGasto").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
   const id=edG?.id||uid();
@@ -1712,7 +1762,7 @@ document.addEventListener("click",e=>{
     case "editShape": S.editShape=true; S.vista="2d"; S.sel=null; S.shapeSel=null; render(); break;
     case "shapeDone": S.editShape=false; S.shapeSel=null; render(); break;
     case "delVtx": { const P0=pts(r).map(x=>[...x]); if(S.shapeSel?.t==="v"&&P0.length>3){ P0.splice(S.shapeSel.i,1); S.shapeSel=null; saveShape(r,P0); } break; }
-    case "newList": openList({estanciaId:S.tab==="plano"?r?.id||"":""}); break;
+    case "newList": openList({estanciaId:S.roomId||""}); break;
     case "newCj": openCj(null); break;
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
