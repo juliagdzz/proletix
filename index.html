@@ -407,6 +407,15 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
 .cat-d[open] summary::after{transform:rotate(-135deg)}
 .cat-d summary .num{margin-left:auto;font-size:11px;color:var(--muted);font-weight:500}
 .cat-d .cat{max-height:none;padding-bottom:6px}
+.loader{display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:90px;color:var(--granate);font-family:var(--f-display);font-size:20px;font-weight:700;font-stretch:85%}
+.loader svg{width:110px;height:110px;color:var(--red);overflow:visible}
+.ld-h{transform-box:view-box;transform-origin:51px 51px;animation:ld-swing .9s cubic-bezier(.5,0,.3,1) infinite}
+.ld-r{animation:ld-roll 1.3s ease-in-out infinite}
+.loader span{animation:ld-fade 1.8s ease-in-out infinite}
+@keyframes ld-swing{0%,100%{transform:rotate(0)}45%{transform:rotate(-32deg)}60%{transform:rotate(5deg)}70%{transform:rotate(0)}}
+@keyframes ld-roll{0%,100%{transform:translate(0,0)}50%{transform:translate(-6px,6px)}}
+@keyframes ld-fade{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.ld-h,.ld-r,.loader span{animation:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -436,7 +445,10 @@ details.need:not([open])>summary{border-bottom-color:var(--line)}
       <details class="menu" id="projMenu"><summary class="btn" aria-label="Menú"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="lbl">Menú</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
   </header>
-  <main id="main" style="display:flex;flex-direction:column;gap:18px"></main>
+  <main id="main" style="display:flex;flex-direction:column;gap:18px"><div class="loader" role="status" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true">
+      <g class="ld-r"><g transform="rotate(45 32 32)" fill="currentColor"><rect x="17" y="5" width="28" height="11" rx="3"/><path d="M45 10.5h3.5a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H34.6v8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="31.5" y="31" width="6.2" height="26" rx="3"/></g></g>
+      <g class="ld-h"><g transform="rotate(-45 32 32)" fill="currentColor"><path d="M17 9h24l5 4v6H17z"/><rect x="28.8" y="18" width="6.4" height="41" rx="3"/></g></g>
+    </svg><span>Preparando tu casa…</span></div></main>
 </div>
 
 <!-- Proyecto -->
@@ -705,6 +717,10 @@ const roomsOf = pid => S.estancias.filter(e=>e.proyectoId===pid).sort((a,b)=>(a.
 function room(p){ const rs=roomsOf(p.id); return rs.find(r=>r.id===S.roomId)||rs[0]||null; }
 const roomName = id => S.estancias.find(e=>e.id===id)?.nombre||"";
 
+const LOADER=`<div class="loader" role="status" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true">
+      <g class="ld-r"><g transform="rotate(45 32 32)" fill="currentColor"><rect x="17" y="5" width="28" height="11" rx="3"/><path d="M45 10.5h3.5a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H34.6v8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="31.5" y="31" width="6.2" height="26" rx="3"/></g></g>
+      <g class="ld-h"><g transform="rotate(-45 32 32)" fill="currentColor"><path d="M17 9h24l5 4v6H17z"/><rect x="28.8" y="18" width="6.4" height="41" rx="3"/></g></g>
+    </svg><span>Preparando tu casa…</span></div>`;
 /* ---------- Render ---------- */
 function render(){
   if(S.dragging) return;
@@ -715,7 +731,7 @@ function render(){
   // conserva lo que se está escribiendo si llega una actualización
   const ae=document.activeElement, keep=ae&&ae.id&&main.contains(ae)?{id:ae.id,v:ae.value,s:ae.selectionStart}:null;
 
-  if(S.mode==="loading"){ main.innerHTML=`<p class="muted">Cargando tus proyectos…</p>`; return; }
+  if(S.mode==="loading"){ if(!main.querySelector(".loader")) main.innerHTML=LOADER; return; }
   const p=proyecto(); S.proyId=p?.id||null;
   $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
