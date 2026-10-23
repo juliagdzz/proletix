@@ -8,144 +8,177 @@
 <title>Proletix</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: cabecera de obra + franja de cifras + pestañas (tablero por estado, presupuesto por capítulos, gremios) */
+/* Layout: cabecera con logo y proyecto · franja de cifras · pestañas (plano 2D con catálogo lateral, compras comparadas, reforma, contactos) */
 :root{
-  --bg:#ECEBE6; --surface:#F9F8F5; --sunk:#E3E2DC; --ink:#1D2023; --muted:#5C5F5C; --line:#D2D0C8;
-  --accent:#F2B705; --accent-ink:#1D2023; --plan:#2B5A78;
-  --ok:#2C7A4B; --warn:#9A5B00; --bad:#B0372B;
-  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
-  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --bg:#ECEEF1; --surface:#FFFFFF; --sunk:#E2E5EA; --ink:#17191D; --muted:#5A626C; --line:#D3D8DF;
+  --red:#CF2A1F; --red-ink:#FFFFFF; --gold:#F3BE00; --gold-ink:#17191D;
+  --ok:#2A7A48; --warn:#9A5B00; --bad:#C0261B;
+  --floor:#F7F4EC; --wall:#2A2D33; --grid:rgb(42 45 51 / .08);
+  --f0:#DCE6F2; --f1:#F1DCCB; --f2:#DDEBD9; --f3:#E9DDF0; --f4:#F3E7B8; --f5:#E4E4E4;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --r:6px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#151719; --surface:#1E2124; --sunk:#26292D; --ink:#E8E6E0; --muted:#A2A29B; --line:#363A3E;
-  --accent:#F2B705; --accent-ink:#1D2023; --plan:#82B3D3;
-  --ok:#6CC28F; --warn:#E5A54C; --bad:#EC7F72; color-scheme:dark}}
+  --bg:#121417; --surface:#1B1E23; --sunk:#252930; --ink:#E9EBEE; --muted:#9BA3AD; --line:#30353D;
+  --red:#FF5546; --red-ink:#17191D; --gold:#F3BE00; --gold-ink:#17191D;
+  --ok:#6CC28F; --warn:#E5A54C; --bad:#FF7468;
+  --floor:#24272C; --wall:#C9CDD3; --grid:rgb(255 255 255 / .06);
+  --f0:#2C3A4D; --f1:#4A3627; --f2:#2E4430; --f3:#3E3048; --f4:#4A421F; --f5:#3A3D42; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#151719; --surface:#1E2124; --sunk:#26292D; --ink:#E8E6E0; --muted:#A2A29B; --line:#363A3E;
-  --accent:#F2B705; --accent-ink:#1D2023; --plan:#82B3D3;
-  --ok:#6CC28F; --warn:#E5A54C; --bad:#EC7F72; color-scheme:dark}
+  --bg:#121417; --surface:#1B1E23; --sunk:#252930; --ink:#E9EBEE; --muted:#9BA3AD; --line:#30353D;
+  --red:#FF5546; --red-ink:#17191D; --gold:#F3BE00; --gold-ink:#17191D;
+  --ok:#6CC28F; --warn:#E5A54C; --bad:#FF7468;
+  --floor:#24272C; --wall:#C9CDD3; --grid:rgb(255 255 255 / .06);
+  --f0:#2C3A4D; --f1:#4A3627; --f2:#2E4430; --f3:#3E3048; --f4:#4A421F; --f5:#3A3D42; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
-.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;
+.wrap{max-width:1240px;margin:0 auto;padding-block:16px 48px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;flex-direction:column;gap:20px}
-h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.01em}
+  display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;font-stretch:80%;font-weight:800;letter-spacing:.005em}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
 button,select,input,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--plan);outline-offset:2px}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+a{color:inherit}
 
 /* Cabecera */
-.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 20px}
-.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
-.brand .label{display:flex;gap:8px;align-items:center}
-.brand .label::before{content:"";width:14px;height:14px;background:var(--accent);border-radius:2px}
-.obra-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.obra-pick select{font-family:var(--f-display);font-size:30px;font-weight:600;background:transparent;border:0;
-  padding:0 26px 0 0;max-width:100%;appearance:none;cursor:pointer;
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{width:40px;height:40px;color:var(--red);flex:none}
+.wordmark{font-family:var(--f-display);font-weight:900;font-stretch:115%;font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.wordmark small{display:block;font-family:var(--f-body);font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--muted);font-stretch:100%;margin-top:3px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mode{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.mode::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--m,var(--muted))}
+
+.proj{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 16px;border-top:3px solid var(--ink);padding-top:12px}
+.proj-pick{display:flex;flex-direction:column;gap:2px;min-width:0}
+.proj-pick select,.proj-pick h1{font-family:var(--f-display);font-size:34px;font-weight:800;font-stretch:80%;line-height:1.05}
+.proj-pick select{background:transparent;border:0;padding:0 28px 0 0;appearance:none;cursor:pointer;max-width:100%;
   background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
   background-position:calc(100% - 12px) 55%,calc(100% - 6px) 55%;background-size:6px 6px;background-repeat:no-repeat}
-.obra-pick h1{font-size:30px}
-.meta{color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:4px 14px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
+.kind{display:inline-flex;gap:6px;align-items:center}
+.kind b{font-size:11px;text-transform:uppercase;letter-spacing:.08em;background:var(--ink);color:var(--bg);padding:2px 6px;border-radius:3px}
 
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 14px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 14px;cursor:pointer;font-weight:500;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{border-color:var(--muted)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
-.btn.primary:hover{filter:brightness(.95)}
+.btn.primary{background:var(--red);color:var(--red-ink);border-color:transparent;font-weight:600}
+.btn.primary:hover{filter:brightness(.94)}
 .btn.ghost{background:transparent;border-color:transparent}
 .btn.ghost:hover{background:var(--sunk)}
 .btn.danger{color:var(--bad)}
 .btn.danger.armed{background:var(--bad);color:var(--surface);border-color:transparent}
 .btn.sm{padding:4px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
 
 /* Cifras */
 .figures{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
-.fig{padding:14px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fig{padding:12px 16px;display:flex;flex-direction:column;gap:5px;min-width:0}
 .fig+.fig{border-left:1px solid var(--line)}
-.fig .v{font-family:var(--f-display);font-size:30px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.fig .v{font-family:var(--f-display);font-size:28px;font-weight:800;font-stretch:85%;line-height:1.05;font-variant-numeric:tabular-nums}
 .fig .s{font-size:13px;color:var(--muted)}
 .bar{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;position:relative}
-.bar i{position:absolute;inset:0 auto 0 0;background:var(--plan);border-radius:3px}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--ink)}
 .bar i.over{background:var(--bad)}
-.bar b{position:absolute;inset:0 auto 0 0;background:var(--accent)}
-@media (max-width:760px){.figures{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .fig:nth-child(3){border-left:0}.fig:nth-child(n+3){border-top:1px solid var(--line)}}
-
-/* Avisos */
-.alerts{display:flex;flex-direction:column;gap:6px}
-.alert{display:flex;gap:10px;align-items:baseline;font-size:14px;padding:8px 12px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line)}
-.alert .tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:3px;flex:none}
-.alert .tag.late{background:var(--bad);color:var(--surface)}
-.alert .tag.soon{background:var(--accent);color:var(--accent-ink)}
-.alert .tag.block{border:1px solid var(--warn);color:var(--warn)}
-.alert button{background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.bar u{position:absolute;inset:0 auto 0 0;background:var(--gold)}
+@media (max-width:760px){.figures{grid-template-columns:repeat(2,minmax(0,1fr))}.fig:nth-child(3){border-left:0}.fig:nth-child(n+3){border-top:1px solid var(--line)}}
 
 /* Pestañas */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
-.tab{background:none;border:0;padding:10px 14px;cursor:pointer;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
-.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;padding:10px 14px;cursor:pointer;font-family:var(--f-display);font-size:18px;font-weight:700;font-stretch:85%;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--red)}
+.tab .n{font-family:var(--f-mono);font-size:12px;font-weight:500;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0 12px}
 
-/* Tablero */
-.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
-@media (max-width:980px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:560px){.board{grid-template-columns:minmax(0,1fr)}}
-.col{background:var(--sunk);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px;transition:background .15s}
-.col.drop{background:color-mix(in srgb,var(--accent) 22%,var(--sunk))}
-.col-h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 4px}
-.col-h h3{font-size:17px;display:flex;align-items:center;gap:8px}
-.col-h .dot{width:9px;height:9px;border-radius:50%}
-.col[data-estado="bloqueada"] .col-h{background:repeating-linear-gradient(-45deg,transparent 0 8px,color-mix(in srgb,var(--accent) 30%,transparent) 8px 16px);border-radius:4px;padding:4px 6px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;width:100%}
-.card:hover{border-color:var(--muted)}
-.card.dragging{opacity:.4}
-.card .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.card .t{font-weight:600;line-height:1.3;min-width:0}
-.card .code{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none}
-.card .sub{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
-.card .late{color:var(--bad);font-weight:600}
-.chip{font-size:12px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.chip.paid{border-color:var(--ok);color:var(--ok)}
-.empty-col{font-size:13px;color:var(--muted);padding:8px 4px}
+/* Plano */
+.rooms{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.room-chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:14px;display:flex;gap:6px;align-items:baseline}
+.room-chip small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.room-chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.room-chip[aria-pressed="true"] small{color:inherit;opacity:.7}
+.planner{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+@media (max-width:900px){.planner{grid-template-columns:minmax(0,1fr)}}
+.canvas{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px;position:relative;min-width:0}
+.canvas svg{display:block;width:100%;height:auto;max-height:72vh;touch-action:none;user-select:none}
+.canvas .hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--muted);pointer-events:none}
+.canvas .warn{position:absolute;right:12px;top:10px;font-size:12px;font-weight:600;color:var(--bad);background:var(--surface);padding:2px 8px;border-radius:4px;border:1px solid var(--bad)}
+svg .it{cursor:grab}
+svg .it.drag{cursor:grabbing}
+svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
+.panel h3{font-size:18px}
+.cat{display:flex;flex-direction:column;gap:2px;max-height:340px;overflow:auto;margin:0 -4px;padding:0 4px}
+.cat-g{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;padding:8px 0 2px}
+.cat button{display:flex;justify-content:space-between;gap:8px;background:none;border:0;padding:6px 8px;border-radius:4px;cursor:pointer;text-align:left;width:100%}
+.cat button:hover{background:var(--sunk)}
+.cat button span:last-child{font-family:var(--f-mono);font-size:12px;color:var(--muted);flex:none}
+.cat button.prod span:first-child::before{content:"★ ";color:var(--gold)}
+.props{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.props .full{grid-column:span 2}
+.swatches{display:flex;gap:6px}
+.swatches button{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);cursor:pointer}
+.swatches button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
 
-/* Presupuesto */
-.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
-table{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
-th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:baseline}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--surface);position:sticky;top:0}
-td.r,th.r{text-align:right}
-tr.cap td{background:var(--sunk);font-family:var(--f-display);font-weight:600;font-size:16px}
-tr.item{cursor:pointer}
-tr.item:hover td{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
-tr.total td{font-weight:600;border-bottom:0;border-top:2px solid var(--ink)}
-.dev-pos{color:var(--bad)}.dev-neg{color:var(--ok)}
-.estado{display:inline-flex;align-items:center;gap:6px;font-size:13px}
-.estado::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+/* Compras */
+.need{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.need-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:6px}
+.need-h h3{font-size:22px}
+.need-h .sum{font-size:13px;color:var(--muted)}
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.prod{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0;position:relative}
+.prod.elegido{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.prod.comprado{background:var(--sunk)}
+.prod .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.prod h4{margin:0;font-size:16px;font-weight:600;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.prod .price{font-family:var(--f-display);font-size:26px;font-weight:800;font-stretch:85%;font-variant-numeric:tabular-nums;line-height:1}
+.prod .shop{font-size:13px;color:var(--muted)}
+.prod .dims{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.prod .note{font-size:13px;overflow-wrap:anywhere}
+.prod .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.stars{color:var(--gold);letter-spacing:1px;font-size:14px}
+.stars i{color:var(--line);font-style:normal}
+.tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.tag.cheap{background:var(--ok);color:var(--surface)}
+.st{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--surface)}
+.st-favorito{border-color:var(--red);color:var(--red)}
+.st-elegido{background:var(--gold);color:var(--gold-ink);border-color:transparent}
+.st-comprado{background:var(--ok);color:var(--surface);border-color:transparent}
 
-/* Gremios */
-.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.person{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+/* Reforma */
+.tasks{display:flex;flex-direction:column;gap:6px}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;text-align:left;width:100%}
+.task:hover{border-color:var(--muted)}
+.task .t{font-weight:600}
+.task .sub{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px}
+.task .late{color:var(--bad);font-weight:600}
+.task .right{text-align:right;font-size:13px}
+.task.hecha .t{text-decoration:line-through;color:var(--muted)}
+.tick{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:12px;cursor:pointer;background:var(--surface)}
+.tick.curso{border-color:var(--gold);background:linear-gradient(90deg,var(--gold) 50%,transparent 50%)}
+.tick.hecha{border-color:var(--ok);background:var(--ok);color:var(--surface)}
+
+/* Contactos */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.person{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .person .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .person h3{font-size:19px}
-.person .of{font-size:13px;color:var(--muted)}
-.person .tel{font-family:var(--f-mono);font-size:14px;user-select:all;word-break:break-all}
-.person .stats{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.person .tel{font-family:var(--f-mono);font-size:14px;user-select:all;overflow-wrap:anywhere}
 
-/* Estado vacío */
-.blank{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.blank{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:26px 20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .blank h2{font-size:24px}
-.blank p{margin:0;color:var(--muted);max-width:60ch}
+.blank p{margin:0;color:var(--muted);max-width:62ch}
 
 /* Diálogos */
 dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
-dialog::backdrop{background:rgb(10 12 14 / .45)}
+dialog::backdrop{background:rgb(10 12 14 / .5)}
 dialog form{display:flex;flex-direction:column}
 .dlg-h{padding:16px 20px 8px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .dlg-h h2{font-size:24px}
@@ -155,110 +188,142 @@ dialog form{display:flex;flex-direction:column}
 .field{display:flex;flex-direction:column;gap:4px;grid-column:span 6;min-width:0}
 .field.h3{grid-column:span 3}.field.h2{grid-column:span 2}
 @media (max-width:480px){.field.h3,.field.h2{grid-column:span 6}}
-.field label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
-.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;width:100%;min-width:0}
-.field textarea{min-height:70px;resize:vertical}
+.field label,.props label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea,.props input,.props select{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;width:100%;min-width:0}
+.props>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field textarea{min-height:64px;resize:vertical}
 .field .hint{font-size:12px;color:var(--muted)}
-.check{display:flex;align-items:center;gap:8px;grid-column:span 6}
-.calc{grid-column:span 6;display:flex;justify-content:space-between;align-items:baseline;background:var(--sunk);border-radius:var(--r);padding:8px 12px}
-.calc .num{font-size:18px;font-weight:500}
-
-.mode{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
-.mode::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--m,var(--muted))}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r);font-size:14px;z-index:20;max-width:calc(100vw - 32px)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 64 64">
+    <!-- Rodillo de pintar en el lugar de la hoz: mango abajo a la izquierda, armazón curvo y rodillo arriba a la derecha -->
+    <g transform="rotate(45 32 32)" fill="currentColor">
+      <rect x="17" y="5" width="28" height="11" rx="3"/>
+      <path d="M45 10.5h3.5a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H34.6v8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="31.5" y="31" width="6.2" height="26" rx="3"/>
+    </g>
+    <!-- Martillo -->
+    <g transform="rotate(-45 32 32)" fill="currentColor">
+      <path d="M17 9h24l5 4v6H17z"/>
+      <rect x="28.8" y="18" width="6.4" height="41" rx="3"/>
+    </g>
+  </symbol>
+</svg>
+
 <div class="wrap">
   <header class="top">
-    <div class="brand">
-      <span class="label">Proletix · Gestión de reformas</span>
-      <div class="obra-pick" id="obraPick"><h1>Cargando obras…</h1></div>
-      <div class="meta" id="obraMeta"></div>
-    </div>
+    <div class="brand"><svg role="img" aria-label="Logo de Proletix"><use href="#logo"/></svg>
+      <div class="wordmark">Proletix<small>Casa, reformas y compras</small></div></div>
     <div class="actions">
       <span class="mode" id="mode">Conectando…</span>
-      <button class="btn" id="btnEditObra" type="button" hidden>Editar obra</button>
-      <button class="btn" id="btnNewObra" type="button">Nueva obra</button>
+      <button class="btn" id="btnNewProj" type="button">Nuevo proyecto</button>
     </div>
   </header>
-
-  <main id="main" style="display:flex;flex-direction:column;gap:20px"></main>
+  <main id="main" style="display:flex;flex-direction:column;gap:18px"></main>
 </div>
 
-<!-- Obra -->
-<dialog id="dlgObra"><form method="dialog" id="fObra">
-  <div class="dlg-h"><h2 id="dlgObraT">Nueva obra</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+<!-- Proyecto -->
+<dialog id="dlgProj"><form method="dialog" id="fProj">
+  <div class="dlg-h"><h2 id="dlgProjT">Nuevo proyecto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
   <div class="dlg-b">
-    <div class="field"><label for="o_nombre">Nombre</label><input id="o_nombre" required placeholder="Reforma del taller"></div>
-    <div class="field"><label for="o_dir">Dirección</label><input id="o_dir" placeholder="Calle, número, localidad"></div>
-    <div class="field h2"><label for="o_pres">Presupuesto máximo (€)</label><input id="o_pres" type="number" min="0" step="1" inputmode="decimal"></div>
-    <div class="field h2"><label for="o_ini">Inicio</label><input id="o_ini" type="date"></div>
-    <div class="field h2"><label for="o_fin">Fin previsto</label><input id="o_fin" type="date"></div>
-    <div class="field"><label for="o_notas">Notas</label><textarea id="o_notas" placeholder="Licencia de obra menor, horario permitido, acceso para materiales…"></textarea></div>
+    <div class="field"><label for="j_nombre">Nombre</label><input id="j_nombre" required placeholder="Piso de la calle Mayor"></div>
+    <div class="field h3"><label for="j_tipo">Tipo</label><select id="j_tipo"><option value="casa">Casa entera</option><option value="estancia">Una estancia</option></select></div>
+    <div class="field h3"><label for="j_pres">Presupuesto (€)</label><input id="j_pres" type="number" min="0" step="1" inputmode="decimal"></div>
+    <div class="field"><label for="j_dir">Dirección</label><input id="j_dir" placeholder="Opcional"></div>
+    <div class="field"><label for="j_notas">Notas</label><textarea id="j_notas"></textarea></div>
   </div>
-  <div class="dlg-f">
-    <button class="btn danger" type="button" id="o_del" hidden>Eliminar obra</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
-  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="j_del" hidden>Eliminar proyecto</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
 </form></dialog>
 
-<!-- Partida -->
-<dialog id="dlgPart"><form method="dialog" id="fPart">
-  <div class="dlg-h"><h2 id="dlgPartT">Nueva partida</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+<!-- Estancia -->
+<dialog id="dlgRoom"><form method="dialog" id="fRoom">
+  <div class="dlg-h"><h2 id="dlgRoomT">Nueva estancia</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
   <div class="dlg-b">
-    <div class="field"><label for="p_titulo">Partida</label><input id="p_titulo" required placeholder="Alicatado de la zona de aseo"></div>
-    <div class="field h3"><label for="p_cap">Capítulo</label><select id="p_cap"></select></div>
-    <div class="field h3"><label for="p_estado">Estado</label><select id="p_estado"></select></div>
-    <div class="field h2"><label for="p_cant">Cantidad</label><input id="p_cant" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field h2"><label for="p_ud">Unidad</label><select id="p_ud"></select></div>
-    <div class="field h2"><label for="p_precio">Precio unitario (€)</label><input id="p_precio" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="calc"><span class="label">Importe presupuestado</span><span class="num" id="p_importe">0 €</span></div>
-    <div class="field h3"><label for="p_real">Coste real (€)</label><input id="p_real" type="number" min="0" step="any" inputmode="decimal"><span class="hint">Lo que has pagado o te han facturado</span></div>
-    <div class="field h3"><label for="p_cont">Quién la hace</label><select id="p_cont"></select></div>
-    <div class="field h3"><label for="p_ini">Inicio</label><input id="p_ini" type="date"></div>
-    <div class="field h3"><label for="p_fin">Fin previsto</label><input id="p_fin" type="date"></div>
-    <label class="check"><input type="checkbox" id="p_pagado"> Pagada</label>
-    <div class="field"><label for="p_notas">Notas</label><textarea id="p_notas" placeholder="Referencia del azulejo, medidas, qué falta para empezar…"></textarea></div>
+    <div class="field"><label for="r_nombre">Nombre</label><input id="r_nombre" required placeholder="Salón" list="roomNames"></div>
+    <div class="field h3"><label for="r_ancho">Ancho (cm)</label><input id="r_ancho" type="number" min="50" max="3000" step="1" required inputmode="numeric"></div>
+    <div class="field h3"><label for="r_largo">Largo (cm)</label><input id="r_largo" type="number" min="50" max="3000" step="1" required inputmode="numeric"></div>
+    <p class="field hint" style="margin:0">Mide de pared a pared por dentro. Las puertas y ventanas las colocas luego desde el catálogo.</p>
   </div>
-  <div class="dlg-f">
-    <button class="btn danger" type="button" id="p_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="r_del" hidden>Eliminar estancia</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+</form></dialog>
+<datalist id="roomNames"><option>Salón</option><option>Cocina</option><option>Dormitorio principal</option><option>Dormitorio</option><option>Baño</option><option>Aseo</option><option>Recibidor</option><option>Despacho</option><option>Terraza</option></datalist>
+
+<!-- Producto -->
+<dialog id="dlgProd"><form method="dialog" id="fProd">
+  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="d_busco">¿Qué buscas?</label><input id="d_busco" required list="needs" placeholder="Sofá del salón"><span class="hint">Los productos con el mismo nombre aquí se comparan juntos</span></div>
+    <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
+    <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
+    <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field"><label for="d_url">Enlace</label><input id="d_url" type="url" placeholder="https://"></div>
+    <div class="field h2"><label for="d_ancho">Ancho (cm)</label><input id="d_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="d_fondo">Fondo (cm)</label><input id="d_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h2"><label for="d_alto">Alto (cm)</label><input id="d_alto" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
+    <div class="field h3"><label for="d_valor">Te gusta</label><select id="d_valor"><option value="0">Sin valorar</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
+    <div class="field"><label for="d_room">Estancia</label><select id="d_room"></select></div>
+    <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
   </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="d_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
+</form></dialog>
+<datalist id="needs"></datalist><datalist id="shops"></datalist>
+
+<!-- Tarea -->
+<dialog id="dlgTask"><form method="dialog" id="fTask">
+  <div class="dlg-h"><h2 id="dlgTaskT">Nueva tarea</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-b">
+    <div class="field"><label for="t_titulo">Tarea</label><input id="t_titulo" required placeholder="Cambiar el plato de ducha"></div>
+    <div class="field h3"><label for="t_room">Estancia</label><select id="t_room"></select></div>
+    <div class="field h3"><label for="t_estado">Estado</label><select id="t_estado"></select></div>
+    <div class="field"><label for="t_cont">Quién la hace</label><select id="t_cont"></select></div>
+    <div class="field h3"><label for="t_ini">Inicio</label><input id="t_ini" type="date"></div>
+    <div class="field h3"><label for="t_fin">Fecha límite</label><input id="t_fin" type="date"></div>
+    <div class="field h3"><label for="t_prev">Coste previsto (€)</label><input id="t_prev" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field h3"><label for="t_real">Coste real (€)</label><input id="t_real" type="number" min="0" step="any" inputmode="decimal"></div>
+    <div class="field"><label for="t_notas">Notas</label><textarea id="t_notas"></textarea></div>
+  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="t_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
 </form></dialog>
 
-<!-- Gremio -->
+<!-- Contacto -->
 <dialog id="dlgCont"><form method="dialog" id="fCont">
-  <div class="dlg-h"><h2 id="dlgContT">Nuevo gremio</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
+  <div class="dlg-h"><h2 id="dlgContT">Nuevo contacto</h2><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div>
   <div class="dlg-b">
-    <div class="field"><label for="c_nombre">Nombre o empresa</label><input id="c_nombre" required placeholder="Instalaciones Martínez"></div>
-    <div class="field h3"><label for="c_oficio">Oficio</label><select id="c_oficio"></select></div>
-    <div class="field h3"><label for="c_tel">Teléfono</label><input id="c_tel" type="tel" placeholder="600 000 000"></div>
+    <div class="field"><label for="c_nombre">Nombre o empresa</label><input id="c_nombre" required></div>
+    <div class="field h3"><label for="c_oficio">Oficio</label><input id="c_oficio" list="oficios" placeholder="Fontanero"></div>
+    <div class="field h3"><label for="c_tel">Teléfono</label><input id="c_tel" type="tel"></div>
     <div class="field"><label for="c_email">Correo</label><input id="c_email" type="email"></div>
     <div class="field"><label for="c_notas">Notas</label><textarea id="c_notas" placeholder="Pide señal del 30 %, no trabaja los viernes…"></textarea></div>
   </div>
-  <div class="dlg-f">
-    <button class="btn danger" type="button" id="c_del" hidden>Eliminar</button>
-    <div class="right"><button class="btn primary" value="ok">Guardar</button></div>
-  </div>
+  <div class="dlg-f"><button class="btn danger" type="button" id="c_del" hidden>Eliminar</button>
+    <div class="right"><button class="btn primary" value="ok">Guardar</button></div></div>
 </form></dialog>
+<datalist id="oficios"><option>Albañil</option><option>Fontanero</option><option>Electricista</option><option>Carpintero</option><option>Pintor</option><option>Cerrajero</option><option>Climatización</option><option>Montador de muebles</option><option>Tienda</option><option>Arquitecto</option></datalist>
 
 <script>
-const CAPITULOS = [
-  ["01","Demoliciones"],["02","Albañilería"],["03","Fontanería"],["04","Electricidad"],
-  ["05","Climatización y ventilación"],["06","Carpintería"],["07","Cerrajería"],
-  ["08","Suelos y revestimientos"],["09","Pintura"],["10","Mobiliario y equipamiento"],["11","Limpieza y varios"]
+/* ---------- Catálogo y constantes ---------- */
+const CATALOGO = [
+  ["Salón",[["Sofá 3 plazas",210,90,1,0],["Sofá 2 plazas",160,90,1,0],["Chaise longue",280,160,1,0],["Sillón",80,85,1,0],["Mesa de centro",110,60,0,4],["Mueble TV",180,40,1,4],["Estantería",80,30,1,4],["Alfombra",200,140,0,5]]],
+  ["Comedor",[["Mesa 6 personas",160,90,0,4],["Mesa redonda",110,110,0,4],["Silla",45,50,1,4],["Aparador",160,45,1,4]]],
+  ["Dormitorio",[["Cama 150",160,205,1,3],["Cama 135",145,200,1,3],["Cama 90",100,200,1,3],["Mesita de noche",45,40,1,4],["Armario 2 puertas",100,60,1,4],["Armario 3 puertas",150,60,1,4],["Cómoda",100,48,1,4],["Escritorio",120,60,1,4]]],
+  ["Cocina y baño",[["Frigorífico",60,66,1,5],["Módulo bajo 60",60,60,1,5],["Lavadora",60,60,1,5],["Lavavajillas",60,60,1,5],["Isla",180,90,0,5],["Plato de ducha",120,80,0,0],["Bañera",170,70,0,0],["Inodoro",38,65,1,5],["Lavabo con mueble",80,46,1,5]]],
+  ["Huecos",[["Puerta 80",80,80,0,-1,"puerta"],["Puerta 70",70,70,0,-1,"puerta"],["Ventana 120",120,12,0,-1,"ventana"],["Balconera 160",160,12,0,-1,"ventana"]]]
 ];
-const ESTADOS = [
-  {id:"pendiente",n:"Pendiente",c:"var(--muted)"},
-  {id:"curso",n:"En curso",c:"var(--plan)"},
-  {id:"bloqueada",n:"Bloqueada",c:"var(--warn)"},
-  {id:"terminada",n:"Terminada",c:"var(--ok)"}
-];
-const UNIDADES = [["PA","PA · partida alzada"],["m²","m²"],["ml","ml · metro lineal"],["m³","m³"],["ud","ud · unidad"],["h","h · hora"],["kg","kg"]];
-const OFICIOS = ["Albañil","Fontanero","Electricista","Carpintero","Cerrajero","Pintor","Climatización","Solador","Proveedor de materiales","Arquitecto / aparejador","Otro"];
+const ESTADOS_P = [["visto","Visto"],["favorito","Favorito"],["elegido","Elegido"],["comprado","Comprado"],["descartado","Descartado"]];
+const ESTADOS_T = [["pendiente","Pendiente"],["curso","En curso"],["hecha","Hecha"]];
+const FILLS = ["--f0","--f1","--f2","--f3","--f4","--f5"];
 
-const S = {mode:"loading", db:null, obras:[], partidas:[], contactos:[], obraId:null, tab:"tablero", filtroCap:""};
+const S = {mode:"loading", db:null, proyectos:[], estancias:[], items:[], productos:[], tareas:[], contactos:[],
+  proyId:null, roomId:null, tab:"plano", sel:null, dragging:false};
+const COLS = ["proyectos","estancias","items","productos","tareas","contactos"];
 const eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const eur2 = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:0,maximumFractionDigits:2});
 const fdate = d => d ? new Date(d+"T00:00").toLocaleDateString("es-ES",{day:"numeric",month:"short"}) : "";
@@ -267,321 +332,473 @@ const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const $ = id => document.getElementById(id);
 const today = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
 const daysTo = d => Math.round((new Date(d+"T00:00") - today())/864e5);
-const importe = p => (+p.cantidad||0)*(+p.precio||0);
-const capName = c => (CAPITULOS.find(x=>x[0]===c)||["","Sin capítulo"])[1];
+const num = v => v===""||v==null ? "" : +v;
+const cm = v => (+v).toLocaleString("es-ES");
+const safeUrl = u => /^https?:\/\//i.test(u||"") ? u : "";
 
 function lsGet(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;t.setAttribute("role","status");document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 
-function toast(msg){
-  const t=document.createElement("div");t.className="toast";t.textContent=msg;t.setAttribute("role","status");
-  document.body.appendChild(t);setTimeout(()=>t.remove(),2600);
-}
-
-/* ---------- Almacenamiento: base de datos compartida o, si no hay, este navegador ---------- */
-const COLS = ["obras","partidas","contactos"];
+/* ---------- Almacenamiento: base de datos de Claude o este navegador ---------- */
 async function save(col,id,data){
+  const row={...data,id}; const arr=S[col]; const i=arr.findIndex(x=>x.id===id);
+  if(i>=0) arr[i]=row; else arr.push(row);
   if(S.mode==="db"){
-    try{ await S.db.collection(col).doc(id).set(data); }
-    catch(e){ toast(e?.code==="invalid_argument" ? "No tienes permiso para editar esta obra." : "No se ha podido guardar. Prueba otra vez."); throw e; }
-  } else {
-    const arr=S[col]; const i=arr.findIndex(x=>x.id===id);
-    const row={...data,id}; if(i>=0)arr[i]=row; else arr.push(row);
-    lsSet("cuaderno:"+col,arr); render();
-  }
+    try{ const {id:_,...body}=row; await S.db.collection(col).doc(id).set(body); }
+    catch(e){ toast(e?.code==="invalid_argument"?"No tienes permiso para editar este proyecto.":"No se ha podido guardar. Prueba otra vez."); throw e; }
+  } else { lsSet("proletix:"+col,arr); }
+  render();
 }
 async function remove(col,id){
+  S[col]=S[col].filter(x=>x.id!==id);
   if(S.mode==="db"){ try{ await S.db.collection(col).doc(id).delete(); }catch(e){ toast("No se ha podido eliminar."); throw e; } }
-  else { S[col]=S[col].filter(x=>x.id!==id); lsSet("cuaderno:"+col,S[col]); render(); }
+  else lsSet("proletix:"+col,S[col]);
+  render();
 }
 async function boot(){
   render();
   let db=null;
   try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch{ db=null; }
   if(db){
-    S.db=db; S.mode="db"; let pending=COLS.length;
-    COLS.forEach(col=>{
-      db.collection(col).onSnapshot(snap=>{
-        S[col]=snap.docs.map(d=>({...d.data(),id:d.id}));
-        if(pending>0 && !snap.metadata.fromCache) pending--;
-        render();
-      },()=>{ toast("Se ha perdido la conexión con los datos. Recarga la página."); });
-    });
+    S.db=db; S.mode="db";
+    COLS.forEach(col=>db.collection(col).onSnapshot(snap=>{
+      S[col]=snap.docs.map(d=>({...d.data(),id:d.id})); render();
+    },()=>toast("Se ha perdido la conexión con los datos. Recarga la página.")));
   } else {
-    S.mode="local";
-    COLS.forEach(col=>S[col]=lsGet("cuaderno:"+col,[]));
-    render();
+    S.mode="local"; COLS.forEach(col=>S[col]=lsGet("proletix:"+col,[])); render();
   }
 }
+
+/* ---------- Selección actual ---------- */
+function proyecto(){
+  if(!S.proyectos.length) return null;
+  const want=S.proyId||lsGet("proletix:proy",null);
+  return S.proyectos.find(p=>p.id===want)||[...S.proyectos].sort((a,b)=>(b.creado||0)-(a.creado||0))[0];
+}
+const roomsOf = pid => S.estancias.filter(e=>e.proyectoId===pid).sort((a,b)=>(a.creado||0)-(b.creado||0));
+function room(p){ const rs=roomsOf(p.id); return rs.find(r=>r.id===S.roomId)||rs[0]||null; }
+const roomName = id => S.estancias.find(e=>e.id===id)?.nombre||"";
 
 /* ---------- Render ---------- */
-function obraActual(){
-  if(!S.obras.length) return null;
-  const saved = S.obraId || lsGet("cuaderno:obra",null);
-  return S.obras.find(o=>o.id===saved) || [...S.obras].sort((a,b)=>(b.creado||0)-(a.creado||0))[0];
-}
 function render(){
+  if(S.dragging) return;
   const m=$("mode");
-  m.textContent = S.mode==="db" ? "Guardado en la nube" : S.mode==="local" ? "Guardado solo en este navegador" : "Conectando…";
-  m.style.setProperty("--m", S.mode==="db" ? "var(--ok)" : S.mode==="local" ? "var(--warn)" : "var(--muted)");
+  m.textContent = S.mode==="db"?"Guardado en la nube":S.mode==="local"?"Guardado en este navegador":"Conectando…";
+  m.style.setProperty("--m",S.mode==="db"?"var(--ok)":S.mode==="local"?"var(--warn)":"var(--muted)");
+  const main=$("main");
+  // conserva lo que se está escribiendo si llega una actualización
+  const ae=document.activeElement, keep=ae&&ae.id&&main.contains(ae)?{id:ae.id,v:ae.value,s:ae.selectionStart}:null;
 
-  const obra=obraActual(); S.obraId=obra?.id||null;
-  $("btnEditObra").hidden=!obra;
-  const pick=$("obraPick"), meta=$("obraMeta"), main=$("main");
-
-  if(S.mode==="loading"){ pick.innerHTML="<h1>Cargando obras…</h1>"; meta.innerHTML=""; main.innerHTML=""; return; }
-  if(!obra){
-    pick.innerHTML="<h1>Sin obras todavía</h1>"; meta.innerHTML="";
-    main.innerHTML=`<section class="blank">
-      <h2>Empieza por dar de alta tu obra</h2>
-      <p>Ponle nombre, el presupuesto máximo que quieres gastar y las fechas. Después añade las partidas por capítulos (demoliciones, fontanería, electricidad…) y los gremios que van a trabajar en ella.</p>
-      <button class="btn primary" type="button" data-act="newObra">Crear la primera obra</button></section>`;
+  if(S.mode==="loading"){ main.innerHTML=`<p class="muted">Cargando tus proyectos…</p>`; return; }
+  const p=proyecto(); S.proyId=p?.id||null;
+  if(!p){
+    main.innerHTML=`<section class="blank"><h2>Crea tu primer proyecto</h2>
+      <p>Un proyecto puede ser una casa entera o una sola estancia. Dentro dibujas cada estancia con sus medidas, colocas muebles, guardas los productos que vas viendo para compararlos y llevas las tareas de la reforma con sus plazos.</p>
+      <button class="btn primary" type="button" data-act="newProj">Crear proyecto</button></section>`;
     return;
   }
-
-  const sorted=[...S.obras].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es"));
-  pick.innerHTML = S.obras.length>1
-    ? `<select id="selObra" aria-label="Obra">${sorted.map(o=>`<option value="${esc(o.id)}"${o.id===obra.id?" selected":""}>${esc(o.nombre)}</option>`).join("")}</select>`
-    : `<h1>${esc(obra.nombre)}</h1>`;
-  const bits=[];
-  if(obra.direccion) bits.push(esc(obra.direccion));
-  if(obra.inicio||obra.fin) bits.push(`${obra.inicio?fdate(obra.inicio):"¿?"} → ${obra.fin?fdate(obra.fin):"¿?"}`);
-  meta.innerHTML=bits.map(b=>`<span>${b}</span>`).join("");
-
-  const parts=S.partidas.filter(p=>p.obraId===obra.id);
-  main.innerHTML = figuresHTML(obra,parts) + alertsHTML(parts) + `
-    <nav class="tabs" role="tablist">
-      ${[["tablero","Tablero"],["presupuesto","Presupuesto"],["gremios","Gremios"]].map(([k,n])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}</button>`).join("")}
-    </nav>
-    <section>${S.tab==="tablero"?boardHTML(parts):S.tab==="presupuesto"?budgetHTML(parts):peopleHTML(parts)}</section>`;
+  const r=room(p); S.roomId=r?.id||null;
+  const prods=S.productos.filter(x=>x.proyectoId===p.id), tasks=S.tareas.filter(x=>x.proyectoId===p.id);
+  const sorted=[...S.proyectos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es"));
+  main.innerHTML=`
+    <section class="proj">
+      <div class="proj-pick">
+        <span class="kind"><b>${p.tipo==="estancia"?"Estancia":"Casa"}</b>${p.direccion?`<span class="muted" style="font-size:13px">${esc(p.direccion)}</span>`:""}</span>
+        ${S.proyectos.length>1?`<select id="selProj" aria-label="Proyecto">${sorted.map(x=>`<option value="${esc(x.id)}"${x.id===p.id?" selected":""}>${esc(x.nombre)}</option>`).join("")}</select>`:`<h1>${esc(p.nombre)}</h1>`}
+      </div>
+      <button class="btn" type="button" data-act="editProj">Editar proyecto</button>
+    </section>
+    ${figuresHTML(p,prods,tasks)}
+    <nav class="tabs" role="tablist">${[["plano","Plano",roomsOf(p.id).length],["compras","Compras",prods.filter(x=>x.estado!=="descartado").length],["reforma","Reforma",tasks.filter(t=>t.estado!=="hecha").length],["contactos","Contactos",S.contactos.length]]
+      .map(([k,n,c])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${S.tab===k}">${n}<span class="n">${c}</span></button>`).join("")}</nav>
+    <section>${S.tab==="plano"?planHTML(p,r):S.tab==="compras"?shopHTML(p,prods):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
+  if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
+  if(S.tab==="plano"&&r) bindPlan(r);
 }
 
-function figuresHTML(obra,parts){
-  const pres=parts.reduce((s,p)=>s+importe(p),0);
-  const real=parts.reduce((s,p)=>s+(+p.real||0),0);
-  const pagado=parts.filter(p=>p.pagado).reduce((s,p)=>s+(+p.real||importe(p)),0);
-  const max=+obra.presupuesto||0;
-  const ref=max||pres;
-  const pctReal=ref?Math.min(100,real/ref*100):0;
-  const done=parts.filter(p=>p.estado==="terminada").length;
-  const pctDone=parts.length?done/parts.length*100:0;
-  let plazo="Sin fecha de fin", plazoS="Pon una fecha en «Editar obra»", pctT=0;
-  if(obra.fin){
-    const d=daysTo(obra.fin);
-    plazo = d>=0 ? `${d} días` : `${-d} días tarde`;
-    plazoS = `Fin previsto el ${fdate(obra.fin)}`;
-    if(obra.inicio){ const tot=(new Date(obra.fin)-new Date(obra.inicio))/864e5; const gone=(today()-new Date(obra.inicio+"T00:00"))/864e5; pctT=tot>0?Math.max(0,Math.min(100,gone/tot*100)):0; }
-  }
-  const margen = max ? max-pres : null;
-  return `<section class="figures" aria-label="Resumen de la obra">
-    <div class="fig"><span class="label">Presupuestado</span><span class="v">${eur.format(pres)}</span>
-      <span class="s">${max? (margen>=0?`Margen de ${eur.format(margen)} sobre ${eur.format(max)}`:`<span class="dev-pos">Te pasas ${eur.format(-margen)} del máximo</span>`) : "Sin presupuesto máximo"}</span></div>
-    <div class="fig"><span class="label">Gastado</span><span class="v">${eur.format(real)}</span>
-      <div class="bar" title="Gastado sobre ${max?"el máximo":"lo presupuestado"}"><i class="${real>ref&&ref?"over":""}" style="width:${pctReal}%"></i></div>
-      <span class="s">Pagado ${eur.format(pagado)}</span></div>
-    <div class="fig"><span class="label">Avance</span><span class="v">${done} / ${parts.length}</span>
-      <div class="bar"><i style="width:${pctDone}%"></i></div><span class="s">partidas terminadas</span></div>
-    <div class="fig"><span class="label">Plazo</span><span class="v">${plazo}</span>
-      ${obra.inicio&&obra.fin?`<div class="bar" title="Tiempo transcurrido"><b style="width:${pctT}%"></b></div>`:""}<span class="s">${plazoS}</span></div>
+function figuresHTML(p,prods,tasks){
+  const elegidos=prods.filter(x=>x.estado==="elegido"||x.estado==="comprado");
+  const comprado=prods.filter(x=>x.estado==="comprado").reduce((s,x)=>s+(+x.precio||0),0);
+  const previsto=elegidos.reduce((s,x)=>s+(+x.precio||0),0)+tasks.reduce((s,t)=>s+(+t.real||+t.prev||0),0);
+  const gastado=comprado+tasks.reduce((s,t)=>s+(+t.real||0),0);
+  const max=+p.presupuesto||0, ref=max||previsto;
+  const needs=[...new Set(prods.filter(x=>x.estado!=="descartado").map(x=>x.busco))];
+  const resueltas=needs.filter(n=>prods.some(x=>x.busco===n&&(x.estado==="elegido"||x.estado==="comprado"))).length;
+  const next=tasks.filter(t=>t.estado!=="hecha"&&t.fin).sort((a,b)=>a.fin.localeCompare(b.fin))[0];
+  const nd=next?daysTo(next.fin):null;
+  return `<section class="figures" aria-label="Resumen">
+    <div class="fig"><span class="label">Previsto</span><span class="v">${eur.format(previsto)}</span>
+      <span class="s">${max?(previsto<=max?`Te quedan ${eur.format(max-previsto)} de ${eur.format(max)}`:`<span style="color:var(--bad)">Te pasas ${eur.format(previsto-max)}</span>`):"Sin presupuesto máximo"}</span></div>
+    <div class="fig"><span class="label">Gastado</span><span class="v">${eur.format(gastado)}</span>
+      <div class="bar"><i class="${ref&&gastado>ref?"over":""}" style="width:${ref?Math.min(100,gastado/ref*100):0}%"></i></div><span class="s">${max?"sobre el presupuesto":"sobre lo previsto"}</span></div>
+    <div class="fig"><span class="label">Compras decididas</span><span class="v">${resueltas} / ${needs.length}</span>
+      <div class="bar"><u style="width:${needs.length?resueltas/needs.length*100:0}%"></u></div><span class="s">cosas que buscas con producto elegido</span></div>
+    <div class="fig"><span class="label">Próximo plazo</span><span class="v" style="${nd!==null&&nd<0?"color:var(--bad)":""}">${next?(nd<0?`${-nd} d tarde`:nd===0?"Hoy":`${nd} días`):"—"}</span>
+      <span class="s">${next?esc(next.titulo):"Sin tareas con fecha"}</span></div>
   </section>`;
 }
 
-function alertsHTML(parts){
-  const items=[];
-  parts.filter(p=>p.estado!=="terminada"&&p.fin).forEach(p=>{
-    const d=daysTo(p.fin);
-    if(d<0) items.push({o:d,tag:"late",tx:"Retrasada",p,extra:`tenía que acabar el ${fdate(p.fin)}`});
-    else if(d<=7) items.push({o:d,tag:"soon",tx:d===0?"Hoy":`${d} d`,p,extra:`acaba el ${fdate(p.fin)}`});
+/* ---------- Plano ---------- */
+function footprint(it){ const r=(it.rot||0)%180!==0; return {fw:r?it.d:it.w, fd:r?it.w:it.d}; }
+function problems(items,rm){
+  const bad=new Set();
+  items.forEach(a=>{
+    const A=footprint(a);
+    if(a.tipo!=="ventana"&&a.tipo!=="puerta"&&(a.x<0||a.y<0||a.x+A.fw>rm.ancho||a.y+A.fd>rm.largo)) bad.add(a.id);
+    if(a.tipo==="ventana"||a.tipo==="alfombra"||/alfombra/i.test(a.nombre)) return;
+    items.forEach(b=>{
+      if(a===b||b.tipo==="ventana"||/alfombra/i.test(b.nombre)) return;
+      const B=footprint(b);
+      if(a.x<b.x+B.fw-1&&b.x<a.x+A.fw-1&&a.y<b.y+B.fd-1&&b.y<a.y+A.fd-1) bad.add(a.id);
+    });
   });
-  parts.filter(p=>p.estado==="bloqueada").forEach(p=>items.push({o:100,tag:"block",tx:"Bloqueada",p,extra:p.notas?esc(p.notas).slice(0,90):"revisa qué falta"}));
-  if(!items.length) return "";
-  items.sort((a,b)=>a.o-b.o);
-  return `<section class="alerts" aria-label="Avisos">${items.slice(0,5).map(i=>`<div class="alert"><span class="tag ${i.tag}">${i.tx}</span><span><button type="button" data-edit="${esc(i.p.id)}">${esc(i.p.titulo)}</button> · <span style="color:var(--muted)">${i.extra}</span></span></div>`).join("")}</section>`;
+  return bad;
+}
+function itemSVG(it,bad){
+  const {fw,fd}=footprint(it), sel=S.sel===it.id, rot=it.rot||0;
+  const stroke=bad?"var(--bad)":sel?"var(--red)":"var(--ink)", sw=sel?3:1.5, dash=bad?' stroke-dasharray="6 4"':"";
+  let body="";
+  if(it.tipo==="puerta"){
+    const s=it.w;
+    body=`<g transform="rotate(${rot} ${s/2} ${s/2})"><rect x="0" y="-11" width="${s}" height="12" fill="var(--floor)"/>
+      <rect x="0" y="0" width="${s}" height="${s}" fill="transparent"/>
+      <path d="M0 0L0 ${s}A${s} ${s} 0 0 0 ${s} 0" fill="none" stroke="${stroke}" stroke-width="${sw}"${dash}/>
+      <line x1="0" y1="0" x2="0" y2="${s}" stroke="${stroke}" stroke-width="4"/></g>`;
+  } else if(it.tipo==="ventana"){
+    const h=fw>fd;
+    body=`<rect x="0" y="0" width="${fw}" height="${fd}" fill="var(--surface)" stroke="${stroke}" stroke-width="${sw}"${dash}/>
+      ${h?`<line x1="0" y1="${fd/2}" x2="${fw}" y2="${fd/2}" stroke="${stroke}" stroke-width="1"/>`:`<line x1="${fw/2}" y1="0" x2="${fw/2}" y2="${fd}" stroke="${stroke}" stroke-width="1"/>`}`;
+  } else {
+    const fill=`var(${FILLS[it.color??0]||"--f0"})`;
+    let back="";
+    if(it.back){ const t=Math.min(14,Math.min(fw,fd)*.22);
+      back=rot===0?`<rect x="0" y="0" width="${fw}" height="${t}"/>`:rot===90?`<rect x="${fw-t}" y="0" width="${t}" height="${fd}"/>`:rot===180?`<rect x="0" y="${fd-t}" width="${fw}" height="${t}"/>`:`<rect x="0" y="0" width="${t}" height="${fd}"/>`;
+      back=`<g fill="var(--ink)" opacity=".18">${back}</g>`; }
+    const fs=Math.max(9,Math.min(16,Math.min(fw,fd)/4.2));
+    const label=Math.min(fw,fd)>=34?`<text x="${fw/2}" y="${fd/2-fs*.15}" font-size="${fs}" text-anchor="middle" font-weight="600">${esc(it.nombre.length>22?it.nombre.slice(0,21)+"…":it.nombre)}</text>
+      <text x="${fw/2}" y="${fd/2+fs*1.05}" font-size="${fs*.8}" text-anchor="middle" opacity=".65">${cm(it.w)}×${cm(it.d)}</text>`:"";
+    body=`<rect x="0" y="0" width="${fw}" height="${fd}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>${back}${label}`;
+  }
+  return `<g class="it" data-item="${esc(it.id)}" transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm</title>${body}</g>`;
+}
+function planHTML(p,r){
+  const rs=roomsOf(p.id);
+  const chips=`<div class="rooms">${rs.map(x=>`<button class="room-chip" type="button" data-room="${esc(x.id)}" aria-pressed="${r&&x.id===r.id}">${esc(x.nombre)} <small>${cm(x.ancho)}×${cm(x.largo)}</small></button>`).join("")}
+    <button class="btn ghost sm" type="button" data-act="newRoom">+ Estancia</button></div>`;
+  if(!r) return `<div class="toolbar">${chips}</div><div class="blank"><h2>Dibuja tu primera estancia</h2><p>Solo necesitas el ancho y el largo en centímetros. Después arrastras muebles encima y ves si caben.</p><button class="btn primary" type="button" data-act="newRoom">Añadir estancia</button></div>`;
+  const items=S.items.filter(i=>i.estanciaId===r.id);
+  const bad=problems(items,r);
+  const W=+r.ancho, L=+r.largo, pad=Math.max(40,Math.max(W,L)*.07);
+  const lines=[]; for(let x=50;x<W;x+=50) lines.push(`M${x} 0V${L}`); for(let y=50;y<L;y+=50) lines.push(`M0 ${y}H${W}`);
+  const sel=items.find(i=>i.id===S.sel);
+  const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
+  const area=(W*L/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
+  return `<div class="toolbar">${chips}<button class="btn sm" type="button" data-act="editRoom">Medidas de ${esc(r.nombre)}</button></div>
+  <div class="planner">
+    <div class="canvas">
+      <svg id="plan" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
+        <rect x="0" y="0" width="${W}" height="${L}" fill="var(--floor)"/>
+        <path d="${lines.join("")}" stroke="var(--grid)" stroke-width="1" fill="none"/>
+        <rect x="-6" y="-6" width="${W+12}" height="${L+12}" fill="none" stroke="var(--wall)" stroke-width="12"/>
+        <g font-size="${pad*.32}"><text x="${W/2}" y="${-pad*.45}" text-anchor="middle" class="num" opacity=".7">${cm(W)} cm</text>
+        <text transform="translate(${-pad*.45} ${L/2}) rotate(-90)" text-anchor="middle" opacity=".7">${cm(L)} cm</text></g>
+        <g id="itemsLayer">${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
+      </svg>
+      <span class="hint">${area} m² · cuadrícula de 50 cm · arrastra para mover</span>
+      ${bad.size?`<span class="warn">${bad.size} ${bad.size>1?"muebles no caben o se solapan":"mueble no cabe o se solapa"}</span>`:""}
+    </div>
+    <div class="side">
+      ${sel?propsHTML(sel):""}
+      <div class="panel"><h3>Añadir al plano</h3>
+        <div class="cat">
+          ${myProds.length?`<div class="cat-g">Mis productos</div>${myProds.map(x=>`<button class="prod" type="button" data-addprod="${esc(x.id)}"><span>${esc(x.nombre)}</span><span>${cm(x.ancho)}×${cm(x.fondo)}</span></button>`).join("")}`:""}
+          ${CATALOGO.map(([g,list],gi)=>`<div class="cat-g">${g}</div>${list.map((c,ci)=>`<button type="button" data-addgen="${gi}.${ci}"><span>${c[0]}</span><span>${c[1]}×${c[2]}</span></button>`).join("")}`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function propsHTML(it){
+  const prod=it.productoId&&S.productos.find(x=>x.id===it.productoId);
+  return `<div class="panel" id="props"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Mueble seleccionado</h3><button class="btn ghost sm" type="button" data-act="unsel">Cerrar</button></div>
+    <div class="props">
+      <div class="full"><label for="pr_nombre">Nombre</label><input id="pr_nombre" value="${esc(it.nombre)}"></div>
+      <div><label for="pr_w">Ancho (cm)</label><input id="pr_w" type="number" min="5" step="1" value="${it.w}" inputmode="numeric"></div>
+      <div><label for="pr_d">Fondo (cm)</label><input id="pr_d" type="number" min="5" step="1" value="${it.d}" inputmode="numeric"></div>
+      <div><label for="pr_x">Desde la izq. (cm)</label><input id="pr_x" type="number" step="1" value="${Math.round(it.x)}" inputmode="numeric"></div>
+      <div><label for="pr_y">Desde arriba (cm)</label><input id="pr_y" type="number" step="1" value="${Math.round(it.y)}" inputmode="numeric"></div>
+      ${it.tipo?"":`<div class="full"><label>Color</label><div class="swatches">${FILLS.map((f,i)=>`<button type="button" aria-label="Color ${i+1}" data-color="${i}" aria-pressed="${(it.color??0)===i}" style="background:var(${f})"></button>`).join("")}</div></div>`}
+    </div>
+    ${prod?`<p style="margin:0;font-size:13px" class="muted">Es tu producto de «${esc(prod.busco)}»${prod.precio?` · ${eur2.format(+prod.precio)}`:""}${prod.tienda?` · ${esc(prod.tienda)}`:""}</p>`:""}
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="rotate">Girar 90°</button><button class="btn sm" type="button" data-act="dup">Duplicar</button><button class="btn sm danger" type="button" data-act="delItem">Quitar</button></div>
+  </div>`;
+}
+function addItem(r,base){
+  const {fw,fd}=footprint({...base,rot:0});
+  const it={estanciaId:r.id,rot:0,color:0,...base,x:Math.max(0,Math.round((r.ancho-fw)/2/5)*5),y:Math.max(0,Math.round((r.largo-fd)/2/5)*5),creado:Date.now()};
+  const id=uid(); S.sel=id; save("items",id,it).catch(()=>{});
+}
+function bindPlan(r){
+  const svg=$("plan"); if(!svg) return;
+  let drag=null;
+  const toCm=e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())};
+  svg.addEventListener("pointerdown",e=>{
+    const g=e.target.closest(".it");
+    if(!g){ if(S.sel){S.sel=null;render();} return; }
+    const it=S.items.find(i=>i.id===g.dataset.item); if(!it) return;
+    e.preventDefault();
+    const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,moved:false,wasSel:S.sel===it.id};
+    S.sel=it.id; S.dragging=true; g.classList.add("drag");
+    svg.querySelector("#itemsLayer").appendChild(g);
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener("pointermove",e=>{
+    if(!drag) return;
+    const p=toCm(e), nx=Math.round((p.x-drag.dx)/5)*5, ny=Math.round((p.y-drag.dy)/5)*5;
+    if(nx!==drag.it.x||ny!==drag.it.y){ drag.it.x=nx; drag.it.y=ny; drag.moved=true; drag.g.setAttribute("transform",`translate(${nx} ${ny})`); }
+  });
+  const end=()=>{
+    if(!drag) return; const d=drag; drag=null; S.dragging=false;
+    if(d.moved){ const {id,...body}=d.it; save("items",id,body).catch(()=>{}); } else render();
+  };
+  svg.addEventListener("pointerup",end); svg.addEventListener("pointercancel",end);
 }
 
-function capSelectHTML(){
-  return `<select id="filtroCap" aria-label="Filtrar por capítulo"><option value="">Todos los capítulos</option>${CAPITULOS.map(([c,n])=>`<option value="${c}"${S.filtroCap===c?" selected":""}>${c} ${n}</option>`).join("")}</select>`;
+/* ---------- Compras ---------- */
+function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
+function shopHTML(p,prods){
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><button class="btn primary" type="button" data-act="newProd">Guardar producto</button></div>`;
+  if(!prods.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
+  const groups={}; prods.forEach(x=>(groups[x.busco||"Sin agrupar"] ||= []).push(x));
+  const order=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es"));
+  const rank={comprado:0,elegido:1,favorito:2,visto:3,descartado:4};
+  return head+order.map(n=>{
+    const list=groups[n].sort((a,b)=>(rank[a.estado]??3)-(rank[b.estado]??3)||(+a.precio||1e9)-(+b.precio||1e9));
+    const vivos=list.filter(x=>x.estado!=="descartado"&&+x.precio>0);
+    const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
+    const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
+    return `<section class="need"><div class="need-h"><h3>${esc(n)}</h3>
+      <span class="sum">${list.length} opci${list.length>1?"ones":"ón"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}</span></div>
+      <div class="prods">${list.map(x=>{
+        const url=safeUrl(x.url), dims=[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"";
+        return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">
+          <div class="row"><span class="st st-${x.estado||"visto"}">${(ESTADOS_P.find(e=>e[0]===x.estado)||ESTADOS_P[0])[1]}</span>${min!==null&&+x.precio===min&&x.estado!=="descartado"?'<span class="tag cheap">Más barato</span>':""}</div>
+          <h4>${esc(x.nombre)}</h4>
+          <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}</span>${stars(x.valor)}</div>
+          <span class="shop">${esc(x.tienda||"")}${x.estanciaId?` · ${esc(roomName(x.estanciaId))}`:""}</span>
+          ${dims?`<span class="dims">${dims}</span>`:""}
+          ${x.nota?`<span class="note">${esc(x.nota)}</span>`:""}
+          <div class="foot"><button class="btn sm" type="button" data-editprod="${esc(x.id)}">Editar</button>
+            ${url?`<a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}
+            ${+x.ancho>0&&+x.fondo>0?`<button class="btn sm" type="button" data-place="${esc(x.id)}">Colocar en plano</button>`:""}
+            ${x.estado!=="elegido"&&x.estado!=="comprado"&&x.estado!=="descartado"?`<button class="btn sm ghost" type="button" data-choose="${esc(x.id)}">Elegir</button>`:""}</div>
+        </article>`}).join("")}</div></section>`;
+  }).join("");
 }
-function codeOf(p,parts){
-  const same=parts.filter(x=>x.cap===p.cap).sort((a,b)=>(a.creado||0)-(b.creado||0));
-  return `${p.cap||"00"}.${String(same.indexOf(p)+1).padStart(2,"0")}`;
-}
-function boardHTML(parts){
-  const list=S.filtroCap?parts.filter(p=>p.cap===S.filtroCap):parts;
-  const contacto=id=>S.contactos.find(c=>c.id===id);
-  return `<div class="toolbar" style="margin:14px 0 12px">${capSelectHTML()}<button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
-  <div class="board">${ESTADOS.map(e=>{
-    const cards=list.filter(p=>(p.estado||"pendiente")===e.id).sort((a,b)=>(a.fin||"9999").localeCompare(b.fin||"9999"));
-    return `<div class="col" data-estado="${e.id}">
-      <div class="col-h"><h3><span class="dot" style="background:${e.c}"></span>${e.n}</h3><span class="num" style="color:var(--muted);font-size:13px">${cards.length}</span></div>
-      ${cards.length?cards.map(p=>{
-        const c=contacto(p.contactoId); const late=p.fin&&p.estado!=="terminada"&&daysTo(p.fin)<0;
-        return `<button class="card" type="button" draggable="true" data-edit="${esc(p.id)}">
-          <div class="row"><span class="t">${esc(p.titulo)}</span><span class="code">${codeOf(p,parts)}</span></div>
-          <div class="sub"><span>${esc(capName(p.cap))}</span>${c?`<span>${esc(c.nombre)}</span>`:""}</div>
-          <div class="row"><span class="num" style="font-size:13px">${eur.format(+p.real||importe(p))}${p.real?"":" <span style=\"color:var(--muted)\">prev.</span>"}</span>
-            <span class="sub">${p.fin?`<span class="${late?"late":""}">${fdate(p.fin)}</span>`:""}${p.pagado?'<span class="chip paid">Pagada</span>':""}</span></div>
-        </button>`}).join(""):`<div class="empty-col">${e.id==="pendiente"?"Nada pendiente.":"Arrastra aquí una partida."}</div>`}
+
+/* ---------- Reforma ---------- */
+function taskHTML(p,tasks){
+  const head=`<div class="toolbar"><span class="label">Tareas, plazos y quién las hace</span><button class="btn primary" type="button" data-act="newTask">Añadir tarea</button></div>`;
+  if(!tasks.length) return head+`<div class="blank"><h2>¿Hay obra?</h2><p>Apunta cada trabajo (pintar el salón, cambiar el plato de ducha…) con su fecha límite, quién lo hace y lo que cuesta. Las que se retrasen se marcan en rojo.</p></div>`;
+  const ord={curso:0,pendiente:1,hecha:2};
+  const list=[...tasks].sort((a,b)=>(ord[a.estado]??1)-(ord[b.estado]??1)||(a.fin||"9999").localeCompare(b.fin||"9999"));
+  return head+`<div class="tasks">${list.map(t=>{
+    const c=S.contactos.find(x=>x.id===t.contactoId), late=t.fin&&t.estado!=="hecha"&&daysTo(t.fin)<0;
+    return `<div class="task ${t.estado||""}" data-edittask="${esc(t.id)}" role="button" tabindex="0">
+      <button class="tick ${t.estado||""}" type="button" data-cycle="${esc(t.id)}" aria-label="Cambiar estado: ${(ESTADOS_T.find(e=>e[0]===t.estado)||ESTADOS_T[0])[1]}">${t.estado==="hecha"?"✓":""}</button>
+      <div style="min-width:0"><div class="t">${esc(t.titulo)}</div>
+        <div class="sub">${t.estanciaId?`<span>${esc(roomName(t.estanciaId))}</span>`:""}${c?`<span>${esc(c.nombre)}${c.tel?` · <span class="num">${esc(c.tel)}</span>`:""}</span>`:""}${t.fin?`<span class="${late?"late":""}">${late?"Retrasada · ":""}hasta el ${fdate(t.fin)}</span>`:""}</div></div>
+      <div class="right num">${t.real?eur.format(+t.real):t.prev?`<span class="muted">${eur.format(+t.prev)} prev.</span>`:""}</div>
     </div>`}).join("")}</div>`;
 }
 
-function budgetHTML(parts){
-  if(!parts.length) return `<div class="toolbar" style="margin:14px 0 12px"><span></span><button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
-    <div class="blank"><h2>Todavía no hay partidas</h2><p>Cada partida lleva su medición (cantidad y unidad) y su precio unitario, como en un presupuesto de obra. Así ves en qué capítulo se va el dinero y cuánto te desvías.</p></div>`;
-  let rows="", tp=0, tr=0;
-  CAPITULOS.forEach(([c,n])=>{
-    const ps=parts.filter(p=>p.cap===c).sort((a,b)=>(a.creado||0)-(b.creado||0)); if(!ps.length) return;
-    const sp=ps.reduce((s,p)=>s+importe(p),0), sr=ps.reduce((s,p)=>s+(+p.real||0),0); tp+=sp; tr+=sr;
-    rows+=`<tr class="cap"><td colspan="5">${c} ${esc(n)}</td><td class="r num">${eur.format(sp)}</td><td class="r num">${sr?eur.format(sr):"—"}</td><td></td></tr>`;
-    ps.forEach(p=>{
-      const imp=importe(p), r=+p.real||0, dv=r?r-imp:null, e=ESTADOS.find(x=>x.id===(p.estado||"pendiente"));
-      rows+=`<tr class="item" data-edit="${esc(p.id)}" tabindex="0">
-        <td class="num" style="color:var(--muted)">${codeOf(p,parts)}</td><td>${esc(p.titulo)}</td>
-        <td class="r num">${p.cantidad!==""&&p.cantidad!=null?(+p.cantidad).toLocaleString("es-ES"):""} ${esc(p.unidad||"")}</td>
-        <td class="r num">${p.precio?eur2.format(+p.precio):""}</td>
-        <td><span class="estado" style="--c:${e.c}">${e.n}</span></td>
-        <td class="r num">${eur.format(imp)}</td>
-        <td class="r num">${r?eur.format(r):"—"}${dv!==null&&dv!==0?` <span class="${dv>0?"dev-pos":"dev-neg"}" style="font-size:12px">${dv>0?"+":"−"}${eur.format(Math.abs(dv))}</span>`:""}</td>
-        <td>${p.pagado?'<span class="chip paid">Pagada</span>':""}</td></tr>`;
-    });
-  });
-  return `<div class="toolbar" style="margin:14px 0 12px"><span class="label">Mediciones y presupuesto por capítulos</span><button class="btn primary" type="button" data-act="newPart">Añadir partida</button></div>
-  <div class="tbl-wrap"><table>
-    <thead><tr><th>Cód.</th><th>Partida</th><th class="r">Medición</th><th class="r">Precio ud.</th><th>Estado</th><th class="r">Presupuesto</th><th class="r">Real</th><th>Pago</th></tr></thead>
-    <tbody>${rows}<tr class="total"><td colspan="5">Total</td><td class="r num">${eur.format(tp)}</td><td class="r num">${eur.format(tr)}</td><td></td></tr></tbody>
-  </table></div>`;
-}
-
-function peopleHTML(parts){
-  const head=`<div class="toolbar" style="margin:14px 0 12px"><span class="label">Gremios y proveedores, compartidos entre obras</span><button class="btn primary" type="button" data-act="newCont">Añadir gremio</button></div>`;
-  if(!S.contactos.length) return head+`<div class="blank"><h2>Apunta a quién llamas</h2><p>Guarda el teléfono del fontanero, del electricista o del almacén de materiales. Luego asígnalos a cada partida para saber cuánto te cuesta cada uno.</p></div>`;
-  const cs=[...S.contactos].sort((a,b)=>(a.oficio||"").localeCompare(b.oficio||"","es")||(a.nombre||"").localeCompare(b.nombre||"","es"));
-  return head+`<div class="people">${cs.map(c=>{
-    const mine=parts.filter(p=>p.contactoId===c.id); const tot=mine.reduce((s,p)=>s+(+p.real||importe(p)),0);
-    const pend=mine.filter(p=>!p.pagado&&(+p.real||0)>0).reduce((s,p)=>s+(+p.real||0),0);
-    return `<article class="person">
-      <div class="row"><h3>${esc(c.nombre)}</h3><button class="btn ghost sm" type="button" data-editc="${esc(c.id)}">Editar</button></div>
-      <span class="of">${esc(c.oficio||"")}</span>
+/* ---------- Contactos ---------- */
+function peopleHTML(tasks){
+  const head=`<div class="toolbar"><span class="label">Compartidos entre todos tus proyectos</span><button class="btn primary" type="button" data-act="newCont">Añadir contacto</button></div>`;
+  if(!S.contactos.length) return head+`<div class="blank"><h2>Ten a mano a quién llamar</h2><p>Fontanero, electricista, la tienda del sofá, el montador… Luego los asignas a las tareas de la reforma.</p></div>`;
+  return head+`<div class="people">${[...S.contactos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")).map(c=>{
+    const mine=tasks.filter(t=>t.contactoId===c.id);
+    return `<article class="person"><div class="row"><h3>${esc(c.nombre)}</h3><button class="btn ghost sm" type="button" data-editcont="${esc(c.id)}">Editar</button></div>
+      <span class="muted" style="font-size:13px">${esc(c.oficio||"")}</span>
       ${c.tel?`<span class="tel">${esc(c.tel)}</span>`:""}${c.email?`<span class="tel" style="font-size:13px">${esc(c.email)}</span>`:""}
       ${c.notas?`<span style="font-size:13px">${esc(c.notas)}</span>`:""}
-      <span class="stats">${mine.length?`${mine.length} partida${mine.length>1?"s":""} en esta obra · ${eur.format(tot)}${pend?` · <span class="dev-pos">pendiente de pago ${eur.format(pend)}</span>`:""}`:"Sin partidas en esta obra"}</span>
-    </article>`}).join("")}</div>`;
+      ${mine.length?`<span class="muted" style="font-size:13px;border-top:1px solid var(--line);padding-top:6px;margin-top:4px">${mine.length} tarea${mine.length>1?"s":""} en este proyecto</span>`:""}</article>`}).join("")}</div>`;
 }
 
 /* ---------- Diálogos ---------- */
-function fillSelect(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${esc(v)}">${esc(n)}</option>`).join(""); el.value=val??opts[0]?.[0]??""; }
+function fill(el,opts,val){ el.innerHTML=opts.map(([v,n])=>`<option value="${esc(v)}">${esc(n)}</option>`).join(""); el.value=val??opts[0]?.[0]??""; }
 function armDelete(btn,fn){
-  btn.classList.remove("armed"); btn.dataset.label ||= btn.textContent; btn.textContent=btn.dataset.label;
-  btn.onclick=async()=>{
-    if(!btn.classList.contains("armed")){ btn.classList.add("armed"); btn.textContent="Pulsa otra vez para eliminar"; return; }
-    await fn();
-  };
+  btn.dataset.label ||= btn.textContent; btn.textContent=btn.dataset.label; btn.classList.remove("armed");
+  btn.onclick=async()=>{ if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent="Pulsa otra vez para eliminar";return;} await fn(); };
 }
+const roomOpts = pid => [["","Toda la casa"],...roomsOf(pid).map(r=>[r.id,r.nombre])];
 
-let editingObra=null;
-function openObra(o){
-  editingObra=o||null;
-  $("dlgObraT").textContent=o?"Editar obra":"Nueva obra";
-  $("o_nombre").value=o?.nombre||""; $("o_dir").value=o?.direccion||""; $("o_pres").value=o?.presupuesto||"";
-  $("o_ini").value=o?.inicio||""; $("o_fin").value=o?.fin||""; $("o_notas").value=o?.notas||"";
-  $("o_del").hidden=!o;
-  if(o) armDelete($("o_del"),async()=>{
-    const ps=S.partidas.filter(p=>p.obraId===o.id);
-    for(const p of ps) await remove("partidas",p.id);
-    await remove("obras",o.id); $("dlgObra").close(); S.obraId=null; lsSet("cuaderno:obra",null); toast("Obra eliminada"); render();
+let edP=null;
+function openProj(p){
+  edP=p||null; $("dlgProjT").textContent=p?"Editar proyecto":"Nuevo proyecto";
+  $("j_nombre").value=p?.nombre||""; $("j_tipo").value=p?.tipo||"casa"; $("j_pres").value=p?.presupuesto||""; $("j_dir").value=p?.direccion||""; $("j_notas").value=p?.notas||"";
+  $("j_del").hidden=!p;
+  if(p) armDelete($("j_del"),async()=>{
+    const rids=roomsOf(p.id).map(r=>r.id);
+    for(const it of S.items.filter(i=>rids.includes(i.estanciaId))) await remove("items",it.id);
+    for(const col of ["estancias","productos","tareas"]) for(const x of S[col].filter(x=>x.proyectoId===p.id)) await remove(col,x.id);
+    await remove("proyectos",p.id); $("dlgProj").close(); S.proyId=null; lsSet("proletix:proy",null); toast("Proyecto eliminado");
   });
-  $("dlgObra").showModal();
+  $("dlgProj").showModal();
 }
-$("fObra").addEventListener("submit",async ev=>{
+$("fProj").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
-  const id=editingObra?.id||uid();
-  const data={nombre:$("o_nombre").value.trim(),direccion:$("o_dir").value.trim(),presupuesto:$("o_pres").value?+$("o_pres").value:0,
-    inicio:$("o_ini").value,fin:$("o_fin").value,notas:$("o_notas").value.trim(),creado:editingObra?.creado||Date.now()};
-  try{ await save("obras",id,data); S.obraId=id; lsSet("cuaderno:obra",id); toast(editingObra?"Obra guardada":"Obra creada"); render(); }catch{}
+  const id=edP?.id||uid();
+  const data={nombre:$("j_nombre").value.trim(),tipo:$("j_tipo").value,presupuesto:num($("j_pres").value)||0,direccion:$("j_dir").value.trim(),notas:$("j_notas").value.trim(),creado:edP?.creado||Date.now()};
+  try{
+    await save("proyectos",id,data); S.proyId=id; lsSet("proletix:proy",id);
+    if(!edP){ const rid=uid(); await save("estancias",rid,{proyectoId:id,nombre:data.tipo==="estancia"?data.nombre:"Salón",ancho:400,largo:350,creado:Date.now()}); S.roomId=rid; S.tab="plano"; render(); }
+    toast(edP?"Proyecto guardado":"Proyecto creado");
+  }catch{}
 });
 
-let editingPart=null;
-function updImporte(){ $("p_importe").textContent=eur2.format((+$("p_cant").value||0)*(+$("p_precio").value||0)); }
-["p_cant","p_precio"].forEach(i=>$(i).addEventListener("input",updImporte));
-$("p_ud").addEventListener("change",()=>{ if($("p_ud").value==="PA"&&!$("p_cant").value){$("p_cant").value=1;updImporte();} });
-function openPart(p,preset={}){
-  editingPart=p||null;
-  $("dlgPartT").textContent=p?"Editar partida":"Nueva partida";
-  fillSelect($("p_cap"),CAPITULOS.map(([c,n])=>[c,`${c} ${n}`]),p?.cap||preset.cap||S.filtroCap||"02");
-  fillSelect($("p_estado"),ESTADOS.map(e=>[e.id,e.n]),p?.estado||preset.estado||"pendiente");
-  fillSelect($("p_ud"),UNIDADES,p?.unidad||"PA");
-  fillSelect($("p_cont"),[["","Sin asignar"],...[...S.contactos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")).map(c=>[c.id,`${c.nombre}${c.oficio?" · "+c.oficio:""}`])],p?.contactoId||"");
-  $("p_titulo").value=p?.titulo||""; $("p_cant").value=p?.cantidad??(p?"":1); $("p_precio").value=p?.precio??"";
-  $("p_real").value=p?.real||""; $("p_ini").value=p?.inicio||""; $("p_fin").value=p?.fin||"";
-  $("p_pagado").checked=!!p?.pagado; $("p_notas").value=p?.notas||"";
-  updImporte();
-  $("p_del").hidden=!p;
-  if(p) armDelete($("p_del"),async()=>{ await remove("partidas",p.id); $("dlgPart").close(); toast("Partida eliminada"); });
-  $("dlgPart").showModal();
+let edR=null;
+function openRoom(r){
+  edR=r||null; $("dlgRoomT").textContent=r?`Medidas de ${r.nombre}`:"Nueva estancia";
+  $("r_nombre").value=r?.nombre||""; $("r_ancho").value=r?.ancho||""; $("r_largo").value=r?.largo||"";
+  $("r_del").hidden=!r;
+  if(r) armDelete($("r_del"),async()=>{
+    for(const it of S.items.filter(i=>i.estanciaId===r.id)) await remove("items",it.id);
+    await remove("estancias",r.id); $("dlgRoom").close(); S.roomId=null; toast("Estancia eliminada"); render();
+  });
+  $("dlgRoom").showModal();
 }
-$("fPart").addEventListener("submit",async ev=>{
+$("fRoom").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
-  const id=editingPart?.id||uid();
-  const num=v=>v===""?"":+v;
-  const data={obraId:editingPart?.obraId||S.obraId,titulo:$("p_titulo").value.trim(),cap:$("p_cap").value,estado:$("p_estado").value,
-    cantidad:num($("p_cant").value),unidad:$("p_ud").value,precio:num($("p_precio").value),real:num($("p_real").value),
-    contactoId:$("p_cont").value,inicio:$("p_ini").value,fin:$("p_fin").value,pagado:$("p_pagado").checked,
-    notas:$("p_notas").value.trim(),creado:editingPart?.creado||Date.now()};
-  try{ await save("partidas",id,data); toast(editingPart?"Partida guardada":"Partida añadida"); }catch{}
+  const id=edR?.id||uid();
+  try{ await save("estancias",id,{proyectoId:edR?.proyectoId||S.proyId,nombre:$("r_nombre").value.trim(),ancho:+$("r_ancho").value,largo:+$("r_largo").value,creado:edR?.creado||Date.now()});
+    S.roomId=id; render(); toast(edR?"Medidas guardadas":"Estancia añadida"); }catch{}
 });
 
-let editingCont=null;
+let edD=null;
+function openProd(x,preset={}){
+  edD=x||null; $("dlgProdT").textContent=x?"Editar producto":"Guardar producto";
+  const pid=x?.proyectoId||S.proyId;
+  $("needs").innerHTML=[...new Set(S.productos.filter(y=>y.proyectoId===pid).map(y=>y.busco))].map(n=>`<option value="${esc(n)}">`).join("");
+  $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
+  fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
+  $("d_busco").value=x?.busco||preset.busco||""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
+  $("d_url").value=x?.url||""; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
+  $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
+  $("d_del").hidden=!x;
+  if(x) armDelete($("d_del"),async()=>{ for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id); await remove("productos",x.id); $("dlgProd").close(); toast("Producto eliminado"); });
+  $("dlgProd").showModal();
+}
+$("fProd").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=edD?.id||uid();
+  const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
+    url:$("d_url").value.trim(),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
+    estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
+  try{
+    await save("productos",id,data);
+    // si el producto está en el plano, actualiza su tamaño
+    for(const it of S.items.filter(i=>i.productoId===id)) if(+data.ancho>0&&+data.fondo>0&&(it.w!==+data.ancho||it.d!==+data.fondo||it.nombre!==data.nombre)){ const {id:iid,...b}=it; await save("items",iid,{...b,w:+data.ancho,d:+data.fondo,nombre:data.nombre}); }
+    toast(edD?"Producto guardado":"Producto guardado en «"+data.busco+"»");
+  }catch{}
+});
+
+let edT=null;
+function openTask(t){
+  edT=t||null; $("dlgTaskT").textContent=t?"Editar tarea":"Nueva tarea";
+  const pid=t?.proyectoId||S.proyId;
+  fill($("t_room"),roomOpts(pid),t?.estanciaId||""); fill($("t_estado"),ESTADOS_T,t?.estado||"pendiente");
+  fill($("t_cont"),[["","Sin asignar"],...[...S.contactos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")).map(c=>[c.id,`${c.nombre}${c.oficio?" · "+c.oficio:""}`])],t?.contactoId||"");
+  $("t_titulo").value=t?.titulo||""; $("t_ini").value=t?.inicio||""; $("t_fin").value=t?.fin||""; $("t_prev").value=t?.prev??""; $("t_real").value=t?.real??""; $("t_notas").value=t?.notas||"";
+  $("t_del").hidden=!t;
+  if(t) armDelete($("t_del"),async()=>{ await remove("tareas",t.id); $("dlgTask").close(); toast("Tarea eliminada"); });
+  $("dlgTask").showModal();
+}
+$("fTask").addEventListener("submit",async ev=>{
+  if(ev.submitter?.value!=="ok") return;
+  const id=edT?.id||uid();
+  try{ await save("tareas",id,{proyectoId:edT?.proyectoId||S.proyId,titulo:$("t_titulo").value.trim(),estanciaId:$("t_room").value,estado:$("t_estado").value,contactoId:$("t_cont").value,
+    inicio:$("t_ini").value,fin:$("t_fin").value,prev:num($("t_prev").value),real:num($("t_real").value),notas:$("t_notas").value.trim(),creado:edT?.creado||Date.now()});
+    toast(edT?"Tarea guardada":"Tarea añadida"); }catch{}
+});
+
+let edC=null;
 function openCont(c){
-  editingCont=c||null;
-  $("dlgContT").textContent=c?"Editar gremio":"Nuevo gremio";
-  fillSelect($("c_oficio"),OFICIOS.map(o=>[o,o]),c?.oficio||"Albañil");
-  $("c_nombre").value=c?.nombre||""; $("c_tel").value=c?.tel||""; $("c_email").value=c?.email||""; $("c_notas").value=c?.notas||"";
+  edC=c||null; $("dlgContT").textContent=c?"Editar contacto":"Nuevo contacto";
+  $("c_nombre").value=c?.nombre||""; $("c_oficio").value=c?.oficio||""; $("c_tel").value=c?.tel||""; $("c_email").value=c?.email||""; $("c_notas").value=c?.notas||"";
   $("c_del").hidden=!c;
   if(c) armDelete($("c_del"),async()=>{
-    for(const p of S.partidas.filter(p=>p.contactoId===c.id)) await save("partidas",p.id,{...p,contactoId:""});
-    await remove("contactos",c.id); $("dlgCont").close(); toast("Gremio eliminado");
+    for(const t of S.tareas.filter(t=>t.contactoId===c.id)){ const {id,...b}=t; await save("tareas",id,{...b,contactoId:""}); }
+    await remove("contactos",c.id); $("dlgCont").close(); toast("Contacto eliminado");
   });
   $("dlgCont").showModal();
 }
 $("fCont").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return;
-  const id=editingCont?.id||uid();
-  const data={nombre:$("c_nombre").value.trim(),oficio:$("c_oficio").value,tel:$("c_tel").value.trim(),email:$("c_email").value.trim(),notas:$("c_notas").value.trim()};
-  try{ await save("contactos",id,data); toast(editingCont?"Gremio guardado":"Gremio añadido"); }catch{}
+  const id=edC?.id||uid();
+  try{ await save("contactos",id,{nombre:$("c_nombre").value.trim(),oficio:$("c_oficio").value.trim(),tel:$("c_tel").value.trim(),email:$("c_email").value.trim(),notas:$("c_notas").value.trim()});
+    toast(edC?"Contacto guardado":"Contacto añadido"); }catch{}
 });
 
 /* ---------- Eventos ---------- */
-$("btnNewObra").onclick=()=>openObra(null);
-$("btnEditObra").onclick=()=>openObra(obraActual());
+function selItem(){ return S.items.find(i=>i.id===S.sel); }
+function saveItem(it,patch){ const {id,...b}=it; return save("items",id,{...b,...patch}).catch(()=>{}); }
+$("btnNewProj").onclick=()=>openProj(null);
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-act],[data-tab],[data-edit],[data-editc]"); if(!t) return;
-  if(t.dataset.tab){ S.tab=t.dataset.tab; lsSet("cuaderno:tab",S.tab); render(); return; }
-  if(t.dataset.editc){ openCont(S.contactos.find(c=>c.id===t.dataset.editc)); return; }
-  if(t.dataset.edit){ const p=S.partidas.find(p=>p.id===t.dataset.edit); if(p) openPart(p); return; }
-  const a=t.dataset.act;
-  if(a==="newObra") openObra(null);
-  if(a==="newPart") openPart(null);
-  if(a==="newCont") openCont(null);
-});
-document.addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&e.target.matches("tr.item")){ const p=S.partidas.find(p=>p.id===e.target.dataset.edit); if(p) openPart(p); }
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color]");
+  if(!t) return;
+  const p=proyecto(), r=p&&room(p), d=t.dataset;
+  if(d.tab){ S.tab=d.tab; lsSet("proletix:tab",S.tab); render(); return; }
+  if(d.room){ S.roomId=d.room; S.sel=null; render(); return; }
+  if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||""}); return; }
+  if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,back:true,color:4,productoId:x.id}); return; }
+  if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
+    if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
+    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,back:true,color:4,productoId:x.id}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
+  if(d.choose){ const x=S.productos.find(y=>y.id===d.choose); const {id,...b}=x; save("productos",id,{...b,estado:"elegido"}).catch(()=>{}); return; }
+  if(d.editprod){ openProd(S.productos.find(y=>y.id===d.editprod)); return; }
+  if(d.cycle){ e.stopPropagation(); const x=S.tareas.find(y=>y.id===d.cycle); const nx={pendiente:"curso",curso:"hecha",hecha:"pendiente"}[x.estado||"pendiente"]; const {id,...b}=x; save("tareas",id,{...b,estado:nx}).catch(()=>{}); return; }
+  if(d.edittask){ openTask(S.tareas.find(y=>y.id===d.edittask)); return; }
+  if(d.editcont){ openCont(S.contactos.find(y=>y.id===d.editcont)); return; }
+  if(d.color){ const it=selItem(); if(it) saveItem(it,{color:+d.color}); return; }
+  switch(d.act){
+    case "newProj": openProj(null); break;
+    case "editProj": openProj(p); break;
+    case "newRoom": openRoom(null); break;
+    case "editRoom": openRoom(r); break;
+    case "newProd": openProd(null,{estanciaId:""}); break;
+    case "newTask": openTask(null); break;
+    case "newCont": openCont(null); break;
+    case "unsel": S.sel=null; render(); break;
+    case "rotate": { const it=selItem(); if(it) saveItem(it,{rot:((it.rot||0)+90)%360}); break; }
+    case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
+    case "delItem": { const it=selItem(); if(it){ S.sel=null; remove("items",it.id).catch(()=>{}); } break; }
+  }
 });
 document.addEventListener("change",e=>{
-  if(e.target.id==="selObra"){ S.obraId=e.target.value; lsSet("cuaderno:obra",S.obraId); S.filtroCap=""; render(); }
-  if(e.target.id==="filtroCap"){ S.filtroCap=e.target.value; render(); }
+  const id=e.target.id;
+  if(id==="selProj"){ S.proyId=e.target.value; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); return; }
+  const it=selItem(); if(!it) return;
+  const v=e.target.value;
+  if(id==="pr_nombre"&&v.trim()) saveItem(it,{nombre:v.trim()});
+  if(id==="pr_w"&&+v>=5) saveItem(it,{w:+v});
+  if(id==="pr_d"&&+v>=5) saveItem(it,{d:+v});
+  if(id==="pr_x"&&v!=="") saveItem(it,{x:+v});
+  if(id==="pr_y"&&v!=="") saveItem(it,{y:+v});
 });
-// Arrastrar tarjetas entre columnas para cambiar el estado
-let dragId=null;
-document.addEventListener("dragstart",e=>{ const c=e.target.closest?.(".card"); if(!c) return; dragId=c.dataset.edit; c.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",dragId); });
-document.addEventListener("dragend",e=>{ e.target.closest?.(".card")?.classList.remove("dragging"); document.querySelectorAll(".col.drop").forEach(c=>c.classList.remove("drop")); });
-document.addEventListener("dragover",e=>{ const col=e.target.closest?.(".col"); if(!col||!dragId) return; e.preventDefault(); document.querySelectorAll(".col.drop").forEach(c=>c!==col&&c.classList.remove("drop")); col.classList.add("drop"); });
-document.addEventListener("drop",async e=>{
-  const col=e.target.closest?.(".col"); if(!col||!dragId) return; e.preventDefault(); col.classList.remove("drop");
-  const p=S.partidas.find(x=>x.id===dragId); dragId=null;
-  if(p&&p.estado!==col.dataset.estado){ try{ await save("partidas",p.id,{...p,estado:col.dataset.estado}); toast(`«${p.titulo}» → ${ESTADOS.find(x=>x.id===col.dataset.estado).n}`); }catch{} }
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
+  if(S.tab==="plano"&&S.sel&&!e.target.closest("input,textarea,select,dialog")){
+    const it=selItem(); if(!it) return;
+    const step=e.shiftKey?1:5, mv={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
+    if(mv){ e.preventDefault(); saveItem(it,{x:it.x+mv[0],y:it.y+mv[1]}); }
+    if(e.key==="r"||e.key==="R") saveItem(it,{rot:((it.rot||0)+90)%360});
+    if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); S.sel=null; remove("items",it.id).catch(()=>{}); }
+  }
 });
 
-S.tab=lsGet("cuaderno:tab","tablero");
+S.tab=lsGet("proletix:tab","plano");
 boot();
 </script>
 
