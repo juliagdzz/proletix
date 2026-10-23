@@ -361,7 +361,7 @@ details.field textarea{margin-top:6px;min-height:90px;background:var(--beige);bo
 <script>
 /* ---------- Catálogo y constantes ---------- */
 const CATALOGO = [
-  ["Salón",[["Sofá 3 plazas",210,90,1,0],["Sofá 2 plazas",160,90,1,0],["Chaise longue",280,160,1,0],["Sillón",80,85,1,0],["Mesa de centro",110,60,0,4],["Mueble TV",180,40,1,4],["Estantería",80,30,1,4],["Alfombra",200,140,0,5]]],
+  ["Salón",[["Sofá 3 plazas",210,90,1,0],["Sofá 2 plazas",160,90,1,0],["Chaise longue",280,160,1,0],["Sillón",80,85,1,0],["Mesa de centro",110,60,0,4],["Mueble TV",180,40,1,4],["Estantería",80,30,1,4],["Alfombra",200,140,0,5],["Lámpara de pie",40,40,0,5],["Planta",45,45,0,2],["Puff",50,50,0,1]]],
   ["Comedor",[["Mesa 6 personas",160,90,0,4],["Mesa redonda",110,110,0,4],["Silla",45,50,1,4],["Aparador",160,45,1,4]]],
   ["Dormitorio",[["Cama 150",160,205,1,3],["Cama 135",145,200,1,3],["Cama 90",100,200,1,3],["Mesita de noche",45,40,1,4],["Armario 2 puertas",100,60,1,4],["Armario 3 puertas",150,60,1,4],["Cómoda",100,48,1,4],["Escritorio",120,60,1,4]]],
   ["Cocina y baño",[["Frigorífico",60,66,1,5],["Módulo bajo 60",60,60,1,5],["Lavadora",60,60,1,5],["Lavavajillas",60,60,1,5],["Isla",180,90,0,5],["Plato de ducha",120,80,0,0],["Bañera",170,70,0,0],["Inodoro",38,65,1,5],["Lavabo con mueble",80,46,1,5]]],
@@ -522,14 +522,12 @@ function itemSVG(it,bad){
       ${h?`<line x1="0" y1="${fd/2}" x2="${fw}" y2="${fd/2}" stroke="${stroke}" stroke-width="1"/>`:`<line x1="${fw/2}" y1="0" x2="${fw/2}" y2="${fd}" stroke="${stroke}" stroke-width="1"/>`}`;
   } else {
     const fill=/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:`var(${FILLS[it.color??0]||"--f0"})`, tst=isDark(it.hex)?' style="fill:#fff"':"";
-    let back="";
-    if(it.back){ const t=Math.min(14,Math.min(fw,fd)*.22);
-      back=rot===0?`<rect x="0" y="0" width="${fw}" height="${t}"/>`:rot===90?`<rect x="${fw-t}" y="0" width="${t}" height="${fd}"/>`:rot===180?`<rect x="0" y="${fd-t}" width="${fw}" height="${t}"/>`:`<rect x="0" y="0" width="${t}" height="${fd}"/>`;
-      back=`<g fill="var(--ink)" opacity=".18">${back}</g>`; }
+    const shp=shape3d(it).f, round=ROUND2D.has(shp), w0=+it.w, d0=+it.d;
+    const back=`<g transform="translate(${fw/2} ${fd/2}) rotate(${rot}) translate(${-w0/2} ${-d0/2})">${symbol2d(shp,w0,d0,isDark(it.hex)?"#fff":"var(--ink)")}</g>`;
     const fs=Math.max(9,Math.min(16,Math.min(fw,fd)/4.2));
     const label=Math.min(fw,fd)>=34?`<text x="${fw/2}" y="${fd/2-fs*.15}" font-size="${fs}" text-anchor="middle" font-weight="600"${tst}>${esc(it.nombre.length>22?it.nombre.slice(0,21)+"…":it.nombre)}</text>
       <text x="${fw/2}" y="${fd/2+fs*1.05}" font-size="${fs*.8}" text-anchor="middle" opacity=".65"${tst}>${cm(it.w)}×${cm(it.d)}</text>`:"";
-    body=`<rect x="0" y="0" width="${fw}" height="${fd}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>${back}${label}`;
+    body=`${round?`<rect x="0" y="0" width="${fw}" height="${fd}" fill="transparent"/><ellipse cx="${fw/2}" cy="${fd/2}" rx="${fw/2}" ry="${fd/2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`:`<rect x="0" y="0" width="${fw}" height="${fd}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`}${back}${label}`;
   }
   return `<g class="it" data-item="${esc(it.id)}" transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm</title>${body}</g>`;
 }
@@ -730,29 +728,159 @@ function bindPlan(r){
 /* ---------- Vista 3D ---------- */
 const COL3D=[0x9DBBF0,0xF86C2F,0xF3B9EF,0xC98E86,0xB07A55,0xEDE3E6];
 function shape3d(it){
-  const n=(it.nombre||"").toLowerCase(), prod=it.productoId&&S.productos.find(x=>x.id===it.productoId);
+  const prod=it.productoId&&S.productos.find(x=>x.id===it.productoId);
+  const n=`${it.nombre||""} ${it.grupo||""} ${prod?.busco||""}`.toLowerCase();
   const def=(f,h)=>({f,h:+it.h||+(prod&&prod.alto)||h});
   if(/alfombra/.test(n)) return {f:"alfombra",h:1};
-  if(/chaise|sof[aá]/.test(n)) return def("sofa",85);
-  if(/sill[oó]n/.test(n)) return def("sofa",90);
-  if(/mesita/.test(n)) return def("caja",55);
+  if(/chaise|rinconera/.test(n)) return def("chaise",85);
+  if(/sof[aá]/.test(n)) return def("sofa",85);
+  if(/sill[oó]n|butaca/.test(n)) return def("sillon",90);
+  if(/puff|pouf/.test(n)) return def("puff",42);
+  if(/l[aá]mpara|pie de luz/.test(n)) return def("lampara",160);
+  if(/planta|maceta/.test(n)) return def("planta",110);
+  if(/mesita|mesilla/.test(n)) return def("mesita",55);
   if(/colch[oó]n/.test(n)) return def("colchon",28);
-  if(/cama/.test(n)) return def("cama",100);
+  if(/cama|canap[eé]/.test(n)) return def("cama",100);
   if(/redonda/.test(n)) return def("redonda",75);
-  if(/mesa de centro/.test(n)) return def("mesa",42);
-  if(/mesa|escritorio/.test(n)) return def("mesa",75);
-  if(/silla/.test(n)) return def("silla",88);
-  if(/armario/.test(n)) return def("caja",220);
-  if(/estanter/.test(n)) return def("estante",190);
-  if(/frigor|nevera/.test(n)) return def("caja",185);
-  if(/c[oó]moda/.test(n)) return def("caja",85);
-  if(/aparador/.test(n)) return def("caja",80);
-  if(/\btv\b/.test(n)) return def("caja",50);
-  if(/plato de ducha/.test(n)) return def("caja",6);
+  if(/mesa de centro|mesa baja/.test(n)) return def("centro",42);
+  if(/escritorio/.test(n)) return def("escritorio",75);
+  if(/mesa/.test(n)) return def("mesa",75);
+  if(/silla|taburete/.test(n)) return def("silla",88);
+  if(/armario|ropero/.test(n)) return def("armario",220);
+  if(/estanter|librer/.test(n)) return def("estante",190);
+  if(/frigor|nevera|frigo/.test(n)) return def("nevera",185);
+  if(/c[oó]moda|cajonera/.test(n)) return def("comoda",85);
+  if(/aparador|bufet/.test(n)) return def("aparador",80);
+  if(/\btv\b|televisi|televisor/.test(n)) return def("tele",50);
+  if(/plato de ducha|ducha/.test(n)) return def("ducha",6);
   if(/ba[ñn]era/.test(n)) return def("banera",55);
-  if(/inodoro/.test(n)) return def("caja",75);
-  if(/lavabo|m[oó]dulo|lavadora|lavavajillas|isla/.test(n)) return def("caja",88);
+  if(/inodoro|v[aá]ter|wc\b/.test(n)) return def("inodoro",78);
+  if(/lavabo/.test(n)) return def("lavabo",85);
+  if(/lavadora|secadora/.test(n)) return def("lavadora",85);
+  if(/isla/.test(n)) return def("isla",90);
+  if(/lavavajillas|m[oó]dulo|encimera|cocina/.test(n)) return def("bajo",90);
   return def("caja",75);
+}
+const ROUND2D=new Set(["redonda","lampara","planta","puff"]);
+// Dibujo en planta de cada mueble, en coordenadas del mueble sin girar (respaldo arriba)
+function symbol2d(f,w,d,ink){
+  const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`, R=(x,y,a,b,r=2)=>`<rect x="${x}" y="${y}" width="${a}" height="${b}" rx="${r}"/>`;
+  const C=(x,y,r)=>`<circle cx="${x}" cy="${y}" r="${r}"/>`, E=(x,y,rx,ry)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`;
+  let s="";
+  switch(f){
+    case "sofa": case "sillon": case "chaise": { const arm=Math.min(20,w*.12), bk=Math.min(20,d*.24), sd=f==="chaise"?Math.min(95,d*.6):d;
+      s=R(0,0,w,bk,3)+R(0,0,arm,sd,3)+(f==="chaise"?"":R(w-arm,0,arm,sd,3));
+      const n=f==="sillon"?1:Math.max(1,Math.round((w-2*arm)/70)), cw=(w-2*arm)/n; for(let i=1;i<n;i++) s+=L(arm+i*cw,bk,arm+i*cw,sd);
+      if(f==="chaise"){ const cx=w-Math.min(90,w*.38); s+=L(cx,bk,cx,d)+L(arm,sd,cx,sd); } break; }
+    case "cama": { s=R(0,0,w,7,1); const pw=w>=120?(w-24)/2:w-20; if(w>=120) s+=R(8,12,pw,30,6)+R(16+pw,12,pw,30,6); else s+=R(10,12,pw,30,6);
+      s+=L(3,d*.36,w-3,d*.36)+L(3,d*.36+6,w-3,d*.36+6); break; }
+    case "colchon": s=R(4,4,w-8,d-8,6); break;
+    case "mesa": case "escritorio": case "centro": s=R(4,4,w-8,d-8,2)+(f==="escritorio"?R(w-42,4,38,d-8,1):""); break;
+    case "silla": s=R(0,0,w,6,2)+R(4,10,w-8,d-14,4); break;
+    case "armario": case "comoda": case "aparador": case "tele": case "mesita": { s=R(0,0,w,4,0); const n=Math.max(1,Math.round(w/50)); for(let i=1;i<n;i++) s+=L(i*w/n,4,i*w/n,d); s+=L(0,d-2,w,d-2); break; }
+    case "estante": { s=R(0,0,w,3,0); for(let x=6;x<w-6;x+=Math.max(6,w/10)) s+=L(x,5,x,d-4); break; }
+    case "nevera": s=R(0,0,w,4,0)+L(w*.15,d-3,w*.85,d-3); break;
+    case "lavadora": s=C(w/2,d*.6,Math.min(w,d)*.3)+R(0,0,w,8,0); break;
+    case "bajo": case "isla": s=R(2,2,w-4,d-4,2)+(f==="bajo"?C(w/2,d/2,Math.min(w,d)*.18):""); break;
+    case "inodoro": s=R(w*.1,0,w*.8,d*.28,3)+E(w/2,d*.62,w*.42,d*.36); break;
+    case "lavabo": s=E(w/2,d*.55,w*.33,d*.28)+C(w/2,d*.15,3); break;
+    case "banera": s=R(6,6,w-12,d-12,Math.min(w,d)*.35)+C(w*.12,d/2,3); break;
+    case "ducha": s=L(0,0,w,d)+L(w,0,0,d)+C(w/2,d/2,4); break;
+    case "alfombra": s=R(6,6,w-12,d-12,2); break;
+    case "lampara": s=C(w/2,d/2,Math.min(w,d)*.42)+C(w/2,d/2,Math.min(w,d)*.12); break;
+    case "planta": { const r=Math.min(w,d)*.45; s=C(w/2,d/2,r*.45); for(let i=0;i<7;i++){ const a=i/7*Math.PI*2; s+=E(w/2+Math.cos(a)*r*.62,d/2+Math.sin(a)*r*.62,r*.36,r*.2); } break; }
+    case "puff": s=C(w/2,d/2,Math.min(w,d)*.3); break;
+    case "redonda": s=C(w/2,d/2,Math.min(w,d)*.35); break;
+  }
+  return s?`<g fill="none" stroke="${ink}" stroke-width="1.2" opacity=".55">${s}</g>`:"";
+}
+// Modelo 3D de cada mueble: x = ancho, z = fondo (respaldo en -z), y = alto, en cm
+function furniture3d(T,g,it,f,h,w,d,base,glow,mat){
+  const main=mat(base,glow), dark=mat(base.clone().multiplyScalar(.7),glow), light=mat(base.clone().lerp(new T.Color(0xffffff),.22),glow);
+  const wood=mat(0x6B4A33,glow), metal=mat(0x9DA1A6,{...glow,metalness:.6,roughness:.35}), white=mat(0xFAF6F0,glow), black=mat(0x26262A,glow);
+  const stone=mat(0xDDD5C8,glow), glass=mat(0xC0D6FF,{...glow,transparent:true,opacity:.28,roughness:.1});
+  const add=(geo,m,x,y,z)=>{ const me=new T.Mesh(geo,m); me.position.set(x,y,z); me.castShadow=true; me.receiveShadow=true; g.add(me); return me; };
+  const box=(bw,bh,bd,m,x,y,z)=>add(new T.BoxGeometry(Math.max(.5,bw),Math.max(.5,bh),Math.max(.5,bd)),m,x,y,z);
+  const cyl=(rt,rb,ch,m,x,y,z,seg=32)=>add(new T.CylinderGeometry(rt,rb,ch,seg),m,x,y,z);
+  const sph=(r,m,x,y,z)=>add(new T.SphereGeometry(r,20,14),m,x,y,z);
+  const legs=(lw,ld,lh,inset,m,r=2)=>[[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([a,b])=>cyl(r,r*.8,lh,m,a*(lw/2-inset),lh/2,b*(ld/2-inset),12));
+  const knob=(x,y,z)=>sph(1.6,metal,x,y,z);
+  const sofa=(sw,sd,ox,oz,armL,armR,n)=>{
+    const legH=8, seat=Math.min(44,h*.52), arm=Math.min(20,sw*.12), bk=Math.min(20,sd*.24), top=seat-12;
+    [[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([a,b])=>cyl(2.2,1.6,legH,wood,ox+a*(sw/2-8),legH/2,oz+b*(sd/2-8),10));
+    box(sw,top-legH,sd,dark,ox,legH+(top-legH)/2,oz);
+    box(sw,h-legH,bk,main,ox,legH+(h-legH)/2,oz-sd/2+bk/2);
+    if(armL) box(arm,h*.66-legH,sd,main,ox-sw/2+arm/2,legH+(h*.66-legH)/2,oz);
+    if(armR) box(arm,h*.66-legH,sd,main,ox+sw/2-arm/2,legH+(h*.66-legH)/2,oz);
+    const iw=sw-(armL?arm:0)-(armR?arm:0), ix=ox+((armL?arm:0)-(armR?arm:0))/2; n=n||Math.max(1,Math.round(iw/70)); const cw=iw/n;
+    for(let i=0;i<n;i++){ const x=ix-iw/2+cw*(i+.5);
+      box(cw-1.5,12,sd-bk-12,light,x,top+6,oz+(bk+12)/2-0);
+      box(cw-3,(h-seat)*.82,12,light,x,seat+(h-seat)*.42,oz-sd/2+bk+6); }
+  };
+  switch(f){
+    case "sofa": sofa(w,d,0,0,true,true); break;
+    case "sillon": sofa(w,d,0,0,true,true,1); break;
+    case "chaise": { const sd=Math.min(95,d*.6), cwid=Math.min(90,w*.38);
+      sofa(w,sd,0,-d/2+sd/2,true,false);
+      const ext=d-sd, x=w/2-cwid/2, z=-d/2+sd+ext/2;
+      box(cwid,24,ext,dark,x,8+12,z); box(cwid-2,12,ext-2,light,x,38,z);
+      [[1],[-1]].forEach(([a])=>cyl(2.2,1.6,8,wood,x+a*(cwid/2-8),4,d/2-8,10)); break; }
+    case "cama": { const fh=26, md=d-12;
+      legs(w,d,8,6,wood,2.5); box(w,fh-8,d,dark,0,8+(fh-8)/2,0);
+      box(w-6,22,md,white,0,fh+11,6); box(w-2,4,md*.64,main,0,fh+22+2,6+md/2-md*.32); box(w-2,6,10,light,0,fh+22+3,6+md/2-md*.64-5);
+      box(w,h,7,dark,0,h/2,-d/2+3.5); box(w-10,h*.55,2,light,0,h*.55,-d/2+8);
+      const pw=w>=120?Math.min(62,(w-24)/2):Math.min(70,w-20);
+      (w>=120?[-pw/2-5,pw/2+5]:[0]).forEach(x=>{ const p=box(pw,11,32,white,x,fh+22+6,-d/2+28); p.scale.set(1,1,1); }); break; }
+    case "colchon": box(w,h,d,white,0,h/2,0); box(w-6,1,d-6,mat(0xEFE8DE,glow),0,h+.3,0); break;
+    case "mesa": { box(w,4,d,main,0,h-2,0); legs(w,d,h-4,7,wood,2.6); break; }
+    case "centro": { box(w,4,d,main,0,h-2,0); box(w-14,2,d-14,main,0,12,0); legs(w,d,h-4,5,wood,2.2); break; }
+    case "escritorio": { box(w,3,d,main,0,h-1.5,0); box(3,h-3,d-6,main,-w/2+4,(h-3)/2,0);
+      const cw=40; box(cw,h-3,d-6,main,w/2-cw/2-1,(h-3)/2,0); for(let i=1;i<3;i++) box(cw-2,.6,.6,dark,w/2-cw/2-1,i*(h-3)/3,d/2-2.6);
+      for(let i=0;i<3;i++) knob(w/2-cw/2-1,(i+.5)*(h-3)/3,d/2-2); break; }
+    case "redonda": { cyl(w/2,w/2,4,main,0,h-2,0,48); cyl(4,5,h-4,wood,0,(h-4)/2,0,16); cyl(w*.22,w*.24,3,wood,0,1.5,0,32); break; }
+    case "silla": { const sh=46; legs(w,d,sh-3,3,wood,1.6); box(w,5,d,light,0,sh-.5,0);
+      box(2.5,h-sh,2.5,wood,-w/2+2,sh+(h-sh)/2,-d/2+2); box(2.5,h-sh,2.5,wood,w/2-2,sh+(h-sh)/2,-d/2+2); box(w-3,(h-sh)*.45,2.5,main,0,h-(h-sh)*.28,-d/2+2); break; }
+    case "puff": cyl(w/2,w/2*.92,h,main,0,h/2,0,32); break;
+    case "lampara": { cyl(Math.min(w,d)*.3,Math.min(w,d)*.32,3,metal,0,1.5,0); cyl(1.2,1.2,h-30,metal,0,(h-30)/2+3,0,10);
+      cyl(Math.min(w,d)*.24,Math.min(w,d)*.42,32,mat(0xFFF1DE,{...glow,emissive:0xFFD9A0,emissiveIntensity:.35}),0,h-16,0,32); break; }
+    case "planta": { const r=Math.min(w,d)/2; cyl(r*.5,r*.38,h*.32,mat(0xC0643E,glow),0,h*.16,0,24);
+      const leaf=mat(0x5E7B5A,glow), leaf2=mat(0x7A9B6E,glow);
+      [[0,h*.55,0,r*.55],[r*.35,h*.68,r*.1,r*.45],[-r*.3,h*.72,-r*.15,r*.45],[r*.05,h*.86,-r*.2,r*.4],[-r*.1,h*.6,r*.35,r*.4]].forEach(([x,y,z,rr],i)=>sph(rr,i%2?leaf2:leaf,x,y,z)); break; }
+    case "estante": { box(w,h,2,main,0,h/2,-d/2+1); box(2,h,d,main,-w/2+1,h/2,0); box(2,h,d,main,w/2-1,h/2,0);
+      const n=Math.max(2,Math.round(h/38)), BK=[0xF86C2F,0x9DBBF0,0xF3B9EF,0x6D0101,0xDDD5C8,0x5E7B5A,0xE2B93B];
+      let seed=[...String(it.id)].reduce((a,c)=>a*31+c.charCodeAt(0)>>>0,7); const rnd=()=>(seed=(seed*1103515245+12345)>>>0)/4294967296;
+      for(let i=0;i<=n;i++){ const y=1+i*(h-2)/n; box(w-4,2,d-2,main,0,y,1);
+        if(i<n){ let x=-w/2+4; const sh=(h-2)/n-4; while(x<w/2-8){ const bw=2+rnd()*3, bh=sh*(.55+rnd()*.35); if(rnd()<.18){ x+=6; continue; }
+          box(bw,bh,d*.7,mat(BK[Math.floor(rnd()*BK.length)],glow),x+bw/2,y+1+bh/2,0); x+=bw+.4; } } } break; }
+    case "armario": { box(w,h-6,d,main,0,6+(h-6)/2,0); box(w-2,6,d-4,dark,0,3,-1);
+      const n=Math.max(1,Math.round(w/50)), dw=w/n; for(let i=1;i<n;i++) box(.7,h-10,.7,dark,-w/2+i*dw,6+(h-6)/2,d/2+.3);
+      for(let i=0;i<n;i++){ const side=i%2?-1:1; box(1.2,30,1.5,metal,-w/2+dw*(i+.5)+side*(dw/2-5),h*.5,d/2+1); } break; }
+    case "comoda": case "mesita": { const lh=f==="mesita"?10:8; legs(w,d,lh,4,wood,1.8); box(w,h-lh,d,main,0,lh+(h-lh)/2,0);
+      const rows=f==="mesita"?2:Math.max(3,Math.round((h-lh)/22)), rh=(h-lh)/rows;
+      for(let i=1;i<rows;i++) box(w-2,.7,.7,dark,0,lh+i*rh,d/2+.3);
+      for(let i=0;i<rows;i++) w>70?[-w/4,w/4].forEach(x=>knob(x,lh+(i+.5)*rh,d/2+1)):knob(0,lh+(i+.5)*rh,d/2+1); break; }
+    case "aparador": case "tele": { const lh=f==="tele"?12:14; legs(w,d,lh,5,wood,1.8); box(w,h-lh,d,main,0,lh+(h-lh)/2,0);
+      const n=Math.max(2,Math.round(w/50)), dw=w/n; for(let i=1;i<n;i++) box(.7,h-lh-2,.7,dark,-w/2+i*dw,lh+(h-lh)/2,d/2+.3);
+      for(let i=0;i<n;i++) box(8,1.2,1.2,metal,-w/2+dw*(i+.5),h-6,d/2+.8); break; }
+    case "nevera": { box(w,h,d,main,0,h/2,0); box(w-.5,.8,.8,dark,0,h*.38,d/2+.2);
+      box(1.6,h*.25,2,metal,-w/2+5,h*.62,d/2+1.4); box(1.6,h*.18,2,metal,-w/2+5,h*.22,d/2+1.4); break; }
+    case "lavadora": { box(w,h,d,white,0,h/2,0); box(w-2,10,1,mat(0xE6E2DA,glow),0,h-6,d/2+.3);
+      const dr=Math.min(w,h)*.3, door=cyl(dr,dr,2,black,0,h*.45,d/2+.8,40); door.rotation.x=Math.PI/2;
+      const gl=cyl(dr*.72,dr*.72,2.4,mat(0x7F96B2,{...glow,roughness:.15}),0,h*.45,d/2+1,40); gl.rotation.x=Math.PI/2; break; }
+    case "bajo": case "isla": { const ov=f==="isla"?25:2; box(w-2,h-12,d-ov,main,0,8+(h-12)/2,-ov/2); box(w-4,8,d-ov-6,black,0,4,-ov/2-3);
+      box(w,4,d,stone,0,h-2,0); const n=Math.max(1,Math.round(w/60)); for(let i=0;i<n;i++) box(Math.min(30,w/n-10),1.2,1.5,metal,-w/2+w/n*(i+.5),h-14,d/2-ov+.8);
+      for(let i=1;i<n;i++) box(.6,h-16,.6,dark,-w/2+i*w/n,8+(h-12)/2,d/2-ov+.3); break; }
+    case "inodoro": { box(w*.7,40,d*.3,white,0,20,-d/2+d*.15+8); box(w*.85,36,d*.2,white,0,40+18,-d/2+d*.1);
+      const b=cyl(w*.42,w*.32,38,white,0,19,d*.12,28); b.scale.set(1,1,1.25); const s=cyl(w*.44,w*.44,3,white,0,40,d*.12,28); s.scale.set(1,1,1.25); break; }
+    case "lavabo": { box(w-2,h-16,d-4,main,0,(h-16)/2+2,-2); box(w,6,d,white,0,h-3,0);
+      const bs=cyl(w*.3,w*.26,2,mat(0xE9EEF2,glow),0,h+.2,d*.05,32); bs.scale.set(1,1,.75);
+      cyl(1.4,1.4,14,metal,0,h+7,-d/2+6,12); box(2,2,9,metal,0,h+13,-d/2+10); break; }
+    case "banera": { box(w,h,d,white,0,h/2,0); box(w-14,2,d-14,mat(0xD7E5F5,{...glow,roughness:.2}),0,h+.2,0); cyl(1.6,1.6,10,metal,-w/2+8,h+5,0,12); break; }
+    case "ducha": { box(w,Math.max(3,h),d,white,0,Math.max(3,h)/2,0); cyl(4,4,.6,metal,0,Math.max(3,h)+.2,0,20);
+      box(w*.6,190,1,glass,-w*.2,Math.max(3,h)+95,d/2-1); box(w*.6,2,2,metal,-w*.2,Math.max(3,h)+190,d/2-1); break; }
+    case "alfombra": box(w,1,d,main,0,.5,0); box(w-12,1.2,d-12,light,0,.6,0); break;
+    default:{ box(w,h,d,main,0,h/2,0); if(h>30) box(w-2,6,d-2,dark,0,3,0); }
+  }
 }
 const V={objs:{}};
 function draw3d(){ if(V.renderer) V.renderer.render(V.scene,V.camera); }
@@ -852,25 +980,7 @@ function build3dRoom(r){
     }
     const g=new T.Group(), {f,h}=shape3d(it), w=+it.w, d=+it.d;
     const base=new T.Color(/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:(COL3D[it.color??0]??COL3D[0]));
-    const main=mat(base,glow), dark=mat(base.clone().multiplyScalar(.72),glow), wood=mat(0x6B4A33,glow), white=mat(0xFAF4EC,glow);
-    const box=(bw,bh,bd,m,x,y,z)=>{ const me=new T.Mesh(new T.BoxGeometry(Math.max(.5,bw),Math.max(.5,bh),Math.max(.5,bd)),m); me.position.set(x,y,z); me.castShadow=true; me.receiveShadow=true; g.add(me); return me; };
-    switch(f){
-      case "sofa":{ const sh=Math.min(44,h*.52), arm=Math.min(20,w*.12), bk=Math.min(20,d*.24);
-        box(w,sh*.55,d,dark,0,sh*.275,0); box(w-arm*2,sh*.45,d-bk,main,0,sh*.775,bk/2);
-        box(w,h,bk,main,0,h/2,-d/2+bk/2); box(arm,h*.7,d,main,-w/2+arm/2,h*.35,0); box(arm,h*.7,d,main,w/2-arm/2,h*.35,0); break; }
-      case "cama":{ const md=d-14; box(w,28,d,wood,0,14,0); box(w-6,22,md,white,0,39,5);
-        box(w-2,3,md*.62,main,0,51.5,5+md/2-md*.31); box(w,h,8,dark,0,h/2,-d/2+4);
-        const pw=Math.min(60,(w-24)/2); if(w>=120){ box(pw,12,34,white,-pw/2-6,56,-d/2+28); box(pw,12,34,white,pw/2+6,56,-d/2+28); } else box(Math.min(70,w-20),12,34,white,0,56,-d/2+28); break; }
-      case "colchon": box(w,h,d,white,0,h/2,0); break;
-      case "mesa":{ const lx=w/2-6, lz=d/2-6; box(w,4,d,main,0,h-2,0); [[lx,lz],[-lx,lz],[lx,-lz],[-lx,-lz]].forEach(([x,z])=>box(5,h-4,5,wood,x,(h-4)/2,z)); break; }
-      case "redonda":{ const top=new T.Mesh(new T.CylinderGeometry(w/2,w/2,4,48),main); top.position.y=h-2; top.castShadow=true; g.add(top); box(8,h-4,8,wood,0,(h-4)/2,0); box(w*.45,3,w*.45,wood,0,1.5,0); break; }
-      case "silla":{ const sh=46, lx=w/2-3, lz=d/2-3; box(w,4,d,main,0,sh,0); [[lx,lz],[-lx,lz],[lx,-lz],[-lx,-lz]].forEach(([x,z])=>box(3,sh-2,3,wood,x,(sh-2)/2,z)); box(w,h-sh,3,main,0,sh+(h-sh)/2,-d/2+1.5); break; }
-      case "estante":{ box(w,h,2,main,0,h/2,-d/2+1); box(2,h,d,main,-w/2+1,h/2,0); box(2,h,d,main,w/2-1,h/2,0); const n=Math.max(2,Math.round(h/38)); for(let i=0;i<=n;i++) box(w-4,2,d-2,main,0,1+i*(h-2)/n,1); break; }
-      case "banera": box(w,h,d,white,0,h/2,0); box(w-14,2,d-14,mat(0xC0D6FF,{roughness:.2}),0,h+.5,0); break;
-      case "alfombra": box(w,1,d,main,0,.5,0); break;
-      default:{ box(w,h,d,main,0,h/2,0); if(h>30) box(w-2,6,d-2,dark,0,3,0);
-        const doors=h>60&&w>=80?Math.round(w/50):0; for(let i=1;i<doors;i++) box(.8,h-14,.8,dark,-w/2+i*w/doors,h/2+3,d/2+.4); }
-    }
+    furniture3d(T,g,it,f,h,w,d,base,glow,mat);
     g.traverse(o=>{ if(o.isMesh) o.userData.itemId=it.id; });
     place3d(g,it); V.objs[it.id]=g; G.add(g);
   });
