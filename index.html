@@ -217,6 +217,14 @@ dialog form{display:flex;flex-direction:column}
 .dlg-f .right{display:flex;gap:8px;margin-left:auto}
 .field{display:flex;flex-direction:column;gap:4px;grid-column:span 6;min-width:0}
 .field.h3{grid-column:span 3}.field.h2{grid-column:span 2}
+.d-grp{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line)}
+.d-grp.mine{background:var(--blue-soft);border-color:var(--blue)}
+.d-grp.web{background:var(--surface)}
+.d-gh{grid-column:1/-1;margin:0;font-size:17px;color:var(--granate);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.d-chk{align-self:end;min-height:40px}
+.readst{font:600 12px var(--f-body);padding:3px 10px;border-radius:999px;letter-spacing:0}
+.readst.ok{background:#E3F3E9;color:var(--ok)}.readst.bad{background:#FBE4E2;color:var(--bad)}
+.field.auto>label::after{content:"✓";color:var(--ok);font-weight:800;margin-left:6px}
 @media (max-width:480px){.field.h3,.field.h2{grid-column:span 6}}
 .field label,.props label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .field input,.field select,.field textarea,.props input,.props select{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;width:100%;min-width:0}
@@ -600,25 +608,29 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 <dialog id="dlgProd"><form method="dialog" id="fProd">
   <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="d_ok">Añadir</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
-    <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
+    <div class="d-grp mine"><h3 class="d-gh">Lo que decides tú</h3>
+      <div class="field"><label for="d_lista">Lista</label><select id="d_lista"></select><input id="d_busco" placeholder="Nombre de la lista nueva: Sofá del salón, Lámpara…" hidden><span class="hint">Los productos de la misma lista se comparan juntos</span></div>
+      <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
+      <div class="field h3"><label for="d_valor">Te gusta</label><select id="d_valor"><option value="0">Sin valorar</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
+      <div class="field h3"><label for="d_room">Estancia</label><select id="d_room"></select></div>
+      <div class="field h3"><label for="d_forma">Tipo de mueble</label><select id="d_forma"></select><span class="hint">Para darle forma en el plano y en 3D</span></div>
+      <label class="field h3 d-chk" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="d_pared" style="width:auto"> Va colgado en la pared <span class="hint" style="margin:0">(balda, cuadro, espejo, tele…)</span></label>
+      <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
+    </div>
+    <div class="d-grp web"><h3 class="d-gh">De la tienda <span class="readst" id="d_readst" hidden></span></h3>
+      <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
     <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
       <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí: la ficha se rellena sola"></textarea>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm ghost" type="button" id="d_fill">Volver a rellenar</button><span class="hint" id="d_fillmsg"></span></div>
     </details>
-    <div class="field"><label for="d_lista">Lista</label><select id="d_lista"></select><input id="d_busco" placeholder="Nombre de la lista nueva: Sofá del salón, Lámpara…" hidden><span class="hint">Los productos de la misma lista se comparan juntos</span></div>
-    <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
-    <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
-    <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field h2"><label for="d_ancho">Ancho (cm)</label><input id="d_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field h2"><label for="d_fondo">Fondo (cm)</label><input id="d_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field h2"><label for="d_alto">Alto (cm)</label><input id="d_alto" type="number" min="0" step="any" inputmode="decimal"></div>
-    <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
-    <div class="field h3"><label for="d_valor">Te gusta</label><select id="d_valor"><option value="0">Sin valorar</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
-    <div class="field"><label for="d_forma">Tipo de mueble</label><select id="d_forma"></select><span class="hint">Para darle forma en el plano y en 3D</span></div>
-    <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="d_pared" style="width:auto"> Va colgado en la pared <span class="hint" style="margin:0">(balda, cuadro, espejo, tele…)</span></label>
-    <div class="field h3"><label for="d_color">Color</label><input id="d_color" type="color" value="#b07a55" style="height:38px;padding:2px 4px"><span class="hint" id="d_colormsg">Para pintarlo en el plano</span></div>
-    <div class="field h3"><label for="d_room">Estancia</label><select id="d_room"></select></div>
-    <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
+      <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
+      <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
+      <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
+      <div class="field h2"><label for="d_ancho">Ancho (cm)</label><input id="d_ancho" type="number" min="0" step="any" inputmode="decimal"></div>
+      <div class="field h2"><label for="d_fondo">Fondo (cm)</label><input id="d_fondo" type="number" min="0" step="any" inputmode="decimal"></div>
+      <div class="field h2"><label for="d_alto">Alto (cm)</label><input id="d_alto" type="number" min="0" step="any" inputmode="decimal"></div>
+      <div class="field"><label for="d_color">Color</label><input id="d_color" type="color" value="#b07a55" style="height:38px;padding:2px 4px"><span class="hint" id="d_colormsg">Para pintarlo en el plano</span></div>
+    </div>
   </div>
   <div class="dlg-f"><button class="btn danger" type="button" id="d_del" hidden>Eliminar</button>
     </div>
@@ -1862,15 +1874,16 @@ async function readUrl(u){
   try{
     const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
     if($("d_url").value.trim()!==u) return;
-    if(!r.ok||d.error){ msg.textContent=(d.error||"No se ha podido leer la página.")+" Copia y pega el texto de la página abajo."; $("d_more").open=true; return; }
+    if(!r.ok||d.error){ msg.textContent=(d.error||"No se ha podido leer la página.")+" Copia y pega el texto de la página abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer"); return; }
     const f=fromUrl(u), host=new URL(u).hostname.replace(/-/g,""), known=Object.keys(SHOPS).some(k=>host.includes(k));
     applyImport({...d,tienda:known?f.tienda:(d.tienda||f.tienda)});
     if(d.imagen){ $("d_img").value=d.imagen;
       if(!$("d_color").dataset.set) colorFromImage("/api/imagen?url="+encodeURIComponent(d.imagen)).then(c=>{ if(!$("d_color").dataset.set){ const v=c||colorFromName($("d_nombre").value); if(v){ $("d_color").value=v; $("d_color").dataset.set="1"; $("d_colormsg").textContent=c?"Sacado de la foto":"Sacado del nombre"; } } }); }
     const faltan=[!d.precio&&"el precio",!(d.ancho&&d.fondo)&&"las medidas"].filter(Boolean);
     msg.textContent=faltan.length?`Leído, pero no encuentro ${faltan.join(" ni ")}. Pega el texto de la página abajo o escríbelo.`:"Leído. Revisa los datos antes de guardar.";
+    readStatus("ok",faltan.length?`Leído (faltan ${faltan.join(" y ")})`:"Leído de la web");
     if(faltan.length) $("d_more").open=true;
-  }catch{ msg.textContent="No se ha podido leer la página. Copia y pega el texto abajo."; $("d_more").open=true; }
+  }catch{ msg.textContent="No se ha podido leer la página. Copia y pega el texto abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer"); }
 }
 const SHOPS={ikea:"IKEA",leroymerlin:"Leroy Merlin",maisonsdumonde:"Maisons du Monde",elcorteingles:"El Corte Inglés",conforama:"Conforama",amazon:"Amazon",zarahome:"Zara Home",sklum:"Sklum",kavehome:"Kave Home",westwing:"Westwing",jysk:"JYSK",bauhaus:"Bauhaus",laredoute:"La Redoute",carrefour:"Carrefour",mueblesboom:"Muebles BOOM",tuco:"Tuco",merkamueble:"Merkamueble",habitat:"Habitat",aliexpress:"AliExpress",wallapop:"Wallapop",milanuncios:"Milanuncios",temu:"Temu",shein:"Shein",lidl:"Lidl",action:"Action",casashops:"Casa",hm:"H&M Home",vidaxl:"vidaXL",miliboo:"Miliboo",ventaunica:"Venta Única",brico:"Bricodepot",bricomart:"Bricomart",mediamarkt:"MediaMarkt"};
 function fromUrl(u){
@@ -1900,12 +1913,16 @@ function parseText(t){
     if(m){ out.ancho=n(m[1]); out.fondo=n(m[2]); if(m[3]) out.alto=n(m[3]); } }
   return out;
 }
+// Marca con ✓ los campos que se han rellenado solos y el estado de la lectura de la web
+function readStatus(kind,txt){ const e=$("d_readst"); if(!kind){ e.hidden=true; return; } e.hidden=false; e.className="readst "+kind; e.textContent=(kind==="ok"?"✓ ":"✕ ")+txt; }
+function clearAuto(){ document.querySelectorAll("#dlgProd .field.auto").forEach(f=>f.classList.remove("auto")); readStatus(null); }
+document.addEventListener("input",e=>{ const f=e.target.closest?.("#dlgProd .field.auto"); if(f&&e.isTrusted) f.classList.remove("auto"); });
 function applyImport(d){
-  let c=0; const set=(id,v)=>{ if(v!==null&&v!==undefined&&v!==""&&!(typeof v==="number"&&!(v>0))){ $(id).value=v; c++; } };
+  let c=0; const set=(id,v)=>{ if(v!==null&&v!==undefined&&v!==""&&!(typeof v==="number"&&!(v>0))){ $(id).value=v; $(id).closest(".field")?.classList.add("auto"); c++; } };
   set("d_nombre",d.nombre); set("d_tienda",d.tienda); set("d_precio",d.precio); set("d_ancho",d.ancho); set("d_fondo",d.fondo); set("d_alto",d.alto);
   if(d.nota&&!$("d_nota").value) set("d_nota",d.nota);
   // si la página habla de diámetro, el mueble es redondo
-  if(d.redondo&&!$("d_forma").value){ const f=detectForma(`${$("d_nombre").value} ${$("d_busco").value} redonda`); if(["redonda","centroR","alfombraR"].includes(f)){ $("d_forma").value=f; c++; } }
+  if(d.redondo&&!$("d_forma").value){ const f=detectForma(`${$("d_nombre").value} ${$("d_busco").value} redonda`); if(["redonda","centroR","alfombraR"].includes(f)){ $("d_forma").value=f; $("d_forma").closest(".field").classList.add("auto"); c++; } }
   return c;
 }
 async function fillFromPaste(){
@@ -1931,6 +1948,7 @@ ${t.slice(0,60000)}`;
   }
   const c=applyImport(data&&typeof data==="object"?data:parseText(t));
   msg.textContent=c?"Listo. Revisa los datos antes de guardar.":"No he encontrado precio ni medidas. Rellénalos a mano.";
+  readStatus(c?"ok":"bad",c?"Leído del texto pegado":"No se ha podido leer");
 }
 const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x));
   S.listas.filter(l=>l.proyectoId===pid&&l.estanciaId===rid).forEach(l=>{ g[l.nombre] ||= []; }); return g; };
@@ -2840,7 +2858,7 @@ $("fRoom").addEventListener("submit",async ev=>{
 
 let edD=null;
 function openProd(x,preset={}){
-  edD=x||null; S.prodFromCj=null; $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
+  edD=x||null; S.prodFromCj=null; clearAuto(); $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
   const pid=x?.proyectoId||S.proyId;
   $("needs").innerHTML=[...new Set(S.productos.filter(y=>y.proyectoId===pid).map(y=>y.busco))].map(n=>`<option value="${esc(n)}">`).join("");
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
