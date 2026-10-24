@@ -347,7 +347,6 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .app-i{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--beige);color:var(--granate)}
 .menu-p .app-t[aria-current="page"] .app-i{background:var(--red);color:#fff}
 .menu-p .app-t[aria-current="page"]{color:var(--granate)}
-.app-n{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:10px;font-family:var(--f-mono);display:grid;place-items:center;padding:0 4px}
 .sec-bar{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:6px 4px 2px;scroll-snap-type:x proximity}
 .sec-bar::-webkit-scrollbar{display:none}
 .sec-t{flex:1 0 64px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;padding:6px 2px 8px;border-radius:12px;cursor:pointer;font:600 12px/1.2 var(--f-body,inherit);color:var(--muted)}
@@ -492,7 +491,6 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* Toques de azul para detalles: interruptores, contadores, medidas y pasar el ratón */
 .seg button[aria-pressed="true"],.icon-btn[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue-ink);border-color:var(--blue)}
-.app-n{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:600}
 .sec-t:hover:not([aria-current="page"]) .app-i,.menu-p .app-t:hover:not([aria-current="page"]) .app-i{background:var(--blue-soft);color:var(--blue-ink)}
 .sec-t:hover:not([aria-current="page"]){color:var(--blue-ink)}
 .prod .dims{color:var(--blue-ink)}
@@ -867,7 +865,7 @@ function render(){
       </div>
       <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </section>
-    <nav class="sec-bar" aria-label="Secciones del proyecto">${sections(p).map(([k,n,c])=>`<button type="button" class="sec-t" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}${c!==""&&c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</nav>
+    <nav class="sec-bar" aria-label="Secciones del proyecto">${sections(p).map(([k,n,c])=>`<button type="button" class="sec-t" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}</span>${n}</button>`).join("")}</nav>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
@@ -2058,7 +2056,7 @@ function projMenuHTML(){
   const nd=S.productos.filter(x=>dropOf(x)).length;
   const apps=[["misproy","Mis proyectos","myProjects",S.proyectos.length,S.view==="proyectos"],["mispres","Mis presupuestos","allBudgets","",S.view==="presupuestos"],["nuevo","Nuevo proyecto","newProj","",false],
     ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[])];
-  const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}${c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</div>`;
+  const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}</span>${n}</button>`).join("")}</div>`;
   return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join("")}`:""}`;
 }
 function myProjectsHTML(){
