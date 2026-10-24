@@ -889,7 +889,7 @@ const pendingCloud=(col,id)=>cloudQ.some(q=>q.col===col&&q.id===id);
 // cosas guardadas sin cuenta en este navegador que aún no están en la cuenta
 const localData=()=>COLS.reduce((n,c)=>n+lsGet("proletix:"+c,[]).filter(d=>d?.id&&!(S.user&&S[c].some(x=>x.id===d.id))).length,0);
 async function cloudBoot(){
-  SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:"pkce"}});
   SB.auth.onAuthStateChange((ev,session)=>{
     if(ev==="PASSWORD_RECOVERY"){ S.auth={modo:"nueva"}; if(session?.user&&!S.user) startCloud(session.user,true); else { S.view="auth"; render(); } }
   });
@@ -905,6 +905,8 @@ async function startCloud(user,recovery){
   await cloudReload();
   SB.channel("docs-"+user.id).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:`user_id=eq.${user.id}`},onCloudChange).subscribe();
   cloudFlush(); startPriceWatch();
+  // una vez: cierra cualquier otra sesión abierta antes del cambio a PKCE (por si un enlace de vuelta acabó en otra web)
+  if(!lsGet("proletix:revocado1",false)) SB.auth.signOut({scope:"others"}).then(({error})=>{ if(!error) lsSet("proletix:revocado1",true); }).catch(()=>{});
   if(localData()&&!lsGet(ck("migrado"),false)) openMigrate();
 }
 async function cloudReload(){
@@ -1009,7 +1011,7 @@ function fillAccount(){
 function openAccount(){ fillAccount(); $("dlgCuenta").showModal(); }
 async function logout(){
   if(cloudQ.length&&!confirm("Hay cambios sin subir todavía. Si cierras la sesión ahora se quedarán en este dispositivo y subirán la próxima vez que entres. ¿Cerrar igualmente?")) return;
-  $("dlgCuenta").close(); try{ SB.removeAllChannels(); await SB.auth.signOut(); }catch{}
+  $("dlgCuenta").close(); try{ SB.removeAllChannels(); await SB.auth.signOut({scope:"global"}); }catch{}
   S.user=null; cloudQ=[]; S.hist=[]; COLS.forEach(c=>S[c]=[]); S.mode="auth"; S.auth={modo:"entrar"}; render();
 }
 
