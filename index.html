@@ -311,7 +311,10 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .rl-d summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--granate);border-bottom:2px solid var(--granate);transform:rotate(-45deg);transition:transform .15s}
 .rl-d[open] summary::before{transform:rotate(45deg)}
 .rl-d[open] summary{background:var(--beige)}
-.rl-n{font-family:var(--f-display);font-size:18px;font-weight:800;font-stretch:85%;color:var(--granate)}
+.rl-n{font-family:var(--f-display);font-size:18px;font-weight:800;font-stretch:85%;color:var(--granate);display:inline-flex;align-items:center;gap:8px}
+.l-ic{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:var(--blue-soft);color:var(--blue-ink)}
+.need-h h3 .l-ic{width:34px;height:34px;margin-right:8px;vertical-align:-6px}
+.need-h h3 .l-ic svg{width:20px;height:20px}
 .rl-d summary{grid-template-columns:auto auto minmax(0,1fr) auto}
 .rl-s{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rl-s i{color:var(--muted)}
 .rl-c{font-size:12px;color:var(--muted)}
@@ -1727,7 +1730,7 @@ function roomListsHTML(p,r){
     const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9)), w=win(n), open=S.openLists.has(n);
     const lid=list[0]?.estanciaId??(S.listas.find(l=>l.proyectoId===pid&&l.nombre===n)?.estanciaId||"");
     return `<details class="rl-d" data-rl="${esc(n)}"${open?" open":""}>
-      <summary><span class="rl-n">${esc(n)}</span><span class="rl-s">${w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Sin elegir":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
+      <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Sin elegir":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
       <div class="rl-b">${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0, sw=prodHex(x);
         return `<button type="button" class="rl-o" data-choose="${esc(x.id)}" aria-pressed="${on}">
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
@@ -2028,6 +2031,44 @@ async function quickAdd(cid){
   ["n","c","p"].forEach(k=>$(`qa_${k}_${cid}`).value="");
   await saveEls(c,[...(c.elementos||[]),el]);
   setTimeout(()=>$("qa_n_"+cid)?.focus(),30);
+}
+
+/* ---------- Iconos de las listas según lo que guardan ---------- */
+const LIST_IC={
+  sofa:'<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v5H2z"/><path d="M5 18v2M19 18v2"/>',
+  mesa:'<rect x="2" y="7" width="20" height="3" rx="1"/><path d="M5 10v10M19 10v10"/>',
+  escritorio:'<rect x="2" y="6" width="20" height="3" rx="1"/><path d="M4 9v11"/><rect x="13" y="9" width="7" height="11"/><path d="M15 13h3M15 17h3"/>',
+  silla:'<path d="M7 3v9h10V3"/><path d="M6 12h12v3H6z"/><path d="M7 15v6M17 15v6"/>',
+  cama:'<path d="M2 19V5M22 19v-6a3 3 0 0 0-3-3h-8v4"/><path d="M2 14h20"/><circle cx="6.5" cy="11" r="2"/>',
+  armario:'<rect x="4" y="2" width="16" height="19" rx="1"/><path d="M12 2v19M10 11v2M14 11v2M6 21v1M18 21v1"/>',
+  estante:'<path d="M4 3v18M20 3v18M4 8h16M4 14h16M4 20h16"/><path d="M7 8V5h3v3M13 14v-3h3v3"/>',
+  tele:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  lampara:'<path d="M8 3h8l3 8H5z"/><path d="M12 11v9M8 21h8"/>',
+  planta:'<path d="M7 14h10l-1.5 7h-7z"/><path d="M12 14V9"/><path d="M12 9c0-3 2-5 6-5 0 3-2 5-6 5zM12 11c0-2-1.5-4-5-4 0 2.5 1.5 4 5 4z"/>',
+  alfombra:'<rect x="4" y="5" width="16" height="14" rx="1"/><rect x="7" y="8" width="10" height="8"/><path d="M4 8H2M4 12H2M4 16H2M20 8h2M20 12h2M20 16h2"/>',
+  cocina:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M5 10h14M8 5.5v2M8 13v3"/>',
+  bano:'<path d="M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M6 12V5a2 2 0 0 1 4 0"/><path d="M7 19l-1 2M17 19l1 2"/>',
+  cuadro:'<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/>',
+  herramienta:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  textil:'<path d="M4 3h16"/><path d="M6 3v18c2-1 3-3 3-6V3M18 3v18c-2-1-3-3-3-6V3"/>',
+  comoda:'<rect x="3" y="3" width="18" height="16" rx="1"/><path d="M3 8.5h18M3 14h18M11 6h2M11 11.5h2M11 16.5h2M5 19v2M19 19v2"/>',
+  caja:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'
+};
+const FORMA_IC={sofa:"sofa",chaise:"sofa",rinconera:"sofa",sillon:"sofa",puff:"sofa",mesa:"mesa",redonda:"mesa",centro:"mesa",centroR:"mesa",mesita:"mesa",escritorio:"escritorio",
+  silla:"silla",taburete:"silla",banco:"silla",cama:"cama",colchon:"cama",armario:"armario",vitrina:"armario",comoda:"comoda",aparador:"comoda",altillo:"armario",estante:"estante",balda:"estante",
+  tele:"tele",tvpared:"tele",lampara:"lampara",aplique:"lampara",alfombra:"alfombra",alfombraR:"alfombra",nevera:"cocina",lavadora:"cocina",bajo:"cocina",isla:"cocina",
+  inodoro:"bano",lavabo:"bano",banera:"bano",ducha:"bano",cuadro:"cuadro",espejo:"cuadro"};
+function listIcon(name){
+  const n=String(name||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  let k=/tornill|pintur|masill|herramient|taladr|clavo|silicon|liston|tabla|madera|material|cola\b|lija|brocha|rodillo/.test(n)?"herramienta"
+    :/cortin|estor|cojin|manta|textil|ropa de cama|sabana|funda/.test(n)?"textil"
+    :/luz|luces|bombill|ilumin|lampar|flexo/.test(n)?"lampara"
+    :/planta|maceta|jardin/.test(n)?"planta"
+    :/cocina|electrodom|horno|microond/.test(n)?"cocina"
+    :/bano|aseo|grifo|mampara/.test(n)?"bano"
+    :/decor|cuadro|lamina|espejo/.test(n)?"cuadro"
+    :FORMA_IC[detectForma(n)]||(PLANTS.has(detectForma(n))?"planta":"caja");
+  return `<span class="l-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${LIST_IC[k]}</svg></span>`;
 }
 
 /* ---------- Menú de proyectos y presupuestos de todo ---------- */
@@ -2475,7 +2516,7 @@ function shopHTML(p,prods){
     const min=vivos.length>1?Math.min(...vivos.map(x=>+x.precio)):null, max=vivos.length?Math.max(...vivos.map(x=>+x.precio)):null;
     const win=list.find(x=>x.estado==="comprado")||list.find(x=>x.estado==="elegido");
     const canCmp=list.filter(x=>x.estado!=="descartado").length>1, cmpOn=canCmp&&S.cmpLists.has(n);
-    return `<details class="need" data-fold="${esc(n)}"${S.foldedLists.has(n)?"":" open"}><summary class="need-h"><h3>${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
+    return `<details class="need" data-fold="${esc(n)}"${S.foldedLists.has(n)?"":" open"}><summary class="need-h"><h3>${listIcon(n.split("\u0001")[0])}${esc(n.split("\u0001")[0])} <span class="muted" style="font-size:15px;font-weight:600">· ${esc(n.split("\u0001")[1])}</span></h3>
       <span class="sum">${list.length?`${list.length} opci${list.length>1?"ones":"ón"}`:"Lista vacía"}${min!==null?` · de ${eur.format(min)} a ${eur.format(max)}`:""}${win?` · <b style="color:var(--ink)">${win.estado==="comprado"?"Comprado":"Elegido"}: ${esc(win.nombre)}</b>`:""}
         <button class="btn ghost sm" type="button" data-editlist="${esc(n.split("\u0001")[0])}" title="Editar lista"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar</button>
         <button class="btn ghost sm" type="button" data-addopt="${esc(n.split("\u0001")[0])}" data-optroom="${esc(list[0]?.estanciaId??(listsOf(p.id).find(l=>l.nombre===n.split("\u0001")[0])?.estanciaId||""))}">+ Añadir opción</button>${list.length?"":`<button class="btn ghost sm danger" type="button" data-dellist="${esc(n.split("\u0001")[0])}">Eliminar lista</button>`}${canCmp?`<button class="btn sm cmp-tg" type="button" data-view="${cmpOn?"cards":"cmp"}" data-vkey="${esc(n)}" aria-pressed="${cmpOn}" title="${cmpOn?"Volver a la lista":"Comparar opciones lado a lado"}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/><path d="M6.5 9h0M17.5 9h0M6.5 13h0M17.5 13h0"/></svg>${cmpOn?"Ver lista":"Comparar"}</button>`:""}</span></summary>
