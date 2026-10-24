@@ -26,9 +26,9 @@ addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = do
 /* Layout: cabecera con logo y proyecto · franja de cifras · pestañas (plano 2D con catálogo lateral, compras comparadas, reforma, contactos) */
 :root{
   --bg:#FFF3FC; --surface:#FFFFFF; --sunk:#FFE4FB; --ink:#3B2832; --muted:#7A6371; --line:#F2D9EE;
-  --red:#F86C2F; --red-ink:#3B1A0E; --gold:#C0D6FF; --gold-ink:#2A2440; --pink:#FFD5FB; --pink-ink:#6D0101; --beige:#F7EAE0; --granate:#6D0101;
+  --red:#F86C2F; --red-ink:#3B1A0E; --gold:#C0D6FF; --gold-ink:#2A2440; --pink:#FFD5FB; --pink-ink:#6D0101; --blue:#C0D6FF; --blue-soft:#E7EFFF; --blue-ink:#23407E; --blue-deep:#4C72C9; --beige:#F7EAE0; --granate:#6D0101;
   --ok:#2E7A4E; --warn:#9E5600; --bad:#B0201A;
-  --floor:#FFFFFF; --wall:#6D0101; --plan-calco:#2B6CB0; --grid:rgb(109 1 1 / .06);
+  --floor:#FFFFFF; --wall:#6D0101; --plan-calco:#2B6CB0; --grid:rgb(76 114 201 / .2);
   --f0:#C0D6FF; --f1:#FDBE9E; --f2:#FFD5FB; --f3:#EBCBC6; --f4:#F5E3D8; --f5:#ECE2E6;
   --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -483,6 +483,15 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .cj-inlist{font-size:12px;color:var(--ok);font-weight:600}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Toques de azul para detalles: interruptores, contadores, medidas y pasar el ratón */
+.seg button[aria-pressed="true"],.icon-btn[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue-ink);border-color:var(--blue)}
+.app-n{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:600}
+.sec-t:hover:not([aria-current="page"]) .app-i,.menu-p .app-t:hover:not([aria-current="page"]) .app-i{background:var(--blue-soft);color:var(--blue-ink)}
+.sec-t:hover:not([aria-current="page"]){color:var(--blue-ink)}
+.prod .dims{color:var(--blue-ink)}
+.field .hint{color:var(--blue-deep)}
+.pj .n b{color:var(--blue-ink)}
+::selection{background:var(--blue);color:var(--blue-ink)}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -977,7 +986,7 @@ function roomGeomSVG(P,pad,floorHex){
     const q=P[(i+1)%P.length], len=Math.hypot(q[0]-p[0],q[1]-p[1]); if(len<25) return "";
     const [nx,ny]=inward(P,i), mx=(p[0]+q[0])/2-nx*pad*.5, my=(p[1]+q[1])/2-ny*pad*.5;
     let ang=Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI; if(ang>90) ang-=180; if(ang<=-90) ang+=180;
-    return `<text transform="translate(${mx} ${my}) rotate(${ang})" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" opacity=".75">${cm(Math.round(len))}</text>`;
+    return `<text transform="translate(${mx} ${my}) rotate(${ang})" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" style="fill:var(--blue-ink);font-weight:600">${cm(Math.round(len))}</text>`;
   }).join("");
   return `<defs><clipPath id="roomClip"><path d="${d}"/></clipPath>
       <mask id="wallMask" maskUnits="userSpaceOnUse" x="${-pad*3}" y="${-pad*3}" width="${W+pad*6}" height="${L+pad*6}"><rect x="${-pad*3}" y="${-pad*3}" width="${W+pad*6}" height="${L+pad*6}" fill="white"/><path d="${d}" fill="black"/></mask></defs>
