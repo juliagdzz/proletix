@@ -517,6 +517,12 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .linkb.muted{color:var(--muted)}
 .auth-card hr{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
 .auth-on .top .actions{visibility:hidden}
+.avatar{width:40px;height:40px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);background:var(--blue-soft);color:var(--blue-ink);padding:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;font:700 16px var(--f-display);flex:none}
+.avatar[hidden]{display:none}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar:hover{box-shadow:0 0 0 2px var(--red)}
+.avatar.lg{width:56px;height:56px;font-size:22px;cursor:default}.avatar.lg:hover{box-shadow:0 0 0 1px var(--line)}
+.ac-who{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .ac-sync{margin:0;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600}
 .ac-sync.ok{background:#E3F3E9;color:var(--ok)}.ac-sync.wait{background:var(--blue-soft);color:var(--blue-ink)}
 /* Toques de azul para detalles: interruptores, contadores, medidas y pasar el ratón */
@@ -553,7 +559,8 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
       <span class="mode" id="mode" hidden>Conectando…</span>
       <button class="icon-btn" id="btnBell" type="button" data-act="bell" aria-label="Rebajas de tus productos" title="Rebajas de tus productos" hidden><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellN"></span></button>
       <button class="icon-btn" id="btnUndo" type="button" data-act="undo" disabled title="Deshacer el último cambio (Ctrl+Z)" aria-label="Atrás: deshacer el último cambio">↶</button>
-      <details class="menu" id="projMenu"><summary class="btn" aria-label="Menú"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="lbl">Menú</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
+      <button class="avatar" id="btnAvatar" type="button" data-act="account" aria-label="Mi cuenta" title="Mi cuenta" hidden></button>
+      <details class="menu" id="projMenu"><summary class="btn" aria-label="Menú"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg><span class="lbl">Menú</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
   </header>
   <main id="main" style="display:flex;flex-direction:column;gap:18px"><div class="loader" role="status" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true">
@@ -718,8 +725,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 <dialog id="dlgCuenta"><form method="dialog">
   <div class="dlg-h"><h2>Mi cuenta</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
   <div class="dlg-b" style="display:block">
-    <p style="margin:0 0 4px" class="label">Has entrado como</p>
-    <p style="margin:0 0 14px;font-weight:600;word-break:break-all" id="acMail"></p>
+    <div class="ac-who"><span class="avatar lg" id="acPic"></span><div style="min-width:0"><p style="margin:0;font-weight:700;font-size:17px" id="acName"></p><p style="margin:0;word-break:break-all" class="muted" id="acMail"></p></div></div>
     <p class="ac-sync ok" id="acSync">Todo guardado en tu cuenta</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
       <button class="btn" type="button" data-act="acMigrate" id="acMig" hidden>Subir lo guardado en este navegador</button>
@@ -1003,10 +1009,20 @@ async function submitAuth(){
 document.addEventListener("submit",e=>{ if(e.target.id==="fAuth"){ e.preventDefault(); submitAuth(); } });
 function fillAccount(){
   const n=cloudQ.length;
-  $("acMail").textContent=S.user?.email||"";
+  $("acMail").textContent=S.user?.email||""; $("acName").textContent=userName()!==S.user?.email?userName():""; $("acPic").innerHTML=avatarInner();
   $("acSync").textContent=!navigator.onLine?`Sin conexión: ${n} cambio${n===1?"":"s"} esperando para subir`:n?`Subiendo ${n} cambio${n===1?"":"s"}…`:S.syncErr?"No se ha podido sincronizar. Lo vuelvo a intentar en unos segundos.":"Todo guardado en tu cuenta";
   $("acSync").className="ac-sync "+(n||S.syncErr||!navigator.onLine?"wait":"ok");
   $("acMig").hidden=!localData();
+}
+// Foto de perfil arriba: la de Google si entraste con Google; si no, la inicial del correo
+function userPic(){ const m=S.user?.user_metadata||{}; return safeUrl(m.avatar_url||m.picture||""); }
+function userName(){ const m=S.user?.user_metadata||{}; return m.full_name||m.name||S.user?.email||""; }
+function avatarInner(){ const pic=userPic(), n=userName(); return pic?`<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">`:`<span>${esc((n.trim()[0]||"?").toUpperCase())}</span>`; }
+function paintAvatar(){
+  const b=$("btnAvatar"); if(!b) return;
+  if(S.mode==="cloud"&&S.user){ b.hidden=false; b.dataset.act="account"; b.title=b.ariaLabel="Mi cuenta: "+userName(); const h=avatarInner(); if(b.innerHTML!==h) b.innerHTML=h; }
+  else if(S.mode==="local"&&cloudOn()){ b.hidden=false; b.dataset.act="goAuth"; b.title=b.ariaLabel="Crear cuenta o entrar"; b.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>'; }
+  else b.hidden=true;
 }
 function openAccount(){ fillAccount(); $("dlgCuenta").showModal(); }
 async function logout(){
@@ -1044,7 +1060,7 @@ function render(){
   if(authOn){ main.innerHTML=authHTML(); if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); } } else setTimeout(()=>($("au_mail")||$("au_pass"))?.focus(),30); return; }
   const p=proyecto(); S.proyId=p?.id||null;
   $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
-  { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=!(HAS_API||nd.length); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
+  { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=true; paintAvatar(); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
   if(S.view==="proyectos"&&S.proyectos.length){ main.innerHTML=myProjectsHTML(); return; }
   if(!p){
