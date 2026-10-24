@@ -341,10 +341,24 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .menu-p .app-t[aria-current="page"] .app-i{background:var(--red);color:#fff}
 .menu-p .app-t[aria-current="page"]{color:var(--granate)}
 .app-n{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:10px;font-family:var(--f-mono);display:grid;place-items:center;padding:0 4px}
-.sec-h{display:inline-flex;align-items:center;gap:10px;background:none;border:0;padding:2px 0;cursor:pointer;font-family:var(--f-display);font-size:24px;font-weight:800;font-stretch:85%;color:var(--granate);align-self:flex-start}
-.sec-i{width:36px;height:36px;border-radius:11px;background:var(--red);color:#fff;display:grid;place-items:center}
-.sec-c{font-size:13px;color:var(--muted)}
-.sec-h:hover span:nth-child(2){text-decoration:underline;text-underline-offset:4px}
+.sec-bar{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:6px 4px 2px;scroll-snap-type:x proximity}
+.sec-bar::-webkit-scrollbar{display:none}
+.sec-t{flex:1 0 64px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;padding:6px 2px 8px;border-radius:12px;cursor:pointer;font:600 12px/1.2 var(--f-body,inherit);color:var(--muted)}
+.sec-t .app-i{width:44px;height:44px;transition:background .15s,color .15s,transform .15s}
+.sec-t:hover .app-i{transform:translateY(-2px)}
+.sec-t[aria-current="page"]{color:var(--granate)}
+.sec-t[aria-current="page"] .app-i{background:var(--red);color:#fff}
+.sec-t:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+@media (max-width:520px){ .sec-t{flex-basis:56px;font-size:11px} .sec-t .app-i{width:40px;height:40px;border-radius:12px} }
+.pj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.pj{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;color:var(--ink);font:inherit}
+.pj:hover{border-color:var(--red)}
+.pj[aria-current="true"]{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.pj h3{margin:0;font-size:19px;color:var(--granate)}
+.pj .s{font-size:13px;color:var(--muted)}
+.pj .n{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-top:4px}
+.pj .n b{font-family:var(--f-mono);font-weight:600}
+.pj.new{align-items:center;justify-content:center;border-style:dashed;color:var(--granate);font-weight:600;min-height:120px}
 #projMenu summary{font-size:15px;letter-spacing:normal;padding:8px 14px;line-height:1.45;display:inline-flex;align-items:center;gap:8px}
 #btnUndo{font-size:20px;width:40px;height:40px}
 .gear{width:42px;height:42px;color:var(--granate)}
@@ -727,6 +741,9 @@ function toast(msg,undo){
 // Borra un mueble del plano y deja deshacerlo unos segundos
 function deleteItem(it){
   const {id,...body}=it; S.sel=null;
+  const down=ridersOf(it).map(({o})=>[o,supportHeight(o,id)]);
+  if(down.length) held(()=>{ down.forEach(([o,z])=>{ const {id:oid,...b}=o; save("items",oid,{...b,z}).catch(()=>{}); }); remove("items",id).catch(()=>{}); });
+  if(down.length){ toast(`«${it.nombre}» borrado`,()=>{ S.sel=id; save("items",id,body).catch(()=>{}); }); return; }
   remove("items",id).then(()=>toast(`«${it.nombre}» borrado`,()=>{ S.sel=id; save("items",id,body).catch(()=>{}); })).catch(()=>{});
 }
 
@@ -815,6 +832,7 @@ function render(){
   $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
   { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=!(HAS_API||nd.length); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
+  if(S.view==="proyectos"&&S.proyectos.length){ main.innerHTML=myProjectsHTML(); return; }
   if(!p){
     main.innerHTML=`<section class="blank"><h2>Crea tu primer proyecto</h2>
       <p>Un proyecto puede ser una casa entera o una sola estancia. Dentro dibujas cada estancia con sus medidas, colocas muebles, guardas los productos que vas viendo para compararlos y llevas las tareas de la reforma con sus plazos.</p>
@@ -832,7 +850,7 @@ function render(){
       </div>
       <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </section>
-    <button type="button" class="sec-h" data-act="openMenu" title="Cambiar de sección"><span class="sec-i">${secIcon(S.tab,20)}</span><span>${(sections(p).find(x=>x[0]===S.tab)||["","Plano"])[1]}</span><span class="sec-c" aria-hidden="true">▾</span></button>
+    <nav class="sec-bar" aria-label="Secciones del proyecto">${sections(p).map(([k,n,c])=>`<button type="button" class="sec-t" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}${c!==""&&c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</nav>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
   if(S.tab==="plano"&&r){ if(S.vista==="3d") mount3d(r); else if(S.editShape) bindShape(r); else bindPlan(r); }
@@ -893,7 +911,8 @@ function problems(items,rm){
     if(!isHueco(a)&&!itemFits(a,a.x,a.y,P)) bad.add(a.id);
     if(a.tipo==="ventana"||rug(a)||onTable(a)) return;
     const A=corners(a,a.x,a.y,1);
-    items.forEach(b=>{ if(a===b||b.tipo==="ventana"||rug(b)||onTable(b)) return; if(quadsOverlap(A,corners(b,b.x,b.y,1))) bad.add(a.id); });
+    const za=+a.z||0, ha=shape3d(a).h;
+    items.forEach(b=>{ if(a===b||b.tipo==="ventana"||rug(b)||onTable(b)) return; const zb=+b.z||0; if(za>=zb+shape3d(b).h-1||zb>=za+ha-1) return; if(quadsOverlap(A,corners(b,b.x,b.y,1))) bad.add(a.id); });
   });
   return bad;
 }
@@ -1088,7 +1107,7 @@ function propsHTML(it){
       </div></div>
       <div><label for="pr_w">Ancho (cm)</label><input id="pr_w" type="number" min="5" step="1" value="${it.w}" inputmode="numeric"></div>
       <div><label for="pr_d">Fondo (cm)</label><input id="pr_d" type="number" min="5" step="1" value="${it.d}" inputmode="numeric"></div>
-      ${onTable(it)||isWallItem(it)?`<div><label for="pr_z">${isWallItem(it)?"Altura desde el suelo (cm)":"Altura sobre el suelo"}</label><input id="pr_z" type="number" min="0" step="1" value="${Math.round(+it.z||0)}" inputmode="numeric"></div>`:""}
+      ${onTable(it)||isWallItem(it)||+it.z>0?`<div><label for="pr_z">${isWallItem(it)?"Altura desde el suelo (cm)":"Altura sobre el suelo"}</label><input id="pr_z" type="number" min="0" step="1" value="${Math.round(+it.z||0)}" inputmode="numeric"></div>`:""}
       ${it.tipo?"":`<div><label for="pr_h">Alto (cm)</label><input id="pr_h" type="number" min="1" step="1" value="${S3.h}" inputmode="numeric"></div>`}
     </div>
     <details class="pr-more"${S.propsMore?" open":""}><summary>Nombre y tipo de mueble</summary>
@@ -1100,11 +1119,35 @@ function propsHTML(it){
     ${prod?`<p style="margin:0;font-size:13px" class="muted">Es tu producto de «${esc(prod.busco)}»${prod.precio?` · ${eur2.format(+prod.precio)}`:""}${prod.tienda?` · ${esc(prod.tienda)}`:""}</p>`:""}
   </div>`;
 }
-// Altura a la que queda una planta de mesa: encima del mueble más alto que tenga debajo
-function supportHeight(it){
-  const C=corners(it,it.x,it.y,0); let z=0;
-  S.items.filter(o=>o.estanciaId===it.estanciaId&&o.id!==it.id&&!isHueco(o)).forEach(o=>{ const f=shape3d(o).f; if(SOBREMESA.has(f)||f==="alfombra"||f==="alfombraR"||PLANTS.has(f)) return; if(quadsOverlap(C,corners(o,o.x,o.y,0))) z=Math.max(z,shape3d(o).h); });
-  return z;
+// Objetos que se apoyan encima de otro más grande al soltarlos sobre él (macetas, cajas, colchón...)
+const FLOOR=new Set(["sofa","chaise","rinconera","sillon","puff","cama","mesita","mesa","redonda","centro","centroR","escritorio","silla","taburete","banco","armario","vitrina","comoda","aparador","tele","estante","alfombra","alfombraR","lampara","planta","monstera","arbol","palmera","cactus","nevera","lavadora","bajo","isla","inodoro","lavabo","banera","ducha"]);
+const isRug=i=>["alfombra","alfombraR"].includes(shape3d(i).f)||/alfombra/i.test(i.nombre||"");
+const canStack=it=>!it.tipo&&!isWallItem(it)&&!FLOOR.has(shape3d(it).f);
+const area=i=>(+i.w||0)*(+i.d||0);
+// El mueble sobre el que queda apoyado: las plantas de mesa basta con que lo toquen; el resto, con el centro encima
+function supportOf(it,skip){
+  if(!canStack(it)) return null;
+  const C=corners(it,it.x,it.y,0), {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2, small=onTable(it); let best=null;
+  S.items.forEach(o=>{
+    if(o.estanciaId!==it.estanciaId||o.id===it.id||o.id===skip||isHueco(o)||isWallItem(o)||isRug(o)) return;
+    const f=shape3d(o).f; if(SOBREMESA.has(f)||PLANTS.has(f)||["lampara","silla","taburete"].includes(f)||area(o)<=area(it)) return;
+    const Q=corners(o,o.x,o.y,0); if(!(small?quadsOverlap(C,Q):inPoly(cx,cy,Q))) return;
+    const top=(+o.z||0)+shape3d(o).h; if(!best||top>best.top) best={o,top};
+  });
+  return best;
+}
+function supportHeight(it,skip){ const b=supportOf(it,skip); return b?Math.round(b.top):0; }
+// Lo que va encima de un mueble (y lo que va encima de eso), para moverlo con él
+function ridersOf(it){
+  const out=[], q=[it];
+  const on=(o,s)=>{ if(Math.abs((+o.z||0)-(+s.z||0)-shape3d(s).h)>2) return false; const {fw,fd}=footprint(o), Q=corners(s,s.x,s.y,0); return onTable(o)?quadsOverlap(corners(o,o.x,o.y,0),Q):inPoly(o.x+fw/2,o.y+fd/2,Q); };
+  while(q.length){ const s=q.pop(); S.items.forEach(o=>{ if(o===it||out.includes(o)||!canStack(o)||!(+o.z>0)||o.estanciaId!==it.estanciaId) return; if(on(o,s)){ out.push(o); q.push(o); } }); }
+  return out.map(o=>({o,x:o.x,y:o.y}));
+}
+function dropItem(it,riders,r){
+  if(canStack(it)) it.z=supportHeight(it);
+  if(isWallItem(it)) Object.assign(it,snapToWall(it,r));
+  held(()=>{ [it,...riders.map(x=>x.o)].forEach(o=>{ const {id,...b}=o; save("items",id,b).catch(()=>{}); }); });
 }
 const onTable=it=>SOBREMESA.has(shape3d(it).f);
 const isWallItem=it=>!it.tipo&&PARED.has(shape3d(it).f);
@@ -1124,7 +1167,7 @@ function snapToWall(it,r){
 function addItem(r,base){
   const {fw,fd}=footprint({...base,rot:0});
   const it={estanciaId:r.id,rot:0,color:0,...base,x:Math.max(0,Math.round((r.ancho-fw)/2/5)*5),y:Math.max(0,Math.round((r.largo-fd)/2/5)*5),creado:Date.now()};
-  if(onTable(it)) it.z=supportHeight(it);
+  if(canStack(it)) it.z=supportHeight(it);
   if(isWallItem(it)){ Object.assign(it,snapToWall(it,r)); if(it.z==null) it.z=WALLZ[shape3d(it).f]||120; }
   const id=uid(); S.sel=id; save("items",id,it).catch(()=>{});
 }
@@ -1137,7 +1180,7 @@ function bindPlan(r){
     if(!g){ if(S.sel){S.sel=null;render();} return; }
     const it=S.items.find(i=>i.id===g.dataset.item); if(!it) return;
     e.preventDefault();
-    S.preEdit={...it}; const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,moved:false,wasSel:S.sel===it.id};
+    S.preEdit={...it}; const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),moved:false,wasSel:S.sel===it.id};
     S.sel=it.id; S.dragging=true; g.classList.add("drag");
     svg.querySelector("#itemsLayer").appendChild(g);
     svg.setPointerCapture(e.pointerId);
@@ -1145,11 +1188,12 @@ function bindPlan(r){
   svg.addEventListener("pointermove",e=>{
     if(!drag) return;
     const p=toCm(e), [nx,ny]=constrain(drag.it,Math.round((p.x-drag.dx)/5)*5,Math.round((p.y-drag.dy)/5)*5,r);
-    if(nx!==drag.it.x||ny!==drag.it.y){ drag.it.x=nx; drag.it.y=ny; drag.moved=true; drag.g.setAttribute("transform",`translate(${nx} ${ny})`); }
+    if(nx!==drag.it.x||ny!==drag.it.y){ drag.it.x=nx; drag.it.y=ny; drag.moved=true; drag.g.setAttribute("transform",`translate(${nx} ${ny})`);
+      drag.riders.forEach(({o,x,y})=>{ o.x=x+nx-drag.x0; o.y=y+ny-drag.y0; svg.querySelector(`.it[data-item="${o.id}"]`)?.setAttribute("transform",`translate(${o.x} ${o.y})`); }); }
   });
   const end=()=>{
     if(!drag) return; const d=drag; drag=null; S.dragging=false;
-    if(d.moved){ if(onTable(d.it)) d.it.z=supportHeight(d.it); if(isWallItem(d.it)) Object.assign(d.it,snapToWall(d.it,r)); const {id,...body}=d.it; save("items",id,body).catch(()=>{}); } else if(d.wasSel) rotateItem(d.it); else render();
+    if(d.moved) dropItem(d.it,d.riders,r); else if(d.wasSel) rotateItem(d.it); else render();
   };
   svg.addEventListener("pointerup",end); svg.addEventListener("pointercancel",end);
 }
@@ -1452,7 +1496,7 @@ function ensure3d(){
     if(!hit) return;
     const it=S.items.find(i=>i.id===hit.object.userData.itemId), p=floorPt(e); if(!it||!p) return;
     V.controls.enabled=false; S.dragging=true;
-    S.preEdit={...it}; V.drag={it,ox:p.x-it.x,oz:p.z-it.y,moved:false,wasSel:S.sel===it.id};
+    S.preEdit={...it}; V.drag={it,ox:p.x-it.x,oz:p.z-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),moved:false,wasSel:S.sel===it.id};
     el.setPointerCapture(e.pointerId);
   },{capture:true});
   el.addEventListener("pointermove",e=>{
@@ -1460,13 +1504,14 @@ function ensure3d(){
     const [nx,nz]=constrain(d.it,Math.round((p.x-d.ox)/5)*5,Math.round((p.z-d.oz)/5)*5,V.room);
     if(nx===d.it.x&&nz===d.it.y) return;
     d.it.x=nx; d.it.y=nz; d.moved=true;
+    d.riders.forEach(({o,x,y})=>{ o.x=x+nx-d.x0; o.y=y+nz-d.y0; if(V.objs[o.id]) place3d(V.objs[o.id],o); });
     if(V.objs[d.it.id]) place3d(V.objs[d.it.id],d.it); else build3dRoom(V.room);
     draw3d();
   });
   const up=e=>{
     const d=V.drag; V.drag=null; V.controls.enabled=true;
     const click=V.down&&Math.hypot(e.clientX-V.down.x,e.clientY-V.down.y)<5;
-    if(d){ S.dragging=false; S.sel=d.it.id; if(d.moved){ if(onTable(d.it)) d.it.z=supportHeight(d.it); if(isWallItem(d.it)) Object.assign(d.it,snapToWall(d.it,V.room)); const {id,...b}=d.it; save("items",id,b).catch(()=>{});} else if(d.wasSel) rotateItem(d.it); else render(); }
+    if(d){ S.dragging=false; S.sel=d.it.id; if(d.moved) dropItem(d.it,d.riders,V.room); else if(d.wasSel) rotateItem(d.it); else render(); }
     else if(click&&S.sel){ S.sel=null; render(); }
   };
   el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up);
@@ -1948,7 +1993,12 @@ const SEC_IC={
   conjuntos:'<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
   presupuesto:'<path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4 10h9M4 14h9"/>',
   reforma:'<path d="M14 6l4 4-9 9H5v-4z"/><path d="M13 4l7 7"/>',
-  contactos:'<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21 20a6 6 0 0 0-4-5.6"/>'
+  contactos:'<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21 20a6 6 0 0 0-4-5.6"/>',
+  misproy:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/>',
+  mispres:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
+  nuevo:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  rebajas:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  instalar:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>'
 };
 const secIcon=(k,sz=22)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SEC_IC[k]||""}</svg>`;
 function sections(p){
@@ -1957,11 +2007,20 @@ function sections(p){
 }
 function projMenuHTML(){
   const cur=S.proyId, ps=[...S.proyectos].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||"","es")), pc=S.proyectos.find(x=>x.id===cur);
-  const grid=pc?`<span class="menu-l">${esc(pc.nombre)}</span><div class="app-grid">${sections(pc).map(([k,n,c])=>`<button type="button" role="menuitem" class="app-t" data-tab="${k}" aria-current="${S.view!=="presupuestos"&&S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}${c!==""&&c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</div><hr>`:"";
-  return `${grid}${ps.length?`<span class="menu-l">Tus proyectos</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${S.view!=="presupuestos"&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}<hr>`:""}
-    <button type="button" role="menuitem" data-act="newProj">＋ Nuevo proyecto</button>
-    <button type="button" role="menuitem" data-act="allBudgets"${S.view==="presupuestos"?' aria-checked="true"':""}>Presupuestos de todo</button>
-    ${window.__pwaPrompt?`<hr><button type="button" role="menuitem" data-act="install">Instalar la app</button>`:""}`;
+  // Funciones generales de la app: para añadir una nueva basta con otra fila aquí
+  const nd=S.productos.filter(x=>dropOf(x)).length;
+  const apps=[["misproy","Mis proyectos","myProjects",S.proyectos.length,S.view==="proyectos"],["mispres","Mis presupuestos","allBudgets","",S.view==="presupuestos"],["nuevo","Nuevo proyecto","newProj","",false],
+    ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[])];
+  const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}${c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</div>`;
+  return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}`:""}`;
+}
+function myProjectsHTML(){
+  const ps=[...S.proyectos].sort((a,b)=>(b.creado||0)-(a.creado||0));
+  return `<section class="proj"><div class="proj-pick"><span class="kind"><b>Todo lo tuyo</b></span><h1>Mis proyectos</h1></div>${S.proyId?`<button class="btn" type="button" data-act="backProj">Volver al proyecto</button>`:""}</section>
+  <section class="pj-grid">${ps.map(p=>{ const rs=roomsOf(p.id).length, pr=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado").length, prev=budgetRows(p).reduce((s,r)=>s+r.prev,0);
+    return `<button type="button" class="pj" data-proj="${esc(p.id)}" aria-current="${p.id===S.proyId}"><span class="kind"><b>${p.tipo==="estancia"?"Estancia":"Casa"}</b></span><h3>${esc(p.nombre)}</h3>${p.direccion?`<span class="s">${esc(p.direccion)}</span>`:""}
+      <span class="n"><span><b>${rs}</b> estancia${rs===1?"":"s"}</span><span><b>${pr}</b> producto${pr===1?"":"s"}</span><span><b>${eur.format(prev)}</b> previsto${+p.presupuesto?` de ${eur.format(+p.presupuesto)}`:""}</span></span></button>`; }).join("")}
+    <button type="button" class="pj new" data-act="newProj">${secIcon("nuevo",28)}Nuevo proyecto</button></section>`;
 }
 function allBudgetsHTML(){
   const ps=[...S.proyectos].sort((a,b)=>(a.creado||0)-(b.creado||0));
@@ -2728,6 +2787,7 @@ document.addEventListener("click",e=>{
     case "foldAll": { const keys=[...document.querySelectorAll("details.need")].map(d=>d.dataset.fold); const allF=keys.every(k=>S.foldedLists.has(k)); keys.forEach(k=>allF?S.foldedLists.delete(k):S.foldedLists.add(k)); render(); break; }
     case "install": { const ev=window.__pwaPrompt; if(ev){ ev.prompt(); ev.userChoice.catch(()=>{}).finally(()=>{ window.__pwaPrompt=null; render(); }); } break; }
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
+    case "myProjects": S.view="proyectos"; render(); window.scrollTo(0,0); break;
     case "backProj": S.view="proyecto"; render(); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
