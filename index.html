@@ -462,6 +462,11 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .bell-i.new{border-color:var(--red);background:#FFF4EE}
 .bell-i small{color:var(--muted);font-size:12px}.bell-i strong{color:var(--granate)}
 .bell-f{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.fin-w{display:flex;gap:6px;flex-wrap:wrap}
+.fin-w button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer}
+.fin-w button[aria-pressed="true"]{background:var(--red);color:#fff;border-color:var(--red)}
+.cj-chip{align-self:flex-start;background:#E4F0D9;color:#2F5A1F;border:0;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.cj-inlist{font-size:12px;color:var(--ok);font-weight:600}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -610,7 +615,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
     <div class="field h3"><label for="el_ud">Unidad</label><select id="el_ud"></select></div>
     <div class="field h3"><label for="el_precio">Precio por unidad (€)</label><input id="el_precio" type="number" min="0" step="any" inputmode="decimal"></div>
     <div class="field h3"><label for="el_tienda">Tienda</label><input id="el_tienda" list="shops"></div>
-    <div class="field h3"><label for="el_url">Enlace</label><input id="el_url" type="url" placeholder="https://"><span class="hint" id="el_urlmsg"></span></div>
+    <div class="field h3"><label for="el_url">Enlace</label><input id="el_url" type="url" placeholder="Pega el enlace de la tienda"><input type="hidden" id="el_img"><span class="hint" id="el_urlmsg"></span></div>
     <div class="field h3"><label for="el_medidas">Medidas</label><input id="el_medidas" placeholder="240 × 4,4 × 2,2 cm"></div>
     <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="el_comprado" style="width:auto"> Ya lo tengo</label>
     <div class="field"><label for="el_notas">Notas</label><textarea id="el_notas" placeholder="Medida de corte, referencia…"></textarea></div>
@@ -1393,7 +1398,8 @@ function ensure3d(){
   el.addEventListener("pointerdown",e=>{
     V.down={x:e.clientX,y:e.clientY};
     V.ray.setFromCamera(ndc(e),V.camera);
-    const hit=V.ray.intersectObjects(V.group.children,true).find(h=>h.object.userData.itemId);
+    const hits=V.ray.intersectObjects(V.group.children,true), hit=hits.find(h=>h.object.userData.itemId);
+    if(!hit&&$("dlgFin").open&&hits[0]&&hits[0].object.userData.wallIdx!=null){ S.finWall=hits[0].object.userData.wallIdx; refreshFin(); render(); return; }
     if(!hit) return;
     const it=S.items.find(i=>i.id===hit.object.userData.itemId), p=floorPt(e); if(!it||!p) return;
     V.controls.enabled=false; S.dragging=true;
@@ -1447,10 +1453,13 @@ function build3dRoom(r){
   const floor=new T.Mesh(new T.ShapeGeometry(shp),mat(0xffffff,{map:ft.tex,emissive:0xffffff,emissiveMap:ft.tex,emissiveIntensity:.12})); floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; G.add(floor);
   const segs=P.map((p,i)=>{ const q=P[(i+1)%P.length], [nx,nz]=inward(P,i); return {p,q,len:Math.hypot(q[0]-p[0],q[1]-p[1]),nx,nz,rot:Math.atan2(nx,nz)}; });
   const putOn=(m,sg,t,y,off)=>{ m.position.set(sg.p[0]+(sg.q[0]-sg.p[0])*t+sg.nx*off,y,sg.p[1]+(sg.q[1]-sg.p[1])*t+sg.nz*off); m.rotation.y=sg.rot; };
-  const wallM=F.paredTex==="lisa"?mat(F.paredColor,{emissive:F.paredColor,emissiveIntensity:.4}):null;
-  const wallMat=len=>{ if(wallM) return wallM; const t=surfTex(T,F.paredTex,F.paredColor); t.tex.repeat.set(len/t.size,H/t.size); return mat(0xffffff,{map:t.tex,emissive:0xffffff,emissiveMap:t.tex,emissiveIntensity:.35}); };
-  segs.forEach(sg=>{ if(sg.len<1) return;
-    const wall=new T.Mesh(new T.PlaneGeometry(sg.len,H),wallMat(sg.len)); wall.receiveShadow=true; putOn(wall,sg,.5,H/2,0); G.add(wall);
+  const PW=r.paredes||{}, finOpen=$("dlgFin")?.open&&finRoom===r.id;
+  const wallMat=(len,i)=>{ const o=PW[i]||{}, c=o.c||F.paredColor, t=o.t||F.paredTex, sel=finOpen&&String(S.finWall)===String(i);
+    if(t==="lisa") return mat(c,sel?{emissive:0xF86C2F,emissiveIntensity:.22}:{emissive:c,emissiveIntensity:.4});
+    const tx=surfTex(T,t,c); tx.tex.repeat.set(len/tx.size,H/tx.size);
+    return mat(0xffffff,sel?{map:tx.tex,emissive:0xF86C2F,emissiveIntensity:.22}:{map:tx.tex,emissive:0xffffff,emissiveMap:tx.tex,emissiveIntensity:.35}); };
+  segs.forEach((sg,i)=>{ if(sg.len<1) return;
+    const wall=new T.Mesh(new T.PlaneGeometry(sg.len,H),wallMat(sg.len,i)); wall.receiveShadow=true; wall.userData.wallIdx=i; putOn(wall,sg,.5,H/2,0); G.add(wall);
     const sk=new T.Mesh(new T.PlaneGeometry(sg.len,8),mat(0xFFF8EF)); putOn(sk,sg,.5,4,.3); G.add(sk);
   });
   const items=S.items.filter(i=>i.estanciaId===r.id);
@@ -1678,9 +1687,9 @@ function budgetRows(p){
   const prods=S.productos.filter(x=>x.proyectoId===p.id&&(x.estado==="elegido"||x.estado==="comprado"));
   const tasks=S.tareas.filter(x=>x.proyectoId===p.id), gastos=S.gastos.filter(x=>x.proyectoId===p.id);
   return [
-    ...prods.map(x=>({concepto:x.nombre,sub:x.busco,room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:+x.precio||0,real:x.estado==="comprado"?+x.precio||0:0,attr:`data-editprod="${esc(x.id)}"`})),
+    ...prods.map(x=>{ const cj=x.conjuntoId&&S.conjuntos.find(c=>c.id===x.conjuntoId); return {concepto:x.nombre,sub:cj?`Conjunto · ${x.busco}`:x.busco,room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:+x.precio||0,real:x.estado==="comprado"?+x.precio||0:cj?cjPaid(cj):0,attr:`data-editprod="${esc(x.id)}"`}; }),
     ...tasks.map(t=>({concepto:t.titulo,sub:S.contactos.find(c=>c.id===t.contactoId)?.nombre||"",room:t.estanciaId||"",tipo:"Reforma",estado:(ESTADOS_T.find(e=>e[0]===t.estado)||ESTADOS_T[0])[1],ok:t.estado==="hecha",prev:+t.prev||+t.real||0,real:+t.real||0,attr:`data-edittask="${esc(t.id)}"`})),
-    ...S.conjuntos.filter(c=>c.proyectoId===p.id&&(c.elementos||[]).length).map(c=>({concepto:c.nombre,sub:`${c.elementos.length} elementos`,room:c.estanciaId||"",tipo:"Conjunto",estado:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0?"Todo comprado":`${c.elementos.filter(e=>e.comprado).length}/${c.elementos.length} comprado`,ok:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0,prev:cjTotal(c),real:cjPaid(c),attr:`data-tab="conjuntos"`})),
+    ...S.conjuntos.filter(c=>c.proyectoId===p.id&&(c.elementos||[]).length&&!S.productos.some(y=>y.conjuntoId===c.id)).map(c=>({concepto:c.nombre,sub:`${c.elementos.length} elementos`,room:c.estanciaId||"",tipo:"Conjunto",estado:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0?"Todo comprado":`${c.elementos.filter(e=>e.comprado).length}/${c.elementos.length} comprado`,ok:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0,prev:cjTotal(c),real:cjPaid(c),attr:`data-tab="conjuntos"`})),
     ...gastos.map(g=>({concepto:g.concepto,sub:g.notas||"",room:g.estanciaId||"",tipo:"Otro gasto",estado:g.pagado?"Pagado":"Pendiente",ok:!!g.pagado,prev:+g.importe||0,real:g.pagado?+g.importe||0:0,attr:`data-editgasto="${esc(g.id)}"`}))
   ];
 }
@@ -1814,7 +1823,7 @@ function conjuntosHTML(p){
         ${sect("pieza","Piezas")}${sect("material","Materiales y herrajes")}
         ${(()=>{ const q=S.qa[c.id]||{}; return `<div class="qa"><input id="qa_n_${esc(c.id)}" value="${esc(q.nombre||"")}" placeholder="Añadir: escribe o pega un enlace (listones, tablero, tornillos…)" data-qa="${esc(c.id)}" aria-label="Nombre o enlace del elemento"><input id="qa_c_${esc(c.id)}" value="${esc(q.cantidad||"")}" type="number" min="0" step="any" placeholder="Cant." data-qa="${esc(c.id)}" aria-label="Cantidad" inputmode="decimal"><input id="qa_p_${esc(c.id)}" value="${esc(q.precio||"")}" type="number" min="0" step="any" placeholder="€/ud" data-qa="${esc(c.id)}" aria-label="Precio por unidad" inputmode="decimal"><select id="qa_t_${esc(c.id)}" aria-label="Tipo"><option value="pieza">Pieza</option><option value="material">Material</option></select><button class="btn sm" type="button" data-qadd="${esc(c.id)}">Añadir</button></div>${q.msg?`<div class="qa-m">${q.url?`<span class="qa-link">🔗 ${esc(q.tienda||"Enlace")}</span>`:""}${esc(q.msg)}</div>`:""}`; })()}
         ${c.notas?`<p class="muted" style="margin:4px 0 0;font-size:13px">${esc(c.notas)}</p>`:""}
-        <div class="cj-f"><button class="btn sm" type="button" data-editcj="${esc(c.id)}">Editar conjunto</button>${dims?`<button class="btn sm" type="button" data-placecj="${esc(c.id)}">Colocar en plano</button>`:`<span class="muted" style="font-size:12px">Ponle medidas para colocarlo en el plano</span>`}<button class="btn sm ghost" type="button" data-dupcj="${esc(c.id)}">Duplicar</button></div>
+        <div class="cj-f"><button class="btn sm" type="button" data-editcj="${esc(c.id)}">Editar conjunto</button>${(()=>{ const lp=S.productos.find(y=>y.conjuntoId===c.id); return lp?`<span class="cj-inlist">En la lista «${esc(lp.busco)}»</span>`:`<button class="btn sm primary" type="button" data-cj2list="${esc(c.id)}">Añadir a una lista de productos</button>`; })()}${dims?`<button class="btn sm" type="button" data-placecj="${esc(c.id)}">Colocar en plano</button>`:`<span class="muted" style="font-size:12px">Ponle medidas para colocarlo en el plano</span>`}<button class="btn sm ghost" type="button" data-dupcj="${esc(c.id)}">Duplicar</button></div>
       </div></details>`;}).join("")}</div>`;
 }
 let edCj=null;
@@ -1832,11 +1841,27 @@ function openEl(cid,eid){
   const c=S.conjuntos.find(x=>x.id===cid), e=c?.elementos?.find(x=>x.id===eid); if(!e) return;
   edEl={cid,eid}; fill($("el_ud"),UDS,e.ud||"ud");
   $("el_nombre").value=e.nombre||""; $("el_tipo").value=e.tipo||"pieza"; $("el_cant").value=e.cantidad??1; $("el_precio").value=e.precio??"";
-  $("el_tienda").value=e.tienda||""; $("el_url").value=e.url||""; $("el_medidas").value=e.medidas||""; $("el_urlmsg").textContent=""; $("el_comprado").checked=!!e.comprado; $("el_notas").value=e.notas||"";
+  $("el_tienda").value=e.tienda||""; $("el_url").value=e.url||""; lastElUrl=e.url||""; $("el_img").value=e.imagen||""; $("el_medidas").value=e.medidas||""; $("el_urlmsg").textContent=""; $("el_comprado").checked=!!e.comprado; $("el_notas").value=e.notas||"";
   armDelete($("el_del"),async()=>{ await saveEls(c,(c.elementos||[]).filter(x=>x.id!==eid)); $("dlgEl").close(); toast("Elemento quitado"); });
   $("dlgEl").showModal();
 }
-async function saveEls(c,els){ const {id,...b}=c; await save("conjuntos",id,{...b,elementos:els}).catch(()=>{}); }
+const saveEls=(c,els)=>held(async()=>{ const {id,...b}=c; await save("conjuntos",id,{...b,elementos:els}).catch(()=>{}); await syncCjProducts(id); });
+// El producto que representa a un conjunto en una lista lleva su total y sus medidas
+async function syncCjProducts(cid){
+  const c=S.conjuntos.find(x=>x.id===cid); if(!c) return;
+  for(const x of S.productos.filter(y=>y.conjuntoId===cid)){
+    const patch={precio:Math.round(cjTotal(c)*100)/100,...(+c.ancho>0?{ancho:+c.ancho}:{}),...(+c.fondo>0?{fondo:+c.fondo}:{}),...(+c.alto>0?{alto:+c.alto}:{})};
+    if(Object.keys(patch).some(k=>+x[k]!==+patch[k])){ const {id,...b}=x; await save("productos",id,{...b,...patch}).catch(()=>{}); } }
+}
+function cjToList(cid){
+  const c=S.conjuntos.find(x=>x.id===cid); if(!c) return;
+  const ex=S.productos.find(y=>y.conjuntoId===cid); if(ex){ toast(`Ya está en la lista «${ex.busco}»`); openProd(ex); return; }
+  openProd(null,{estanciaId:c.estanciaId||""});
+  $("d_nombre").value=c.nombre; $("d_precio").value=Math.round(cjTotal(c)*100)/100; $("d_ancho").value=c.ancho??""; $("d_fondo").value=c.fondo??""; $("d_alto").value=c.alto??"";
+  if(c.forma) $("d_forma").value=c.forma; if(/^#[0-9a-f]{6}$/i.test(c.color||"")){ $("d_color").value=c.color; $("d_color").dataset.set="1"; }
+  $("d_nota").value=`Conjunto hecho por piezas: ${(c.elementos||[]).length} elementos`; $("dlgProdT").textContent="Añadir conjunto a una lista";
+  S.prodFromCj=cid; updFormaHint();
+}
 // Pegar un enlace en «Añadir»: saca nombre y tienda del enlace y, en Vercel, lee precio, medidas y foto
 const dimsText=d=>[d.ancho,d.fondo,d.alto].some(v=>+v>0)?`${[d.ancho,d.fondo,d.alto].filter(v=>+v>0).map(v=>cm(v)).join(" × ")} cm`:"";
 async function qaUrl(cid,u){
@@ -1990,11 +2015,19 @@ function texCanvas(kind,hex){
   return TEXCACHE[key]={canvas:c,size};
 }
 function surfTex(T,kind,hex){ const t=texCanvas(kind,hex); const tex=new T.CanvasTexture(t.canvas); tex.wrapS=tex.wrapT=T.RepeatWrapping; return {tex,size:t.size}; }
+function wallLabel(P,i){
+  const p=P[i], q=P[(i+1)%P.length], [nx,ny]=inward(P,i), len=Math.hypot(q[0]-p[0],q[1]-p[1]);
+  const pos=ny>.9?"de arriba":ny<-.9?"de abajo":nx>.9?"izquierda":nx<-.9?"derecha":"en diagonal";
+  return `Pared ${pos} · ${cm(Math.round(len))} cm`;
+}
 function finHTML(r){
-  const f={...DEF_FIN,...r};
+  const P=pts(r), PW=r.paredes||{}, wsel=S.finWall??"all", ov=wsel==="all"?{}:(PW[wsel]||{});
+  const f={...DEF_FIN,...r,...(ov.c?{paredColor:ov.c}:{}),...(ov.t?{paredTex:ov.t}:{})};
+  const chips=`<div class="fin-w" role="group" aria-label="Qué pared"><button type="button" data-wall="all" aria-pressed="${wsel==="all"}">Todas</button>${P.map((_,i)=>`<button type="button" data-wall="${i}" aria-pressed="${String(wsel)===String(i)}">${esc(wallLabel(P,i))}${PW[i]?" •":""}</button>`).join("")}</div>
+    <p class="hint" style="margin:0">${wsel==="all"?"Cambia todas las paredes a la vez. También puedes tocar una pared en el 3D.":"Solo cambia esta pared (se ve resaltada en naranja en el 3D)."}${wsel!=="all"&&PW[wsel]?` <button type="button" class="btn ghost sm" data-wallreset="${wsel}">Igual que las demás</button>`:""}</p>`;
   const sw=(list,cur,attr)=>list.map(([h,n])=>`<button type="button" class="fin-sw" ${attr}="${h}" aria-pressed="${cur.toLowerCase()===h.toLowerCase()}" title="${n}" style="background:${h}"></button>`).join("");
   const tiles=(list,cur,attr,hex)=>list.map(([k,n])=>`<button type="button" class="fin-t" ${attr}="${k}" aria-pressed="${cur===k}"><span style="background:${k==="lisa"?hex:`url(${texCanvas(k,hex).canvas.toDataURL("image/jpeg",.7)}) center/90px`}"></span>${n}</button>`).join("");
-  return `<div class="fin-s"><h3>Paredes</h3>
+  return `<div class="fin-s"><h3>Paredes</h3>${chips}
       <div class="fin-row">${sw(COL_PARED,f.paredColor,"data-pc")}<input type="color" id="fin_pc" value="${f.paredColor}" aria-label="Color exacto de las paredes" title="Color exacto"></div>
       <div class="fin-ts">${tiles(PAREDES,f.paredTex,"data-pt",f.paredColor)}</div></div>
     <div class="fin-s"><h3>Suelo</h3>
@@ -2002,7 +2035,15 @@ function finHTML(r){
       <div class="fin-row">${sw(COL_SUELO,f.sueloColor,"data-sc")}<input type="color" id="fin_sc" value="${f.sueloColor}" aria-label="Color exacto del suelo" title="Color exacto"></div></div>`;
 }
 let finRoom=null;
-function openFin(r){ finRoom=r.id; $("dlgFinT").textContent=`Paredes y suelo de ${r.nombre}`; $("finBody").innerHTML=finHTML(r); if(S.vista!=="3d"){ S.vista="3d"; lsSet("proletix:vista","3d"); render(); } $("dlgFin").show(); }
+function refreshFin(){ const r=S.estancias.find(e=>e.id===finRoom); if(r&&$("dlgFin").open) $("finBody").innerHTML=finHTML(r); }
+function saveWall(patch){
+  const r=S.estancias.find(e=>e.id===finRoom); if(!r) return; const w=S.finWall??"all";
+  if(w==="all"){ saveFin({...patch,paredes:{}}); return; }
+  const PW={...(r.paredes||{})}, cur={...(PW[w]||{})};
+  if(patch.paredColor) cur.c=patch.paredColor; if(patch.paredTex) cur.t=patch.paredTex;
+  PW[w]=cur; saveFin({paredes:PW});
+}
+function openFin(r){ finRoom=r.id; S.finWall="all"; $("dlgFinT").textContent=`Paredes y suelo de ${r.nombre}`; $("finBody").innerHTML=finHTML(r); if(S.vista!=="3d"){ S.vista="3d"; lsSet("proletix:vista","3d"); render(); } $("dlgFin").show(); }
 function saveFin(patch){ const r=S.estancias.find(e=>e.id===finRoom); if(!r) return; const {id,...b}=r; save("estancias",id,{...b,...patch}).then(()=>{ const r2=S.estancias.find(e=>e.id===finRoom); if(r2&&$("dlgFin").open) $("finBody").innerHTML=finHTML(r2); }).catch(()=>{}); }
 
 /* ---------- Importar contactos: agenda del móvil (Android) o archivo .vcf ---------- */
@@ -2294,6 +2335,7 @@ function shopHTML(p,prods){
           ${dropOf(x)?`<span class="tag drop">Ha bajado un ${dropOf(x)} %</span>`:""}${x.check&&safeUrl(x.url)?`<span class="dims">Precio comprobado ${ago(+x.check)}</span>`:""}
           <span class="shop">${esc(x.tienda||"")}${x.estanciaId?` · ${esc(roomName(x.estanciaId))}`:""}</span>
           ${dims?`<span class="dims">${dims}</span>`:""}
+          ${x.conjuntoId&&S.conjuntos.find(c=>c.id===x.conjuntoId)?`<button type="button" class="cj-chip" data-gocj="${esc(x.conjuntoId)}">Conjunto · ${(S.conjuntos.find(c=>c.id===x.conjuntoId).elementos||[]).length} elementos ›</button>`:""}
           ${(()=>{ const hm=listMed(x.proyectoId,x.busco), f=hm&&fitsMed(x,hm); return f?`<span class="fit ${f.ok?"ok":"bad"}">${f.ok?"✓":"✗"} ${esc(f.t.replace(/^Cabe · /,"Cabe en "+hm.nombre+" · ").replace(/^No cabe:/,"No cabe en "+hm.nombre+":"))}</span>`:""; })()}
           ${x.nota?`<span class="note">${esc(x.nota)}</span>`:""}
           <div class="foot"><button class="btn sm" type="button" data-editprod="${esc(x.id)}">Editar</button>
@@ -2388,7 +2430,7 @@ $("fRoom").addEventListener("submit",async ev=>{
 
 let edD=null;
 function openProd(x,preset={}){
-  edD=x||null; $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
+  edD=x||null; S.prodFromCj=null; $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
   const pid=x?.proyectoId||S.proyId;
   $("needs").innerHTML=[...new Set(S.productos.filter(y=>y.proyectoId===pid).map(y=>y.busco))].map(n=>`<option value="${esc(n)}">`).join("");
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
@@ -2406,7 +2448,7 @@ $("fProd").addEventListener("submit",async ev=>{
   if(!$("d_busco").value.trim()){ ev.preventDefault(); $("d_busco").hidden=false; $("d_busco").focus(); toast("Elige una lista o escribe el nombre de una nueva."); return; }
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
-    forma:$("d_forma").value,url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
+    forma:$("d_forma").value,conjuntoId:edD?.conjuntoId||S.prodFromCj||"",url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
     estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
   try{
     S.lastList=data.busco; await ensureList(data.proyectoId,data.busco,data.estanciaId);
@@ -2474,21 +2516,28 @@ $("fCj").addEventListener("submit",async ev=>{
     color:$("cj_color").value,notas:$("cj_notas").value.trim(),elementos:edCj?.elementos||[],creado:edCj?.creado||Date.now()};
   try{ await save("conjuntos",id,data);
     for(const it of S.items.filter(i=>i.conjuntoId===id)){ const {id:iid,...b}=it; await save("items",iid,{...b,nombre:data.nombre,w:+data.ancho||it.w,d:+data.fondo||it.d,h:+data.alto||"",forma:data.forma,hex:data.color}); }
+    await syncCjProducts(id);
     if(!edCj){ S.tab="conjuntos"; render(); setTimeout(()=>$("qa_n_"+id)?.focus(),60); }
     toast(edCj?"Conjunto guardado":"Conjunto creado: añade sus piezas y materiales"); }catch{}
 });
-$("el_url").addEventListener("change",async()=>{
-  const u=$("el_url").value.trim(); if(!/^https?:\/\//i.test(u)) return;
-  const f=fromUrl(u); if(!$("el_tienda").value) $("el_tienda").value=f.tienda||"";
-  if(!HAS_API) return; $("el_urlmsg").textContent="Leyendo…";
+let lastElUrl="";
+async function onElUrl(){
+  const u=$("el_url").value.trim(); if(!/^https?:\/\/\S+\.\S+/i.test(u)||u===lastElUrl) return; lastElUrl=u;
+  const f=fromUrl(u); if(!$("el_tienda").value) $("el_tienda").value=f.tienda||""; if(!$("el_nombre").value&&f.nombre) $("el_nombre").value=f.nombre;
+  if(!HAS_API){ $("el_urlmsg").textContent="Nombre y tienda sacados del enlace"; return; }
+  $("el_urlmsg").textContent="Leyendo la página…";
   try{ const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
-    if(r.ok&&!d.error){ if(d.precio&&!$("el_precio").value) $("el_precio").value=d.precio; if(!$("el_medidas").value) $("el_medidas").value=dimsText(d); $("el_urlmsg").textContent="Leído"; }
-    else $("el_urlmsg").textContent=d.error||"No se ha podido leer"; }catch{ $("el_urlmsg").textContent="No se ha podido leer"; }
-});
+    if($("el_url").value.trim()!==u) return;
+    if(r.ok&&!d.error){ if(d.nombre) $("el_nombre").value=d.nombre; if(d.precio) $("el_precio").value=d.precio; const md=dimsText(d); if(md) $("el_medidas").value=md; if(d.imagen) $("el_img").value=d.imagen;
+      $("el_urlmsg").textContent=d.precio?"Leído":"Leído, pero sin precio: escríbelo"; }
+    else $("el_urlmsg").textContent=(d.error||"No se ha podido leer")+". Pon el precio a mano."; }catch{ $("el_urlmsg").textContent="No se ha podido leer"; }
+}
+$("el_url").addEventListener("change",onElUrl);
+$("el_url").addEventListener("input",()=>{ clearTimeout(onElUrl.t); onElUrl.t=setTimeout(onElUrl,400); });
 $("fEl").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok"||!edEl) return;
   const c=S.conjuntos.find(x=>x.id===edEl.cid); if(!c) return;
-  const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),medidas:$("el_medidas").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
+  const patch={nombre:$("el_nombre").value.trim(),tipo:$("el_tipo").value,cantidad:num($("el_cant").value)||1,ud:$("el_ud").value,precio:num($("el_precio").value),tienda:$("el_tienda").value.trim(),url:$("el_url").value.trim(),imagen:$("el_img").value.trim(),medidas:$("el_medidas").value.trim(),comprado:$("el_comprado").checked,notas:$("el_notas").value.trim()};
   await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
 });
 document.addEventListener("input",e=>{
@@ -2523,6 +2572,7 @@ $("m_file").addEventListener("change",async()=>{
   if(mFotos.length>=3){ toast("Como mucho 3 fotos por medida."); return; }
   try{ mFotos.push(await compressImg(f)); drawMFotos(); }catch{ toast("No se ha podido abrir esa imagen."); }
 });
+$("dlgFin").addEventListener("close",()=>{ if(S.tab==="plano") render(); });
 $("dlgPh").addEventListener("click",e=>{ if(e.target.id!=="phImg") $("dlgPh").close(); });
 $("fMed").addEventListener("submit",async ev=>{
   if(ev.submitter?.value!=="ok") return; holdHist();
@@ -2553,7 +2603,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -2572,12 +2622,16 @@ document.addEventListener("click",e=>{
   if(d.copymed){ e.stopPropagation(); copyMed(S.medidas.find(m=>m.id===d.copymed)); return; }
   if(d.editmed){ openMed(S.medidas.find(m=>m.id===d.editmed)); return; }
   if(d.goprod){ const x=S.productos.find(y=>y.id===d.goprod); $("dlgBell").close(); if(x){ S.proyId=x.proyectoId; S.view="proyecto"; S.tab="productos"; lsSet("proletix:proy",S.proyId); render(); } return; }
+  if(d.cj2list){ cjToList(d.cj2list); return; }
+  if(d.gocj){ S.tab="conjuntos"; S.closedCj.delete(d.gocj); render(); setTimeout(()=>document.querySelector(`details.cj[data-cj="${CSS.escape(d.gocj)}"]`)?.scrollIntoView({block:"start"}),50); return; }
   if(d.editlist){ openList({edit:d.editlist}); return; }
   if(d.dellist){ const l=S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===d.dellist); if(l) remove("listas",l.id).catch(()=>{}); return; }
   if(d.proj){ S.proyId=d.proj; S.view="proyecto"; S.roomId=null; S.sel=null; S.editShape=false; lsSet("proletix:proy",S.proyId); render(); return; }
   if(d.openbud){ S.proyId=d.openbud; S.view="proyecto"; S.tab="presupuesto"; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); window.scrollTo(0,0); return; }
   if(d.view){ if(d.view==="cmp") S.cmpLists.add(d.vkey); else S.cmpLists.delete(d.vkey); render(); return; }
-  if(d.pc){ saveFin({paredColor:d.pc}); return; } if(d.pt){ saveFin({paredTex:d.pt}); return; }
+  if(d.pc){ saveWall({paredColor:d.pc}); return; } if(d.pt){ saveWall({paredTex:d.pt}); return; }
+  if(d.wall!=null){ S.finWall=d.wall==="all"?"all":+d.wall; refreshFin(); render(); return; }
+  if(d.wallreset!=null){ const r0=S.estancias.find(e=>e.id===finRoom); if(r0){ const PW={...(r0.paredes||{})}; delete PW[d.wallreset]; saveFin({paredes:PW}); } return; }
   if(d.st){ saveFin({sueloTex:d.st}); return; } if(d.sc){ saveFin({sueloColor:d.sc}); return; }
   if(d.rotto){ const it=selItem(); if(it){ const r0=((+it.rot||0)%360+360)%360, opts=d.rotto==="h"?[0,180,360]:[90,270]; const best=opts.reduce((a,b)=>Math.abs(b-r0)<Math.abs(a-r0)?b:a); rotateTo(it,best%360); } return; }
   if(d.rotby){ const it=selItem(); if(it) rotateTo(it,(+it.rot||0)+(+d.rotby)); return; }
@@ -2639,7 +2693,7 @@ document.addEventListener("change",e=>{
     if(P0&&S.shapeSel?.t==="s"&&+e.target.value>=10){ const a=P0[i], j=(i+1)%P0.length, b=P0[j], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1, nl=+e.target.value;
       P0[j]=[Math.round(a[0]+(b[0]-a[0])/l*nl),Math.round(a[1]+(b[1]-a[1])/l*nl)]; saveShape(r0,P0); } return; }
   if(id==="bud_max"){ const p0=proyecto(); if(p0){ const {id:pid,...b}=p0; save("proyectos",pid,{...b,presupuesto:num(e.target.value)||0}).catch(()=>{}); } return; }
-  if(id==="fin_pc"){ saveFin({paredColor:e.target.value}); return; }
+  if(id==="fin_pc"){ saveWall({paredColor:e.target.value}); return; }
   if(id==="fin_sc"){ saveFin({sueloColor:e.target.value}); return; }
   if(/^qa_t_/.test(id)){ e.target.dataset.touched="1"; return; }
   if(id==="selProj"){ S.proyId=e.target.value; S.roomId=null; S.sel=null; lsSet("proletix:proy",S.proyId); render(); return; }
