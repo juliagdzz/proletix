@@ -16,6 +16,8 @@ if ("serviceWorker" in navigator) addEventListener("load", () => navigator.servi
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.__pwaPrompt = e; const b = document.getElementById("btnInstall"); if (b) b.hidden = false; });
 addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = document.getElementById("btnInstall"); if (b) b.hidden = true; });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>window.SUPA = { url: "https://nydbggxqvukjitvuxenz.supabase.co", key: "sb_publishable_GqeFHk0MzYtc5JVOwqEiGw_eoAaIDQu" };</script>
 </head>
 <body>
 <title>Proletia</title>
@@ -497,6 +499,23 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .cj-inlist{font-size:12px;color:var(--ok);font-weight:600}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.auth{display:grid;place-items:center;padding:24px 0 40px}
+.auth-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 24px;display:flex;flex-direction:column;gap:12px;align-items:stretch;box-shadow:0 10px 30px rgb(109 1 1 / .06)}
+.auth-card svg{align-self:center}
+.auth-card h1{text-align:center;font-size:30px;color:var(--granate)}
+.auth-card>p{text-align:center;margin:0 0 4px;font-size:14px}
+.auth-seg{display:grid;grid-template-columns:1fr 1fr}
+.auth-f{display:flex;flex-direction:column;gap:12px}
+.auth-f .btn.primary{padding:12px;font-size:16px;justify-content:center;text-align:center}
+.pass-w{display:flex;gap:6px;align-items:center}.pass-w input{flex:1;min-width:0}
+.auth-msg{margin:0;min-height:1em;font-size:14px;color:var(--bad)}.auth-msg.ok{color:var(--ok)}
+.auth-msg:empty{display:none}
+.linkb{background:none;border:0;color:var(--blue-ink);font:inherit;font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:4px;align-self:center}
+.linkb.muted{color:var(--muted)}
+.auth-card hr{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
+.auth-on .top .actions{visibility:hidden}
+.ac-sync{margin:0;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600}
+.ac-sync.ok{background:#E3F3E9;color:var(--ok)}.ac-sync.wait{background:var(--blue-soft);color:var(--blue-ink)}
 /* Toques de azul para detalles: interruptores, contadores, medidas y pasar el ratón */
 .seg button[aria-pressed="true"],.icon-btn[aria-pressed="true"],.btn[aria-pressed="true"]{background:var(--blue-soft);color:var(--blue-ink);border-color:var(--blue)}
 .sec-t:hover:not([aria-current="page"]) .app-i,.menu-p .app-t:hover:not([aria-current="page"]) .app-i{background:var(--blue-soft);color:var(--blue-ink)}
@@ -692,6 +711,24 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
   <div class="dlg-b" style="display:block" id="bellBody"></div>
 </form></dialog>
 
+<!-- Cuenta -->
+<dialog id="dlgCuenta"><form method="dialog">
+  <div class="dlg-h"><h2>Mi cuenta</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
+  <div class="dlg-b" style="display:block">
+    <p style="margin:0 0 4px" class="label">Has entrado como</p>
+    <p style="margin:0 0 14px;font-weight:600;word-break:break-all" id="acMail"></p>
+    <p class="ac-sync ok" id="acSync">Todo guardado en tu cuenta</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+      <button class="btn" type="button" data-act="acMigrate" id="acMig" hidden>Subir lo guardado en este navegador</button>
+      <button class="btn danger" type="button" data-act="logout">Cerrar sesión</button>
+    </div>
+  </div>
+</form></dialog>
+<dialog id="dlgMig"><form method="dialog">
+  <div class="dlg-h"><h2>¿Subo tus datos?</h2><div class="dlg-hb"><button class="btn primary sm" type="button" data-act="migYes">Subir a mi cuenta</button><button class="btn ghost sm" type="button" data-act="migNo">Ahora no</button></div></div>
+  <div class="dlg-b" style="display:block"><p id="migTxt" style="margin:0"></p><p class="muted" style="font-size:13px;margin:10px 0 0">Si dices que ahora no, puedes hacerlo luego desde Menú → Mi cuenta.</p></div>
+</form></dialog>
+
 <!-- Gasto -->
 <dialog id="dlgGasto"><form method="dialog" id="fGasto">
   <div class="dlg-h"><h2 id="dlgGastoT">Nuevo gasto</h2><div class="dlg-hb"><button class="btn primary" value="ok">Guardar</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
@@ -807,13 +844,15 @@ async function save(col,id,data){
   if(S.mode==="db"){
     try{ const {id:_,...body}=row; await S.db.collection(col).doc(id).set(body); }
     catch(e){ toast(e?.code==="invalid_argument"?"No tienes permiso para editar este proyecto.":"No se ha podido guardar. Prueba otra vez."); throw e; }
-  } else if(!lsSet("proletix:"+col,arr)) toast("No queda espacio en este navegador. Quita alguna foto o conecta la nube.");
+  } else if(S.mode==="cloud"){ lsSet(ck(col),arr); cloudPush(col,id,row); }
+  else if(!lsSet("proletix:"+col,arr)) toast("No queda espacio en este navegador. Quita alguna foto o crea una cuenta.");
   render();
 }
 async function remove(col,id){
   record(col,id,S[col].find(x=>x.id===id)||null);
   S[col]=S[col].filter(x=>x.id!==id);
   if(S.mode==="db"){ try{ await S.db.collection(col).doc(id).delete(); }catch(e){ toast("No se ha podido eliminar."); throw e; } }
+  else if(S.mode==="cloud"){ lsSet(ck(col),S[col]); cloudPush(col,id,null); }
   else lsSet("proletix:"+col,S[col]);
   render();
 }
@@ -827,10 +866,145 @@ async function boot(){
     COLS.forEach(col=>db.collection(col).onSnapshot(snap=>{
       S[col]=snap.docs.map(d=>({...d.data(),id:d.id})); render();
     },()=>toast("Se ha perdido la conexión con los datos. Recarga la página.")));
-  } else {
-    S.mode="local"; COLS.forEach(col=>S[col]=lsGet("proletix:"+col,[])); render();
-    if(HAS_API){ setTimeout(()=>checkPrices(false),2500); setInterval(()=>checkPrices(false),6*3600e3); }
-  }
+  } else if(cloudOn()) await cloudBoot();
+  else startLocal();
+}
+function startLocal(){
+  S.mode="local"; S.user=null; COLS.forEach(col=>S[col]=lsGet("proletix:"+col,[])); render(); startPriceWatch();
+}
+function startPriceWatch(){
+  if(!HAS_API||startPriceWatch.on) return; startPriceWatch.on=true;
+  setTimeout(()=>checkPrices(false),2500); setInterval(()=>checkPrices(false),6*3600e3);
+}
+
+/* ---------- Cuentas y nube (Supabase, solo en la web de Vercel) ---------- */
+// Todo se guarda en una tabla «docs» (una fila por cosa) y también en el navegador para ir rápido y sin conexión
+let SB=null, cloudQ=[], flushing=false;
+const cloudOn=()=>HAS_API&&!!window.SUPA&&!!window.supabase?.createClient;
+const ck=k=>`proletix:${S.user.id}:${k}`;
+const pendingCloud=(col,id)=>cloudQ.some(q=>q.col===col&&q.id===id);
+// cosas guardadas sin cuenta en este navegador que aún no están en la cuenta
+const localData=()=>COLS.reduce((n,c)=>n+lsGet("proletix:"+c,[]).filter(d=>d?.id&&!(S.user&&S[c].some(x=>x.id===d.id))).length,0);
+async function cloudBoot(){
+  SB=window.supabase.createClient(SUPA.url,SUPA.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  SB.auth.onAuthStateChange((ev,session)=>{
+    if(ev==="PASSWORD_RECOVERY"){ S.auth={modo:"nueva"}; if(session?.user&&!S.user) startCloud(session.user,true); else { S.view="auth"; render(); } }
+  });
+  let session=null;
+  try{ ({data:{session}}=await SB.auth.getSession()); }catch{}
+  if(session) await startCloud(session.user);
+  else if(lsGet("proletix:sinCuenta",false)) startLocal();
+  else { S.mode="auth"; S.auth=S.auth||{modo:"entrar"}; render(); }
+}
+async function startCloud(user,recovery){
+  S.user=user; S.mode="cloud"; S.hist=[]; if(!recovery) S.view="proyecto"; else S.view="auth";
+  cloudQ=lsGet(ck("cola"),[]); COLS.forEach(c=>S[c]=lsGet(ck(c),[])); render();
+  await cloudReload();
+  SB.channel("docs-"+user.id).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:`user_id=eq.${user.id}`},onCloudChange).subscribe();
+  cloudFlush(); startPriceWatch();
+  if(localData()&&!lsGet(ck("migrado"),false)) openMigrate();
+}
+async function cloudReload(){
+  try{
+    const rows=[];
+    for(let from=0;;from+=1000){ const {data,error}=await SB.from("docs").select("col,id,data").range(from,from+999); if(error) throw error; rows.push(...data); if(data.length<1000) break; }
+    const next={}; COLS.forEach(c=>next[c]=[]);
+    rows.forEach(r=>{ if(next[r.col]) next[r.col].push({...r.data,id:r.id}); });
+    // lo que aún no ha subido manda sobre lo que hay en la nube
+    cloudQ.forEach(q=>{ const a=next[q.col]; if(!a) return; const i=a.findIndex(x=>x.id===q.id); if(q.data){ if(i>=0) a[i]=q.data; else a.push(q.data); } else if(i>=0) a.splice(i,1); });
+    COLS.forEach(c=>{ S[c]=next[c]; lsSet(ck(c),S[c]); });
+    S.syncErr=false; render();
+  }catch(e){ S.syncErr=true; if(navigator.onLine) toast("No se ha podido leer tu cuenta. Uso lo guardado en este dispositivo."); }
+}
+function onCloudChange(p){
+  const r=p.eventType==="DELETE"?p.old:p.new;
+  if(!r||!S.user||(r.user_id&&r.user_id!==S.user.id)||!COLS.includes(r.col)||pendingCloud(r.col,r.id)) return;
+  const arr=S[r.col], i=arr.findIndex(x=>x.id===r.id);
+  if(p.eventType==="DELETE"){ if(i<0) return; arr.splice(i,1); }
+  else { const row={...r.data,id:r.id}; if(i>=0){ if(sameDoc(arr[i],row)) return; arr[i]=row; } else arr.push(row); }
+  lsSet(ck(r.col),arr); render();
+}
+function cloudPush(col,id,data){
+  cloudQ=cloudQ.filter(q=>!(q.col===col&&q.id===id)); cloudQ.push({col,id,data});
+  lsSet(ck("cola"),cloudQ); clearTimeout(cloudPush.t); cloudPush.t=setTimeout(cloudFlush,250);
+}
+async function cloudFlush(){
+  if(flushing||!SB||!S.user||!cloudQ.length||!navigator.onLine) return;
+  flushing=true; const batch=cloudQ.slice(0,300), uidN=S.user.id, now=new Date().toISOString();
+  try{
+    const ups=batch.filter(q=>q.data).map(q=>{ const {id,...data}=q.data; return {user_id:uidN,col:q.col,id:q.id,data,updated_at:now}; });
+    if(ups.length){ const {error}=await SB.from("docs").upsert(ups); if(error) throw error; }
+    const dels={}; batch.filter(q=>!q.data).forEach(q=>(dels[q.col] ||= []).push(q.id));
+    for(const [col,ids] of Object.entries(dels)){ const {error}=await SB.from("docs").delete().eq("col",col).in("id",ids); if(error) throw error; }
+    cloudQ=cloudQ.filter(q=>!batch.includes(q)); lsSet(ck("cola"),cloudQ); S.syncErr=false;
+  }catch(e){ S.syncErr=true; clearTimeout(cloudFlush.t); cloudFlush.t=setTimeout(cloudFlush,8000); }
+  finally{ flushing=false; }
+  if(cloudQ.length&&!S.syncErr) setTimeout(cloudFlush,50);
+  if($("dlgCuenta").open) fillAccount();
+}
+addEventListener("online",()=>{ if(S.mode==="cloud"){ cloudFlush(); cloudReload(); } });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&S.mode==="cloud"&&Date.now()-(cloudReload.last||0)>60e3){ cloudReload.last=Date.now(); cloudFlush(); cloudReload(); } });
+// Pasar a la cuenta lo que había guardado solo en este navegador
+function openMigrate(){
+  const n=c=>lsGet("proletix:"+c,[]).length, pj=n("proyectos"), pr=n("productos");
+  $("migTxt").textContent=`En este navegador tienes ${pj} proyecto${pj===1?"":"s"}${pr?` y ${pr} producto${pr===1?"":"s"}`:""} guardados sin cuenta. ¿Los subo a tu cuenta para tenerlos también en el móvil y en el ordenador?`;
+  $("dlgMig").showModal();
+}
+function migrateLocal(){
+  let n=0;
+  COLS.forEach(c=>lsGet("proletix:"+c,[]).forEach(doc=>{ if(!doc?.id||S[c].some(x=>x.id===doc.id)) return; S[c].push(doc); cloudPush(c,doc.id,doc); n++; }));
+  COLS.forEach(c=>lsSet(ck(c),S[c])); lsSet(ck("migrado"),true); render();
+  toast(n?`Subido a tu cuenta: ${n} cosa${n===1?"":"s"}`:"Ya estaba todo en tu cuenta");
+}
+const AUTH_ERR=[[/invalid login/i,"Correo o contraseña incorrectos."],[/not confirmed/i,"Aún no has confirmado tu correo. Busca el mensaje de Supabase (mira también en spam)."],[/already registered|already been registered/i,"Ya hay una cuenta con ese correo. Pulsa «Entrar»."],
+  [/at least|should be|weak/i,"La contraseña tiene que tener al menos 6 caracteres."],[/rate limit|too many|seconds/i,"Demasiados intentos seguidos. Espera un minuto y prueba otra vez."],[/invalid.*email|email.*invalid/i,"Ese correo no parece válido."],[/fetch|network/i,"No hay conexión. Prueba cuando tengas internet."]];
+const authErr=e=>(AUTH_ERR.find(([re])=>re.test(e?.message||""))||[,"No ha funcionado: "+(e?.message||"error desconocido")])[1];
+function authHTML(){
+  const m=S.auth?.modo||"entrar", t={entrar:"Entra en tu cuenta",crear:"Crea tu cuenta",olvido:"Recupera tu contraseña",nueva:"Pon una contraseña nueva"}[m];
+  return `<section class="auth"><div class="auth-card">
+    <svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true" style="color:var(--red)"><g transform="rotate(45 32 32)" fill="currentColor"><rect x="17" y="5" width="28" height="11" rx="3"/><path d="M45 10.5h3.5a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H34.6v8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="31.5" y="32" width="6.2" height="26" rx="3"/></g><g transform="rotate(-45 32 32)" fill="var(--granate)"><path d="M17 9h24l5 4v6H17z"/><rect x="28.8" y="18" width="6.4" height="41" rx="3"/></g></svg>
+    <h1>${t}</h1>
+    <p class="muted">${m==="nueva"?"Pulsa «Ver» para comprobar que la has escrito bien.":m==="olvido"?"Te mando un enlace al correo para poner una contraseña nueva.":"Tus proyectos, listas y planos en el móvil y en el ordenador, siempre al día."}</p>
+    ${m==="entrar"||m==="crear"?`<div class="seg auth-seg" role="group" aria-label="Entrar o crear cuenta"><button type="button" data-act="authEntrar" aria-pressed="${m==="entrar"}">Entrar</button><button type="button" data-act="authCrear" aria-pressed="${m==="crear"}">Crear cuenta</button></div>`:""}
+    <form id="fAuth" class="auth-f" novalidate>
+      ${m!=="nueva"?`<div class="field"><label for="au_mail">Correo</label><input id="au_mail" type="email" autocomplete="email" inputmode="email" required value="${esc(S.auth?.mail||"")}"></div>`:""}
+      ${m!=="olvido"?`<div class="field"><label for="au_pass">${m==="nueva"?"Contraseña nueva":"Contraseña"}</label><div class="pass-w"><input id="au_pass" type="password" autocomplete="${m==="entrar"?"current-password":"new-password"}" minlength="6" required><button type="button" class="btn ghost sm" data-act="authShow" aria-label="Ver la contraseña">Ver</button></div>${m!=="entrar"?`<span class="hint">Mínimo 6 caracteres</span>`:""}</div>`:""}
+      <p class="auth-msg" id="authMsg" role="alert">${esc(S.auth?.msg||"")}</p>
+      <button class="btn primary" type="submit" id="au_ok">${{entrar:"Entrar",crear:"Crear cuenta",olvido:"Enviarme el enlace",nueva:"Guardar contraseña"}[m]}</button>
+    </form>
+    ${m==="entrar"?`<button type="button" class="linkb" data-act="authOlvido">¿Has olvidado la contraseña?</button>`:m==="olvido"?`<button type="button" class="linkb" data-act="authEntrar">Volver a entrar</button>`:""}
+    ${m!=="nueva"?`<hr><button type="button" class="linkb muted" data-act="authLocal">Seguir sin cuenta (solo se guarda en este navegador)</button>`:""}
+  </div></section>`;
+}
+async function submitAuth(){
+  const m=S.auth?.modo||"entrar", mail=$("au_mail")?.value.trim()||"", pass=$("au_pass")?.value||"", msg=$("authMsg"), ok=$("au_ok");
+  S.auth={...S.auth,mail};
+  if(m!=="nueva"&&!/^\S+@\S+\.\S+$/.test(mail)){ msg.textContent="Escribe tu correo."; $("au_mail").focus(); return; }
+  if(m!=="olvido"&&pass.length<6){ msg.textContent="La contraseña tiene que tener al menos 6 caracteres."; $("au_pass").focus(); return; }
+  ok.disabled=true; msg.textContent=""; msg.classList.remove("ok");
+  try{
+    if(m==="entrar"){ const {data,error}=await SB.auth.signInWithPassword({email:mail,password:pass}); if(error) throw error; S.auth=null; lsSet("proletix:sinCuenta",false); await startCloud(data.user); return; }
+    if(m==="crear"){ const {data,error}=await SB.auth.signUp({email:mail,password:pass,options:{emailRedirectTo:location.origin}}); if(error) throw error;
+      if(data.session){ S.auth=null; lsSet("proletix:sinCuenta",false); await startCloud(data.user); return; }
+      if(data.user&&!(data.user.identities||[]).length) throw {message:"already registered"};
+      S.auth={modo:"entrar",mail,msg:""}; render(); const mm=$("authMsg"); mm.textContent=`Te he enviado un correo a ${mail}. Pulsa el enlace para confirmar tu cuenta y vuelve aquí para entrar.`; mm.classList.add("ok"); return; }
+    if(m==="olvido"){ const {error}=await SB.auth.resetPasswordForEmail(mail,{redirectTo:location.origin}); if(error) throw error; msg.textContent=`Listo. Mira tu correo (${mail}) y pulsa el enlace.`; msg.classList.add("ok"); ok.disabled=false; return; }
+    if(m==="nueva"){ const {error}=await SB.auth.updateUser({password:pass}); if(error) throw error; S.auth=null; S.view="proyecto"; render(); toast("Contraseña cambiada"); return; }
+  }catch(e){ const mm=$("authMsg"); if(mm){ mm.textContent=authErr(e); } const b=$("au_ok"); if(b) b.disabled=false; }
+}
+document.addEventListener("submit",e=>{ if(e.target.id==="fAuth"){ e.preventDefault(); submitAuth(); } });
+function fillAccount(){
+  const n=cloudQ.length;
+  $("acMail").textContent=S.user?.email||"";
+  $("acSync").textContent=!navigator.onLine?`Sin conexión: ${n} cambio${n===1?"":"s"} esperando para subir`:n?`Subiendo ${n} cambio${n===1?"":"s"}…`:S.syncErr?"No se ha podido sincronizar. Lo vuelvo a intentar en unos segundos.":"Todo guardado en tu cuenta";
+  $("acSync").className="ac-sync "+(n||S.syncErr||!navigator.onLine?"wait":"ok");
+  $("acMig").hidden=!localData();
+}
+function openAccount(){ fillAccount(); $("dlgCuenta").showModal(); }
+async function logout(){
+  if(cloudQ.length&&!confirm("Hay cambios sin subir todavía. Si cierras la sesión ahora se quedarán en este dispositivo y subirán la próxima vez que entres. ¿Cerrar igualmente?")) return;
+  $("dlgCuenta").close(); try{ SB.removeAllChannels(); await SB.auth.signOut(); }catch{}
+  S.user=null; cloudQ=[]; S.hist=[]; COLS.forEach(c=>S[c]=[]); S.mode="auth"; S.auth={modo:"entrar"}; render();
 }
 
 /* ---------- Selección actual ---------- */
@@ -858,6 +1032,8 @@ function render(){
   const ae=document.activeElement, keep=ae&&ae.id&&main.contains(ae)?{id:ae.id,v:ae.value,s:ae.selectionStart}:null;
 
   if(S.mode==="loading"){ if(!main.querySelector(".loader")) main.innerHTML=LOADER; return; }
+  const authOn=S.mode==="auth"||S.view==="auth"; document.body.classList.toggle("auth-on",authOn);
+  if(authOn){ main.innerHTML=authHTML(); if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); } } else setTimeout(()=>($("au_mail")||$("au_pass"))?.focus(),30); return; }
   const p=proyecto(); S.proyId=p?.id||null;
   $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
   { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=!(HAS_API||nd.length); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
@@ -2102,7 +2278,8 @@ const SEC_IC={
   mispres:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
   nuevo:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
   rebajas:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-  instalar:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>'
+  instalar:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+  cuenta:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
 };
 const secIcon=(k,sz=22)=>`<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SEC_IC[k]||""}</svg>`;
 function sections(p){
@@ -2114,7 +2291,8 @@ function projMenuHTML(){
   // Funciones generales de la app: para añadir una nueva basta con otra fila aquí
   const nd=S.productos.filter(x=>dropOf(x)).length;
   const apps=[["misproy","Mis proyectos","myProjects",S.proyectos.length,S.view==="proyectos"],["mispres","Mis presupuestos","allBudgets","",S.view==="presupuestos"],["nuevo","Nuevo proyecto","newProj","",false],
-    ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[])];
+    ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[]),
+    ...(S.mode==="cloud"?[["cuenta","Mi cuenta","account","",false]]:S.mode==="local"&&cloudOn()?[["cuenta","Crear cuenta o entrar","goAuth","",false]]:[])];
   const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}</span>${n}</button>`).join("")}</div>`;
   return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join("")}`:""}`;
 }
@@ -2894,6 +3072,17 @@ document.addEventListener("click",e=>{
     case "install": { const ev=window.__pwaPrompt; if(ev){ ev.prompt(); ev.userChoice.catch(()=>{}).finally(()=>{ window.__pwaPrompt=null; render(); }); } break; }
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
     case "myProjects": S.view="proyectos"; render(); window.scrollTo(0,0); break;
+    case "account": openAccount(); break;
+    case "logout": logout(); break;
+    case "goAuth": lsSet("proletix:sinCuenta",false); S.mode="auth"; S.auth={modo:"entrar"}; render(); break;
+    case "authEntrar": S.auth={...S.auth,modo:"entrar",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
+    case "authCrear": S.auth={...S.auth,modo:"crear",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
+    case "authOlvido": S.auth={...S.auth,modo:"olvido",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
+    case "authShow": { const i=$("au_pass"); if(i){ i.type=i.type==="password"?"text":"password"; t.textContent=i.type==="password"?"Ver":"Ocultar"; } break; }
+    case "authLocal": lsSet("proletix:sinCuenta",true); S.auth=null; startLocal(); break;
+    case "migYes": $("dlgMig").close(); migrateLocal(); break;
+    case "migNo": $("dlgMig").close(); if(S.user) lsSet(ck("migrado"),true); break;
+    case "acMigrate": $("dlgCuenta").close(); migrateLocal(); break;
     case "backProj": S.view="proyecto"; render(); break;
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }

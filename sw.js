@@ -1,9 +1,10 @@
 // Guarda la app para que abra rápido y funcione sin conexión. Sube CACHE al cambiar este archivo.
-const CACHE = "proletia-v3";
+const CACHE = "proletia-v4";
 const SHELL = [
   "/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/favicon.svg",
   "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js",
   "https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js",
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js",
 ];
 const RUNTIME = ["cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"];
 
