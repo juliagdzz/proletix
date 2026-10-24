@@ -510,6 +510,9 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .pass-w{display:flex;gap:6px;align-items:center}.pass-w input{flex:1;min-width:0}
 .auth-msg{margin:0;min-height:1em;font-size:14px;color:var(--bad)}.auth-msg.ok{color:var(--ok)}
 .auth-msg:empty{display:none}
+.g-btn{justify-content:center;gap:10px;padding:11px;font-size:15px;font-weight:600;background:var(--surface)}
+.auth-or{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin:2px 0}
+.auth-or::before,.auth-or::after{content:"";flex:1;border-top:1px solid var(--line)}
 .linkb{background:none;border:0;color:var(--blue-ink);font:inherit;font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:4px;align-self:center}
 .linkb.muted{color:var(--muted)}
 .auth-card hr{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
@@ -897,7 +900,7 @@ async function cloudBoot(){
   else { S.mode="auth"; S.auth=S.auth||{modo:"entrar"}; render(); }
 }
 async function startCloud(user,recovery){
-  S.user=user; S.mode="cloud"; S.hist=[]; if(!recovery) S.view="proyecto"; else S.view="auth";
+  S.user=user; S.mode="cloud"; S.hist=[]; lsSet("proletix:sinCuenta",false); if(!recovery) S.view="proyecto"; else S.view="auth";
   cloudQ=lsGet(ck("cola"),[]); COLS.forEach(c=>S[c]=lsGet(ck(c),[])); render();
   await cloudReload();
   SB.channel("docs-"+user.id).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:`user_id=eq.${user.id}`},onCloudChange).subscribe();
@@ -966,6 +969,8 @@ function authHTML(){
     <h1>${t}</h1>
     <p class="muted">${m==="nueva"?"Pulsa «Ver» para comprobar que la has escrito bien.":m==="olvido"?"Te mando un enlace al correo para poner una contraseña nueva.":"Tus proyectos, listas y planos en el móvil y en el ordenador, siempre al día."}</p>
     ${m==="entrar"||m==="crear"?`<div class="seg auth-seg" role="group" aria-label="Entrar o crear cuenta"><button type="button" data-act="authEntrar" aria-pressed="${m==="entrar"}">Entrar</button><button type="button" data-act="authCrear" aria-pressed="${m==="crear"}">Crear cuenta</button></div>`:""}
+    ${m==="entrar"||m==="crear"?`<button type="button" class="btn g-btn" data-act="authGoogle"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continuar con Google</button>
+    <div class="auth-or"><span>o con tu correo</span></div>`:""}
     <form id="fAuth" class="auth-f" novalidate>
       ${m!=="nueva"?`<div class="field"><label for="au_mail">Correo</label><input id="au_mail" type="email" autocomplete="email" inputmode="email" required value="${esc(S.auth?.mail||"")}"></div>`:""}
       ${m!=="olvido"?`<div class="field"><label for="au_pass">${m==="nueva"?"Contraseña nueva":"Contraseña"}</label><div class="pass-w"><input id="au_pass" type="password" autocomplete="${m==="entrar"?"current-password":"new-password"}" minlength="6" required><button type="button" class="btn ghost sm" data-act="authShow" aria-label="Ver la contraseña">Ver</button></div>${m!=="entrar"?`<span class="hint">Mínimo 6 caracteres</span>`:""}</div>`:""}
@@ -3079,6 +3084,7 @@ document.addEventListener("click",e=>{
     case "authCrear": S.auth={...S.auth,modo:"crear",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
     case "authOlvido": S.auth={...S.auth,modo:"olvido",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
     case "authShow": { const i=$("au_pass"); if(i){ i.type=i.type==="password"?"text":"password"; t.textContent=i.type==="password"?"Ver":"Ocultar"; } break; }
+    case "authGoogle": SB.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin}}).then(({error})=>{ if(error){ const mm=$("authMsg"); if(mm) mm.textContent=authErr(error); } }); break;
     case "authLocal": lsSet("proletix:sinCuenta",true); S.auth=null; startLocal(); break;
     case "migYes": $("dlgMig").close(); migrateLocal(); break;
     case "migNo": $("dlgMig").close(); if(S.user) lsSet(ck("migrado"),true); break;
