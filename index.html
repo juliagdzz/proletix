@@ -399,7 +399,12 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .icon-btn.danger:hover{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .pr-more summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--granate);padding:4px 0}
 .pr-more .props{margin-top:8px}
-.toast{display:flex;align-items:center;gap:14px}
+.toast{display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px rgb(59 40 50 / .14);animation:toastIn .18s ease-out}
+.toast.out{opacity:0;transform:translate(-50%,8px);transition:opacity .18s,transform .18s}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}}
+.toast span{cursor:default}
+@media (max-width:520px){ .toast{font-size:13px;padding:7px 12px;gap:10px;border-radius:999px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 48px);white-space:nowrap}
+  .toast span{overflow:hidden;text-overflow:ellipsis;min-width:0} .toast button{flex:none;padding:2px 0} }
 .toast button{background:none;border:0;color:var(--red);font-weight:700;cursor:pointer;padding:2px 4px;text-decoration:underline;text-underline-offset:3px}
 .cmp-tg{margin-left:6px}.cmp-tg svg{flex:none}
 .need-h .sum{display:flex;align-items:center;gap:4px 6px;flex-wrap:wrap;justify-content:flex-end}
@@ -749,13 +754,20 @@ const safeUrl = u => /^https?:\/\//i.test(u||"") ? u : "";
 
 function lsGet(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}
-function toast(msg,undo){
+// Aviso breve abajo: se va solo, al tocar en cualquier otra parte o al desplazarte
+function showToast(msg,label,fn,ms){
   document.querySelectorAll(".toast").forEach(x=>x.remove());
-  const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");
+  const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
   const s=document.createElement("span"); s.textContent=msg; t.appendChild(s);
-  if(undo){ const b=document.createElement("button"); b.type="button"; b.textContent="Deshacer"; b.onclick=()=>{ t.remove(); undo(); }; t.appendChild(b); }
-  document.body.appendChild(t); setTimeout(()=>t.remove(),undo?6000:2600);
+  const close=()=>{ if(!t.isConnected) return; t.classList.add("out"); setTimeout(()=>t.remove(),180); document.removeEventListener("pointerdown",outside,true); window.removeEventListener("scroll",close); };
+  const outside=e=>{ if(!t.contains(e.target)) close(); };
+  if(label){ const b=document.createElement("button"); b.type="button"; b.textContent=label; b.onclick=()=>{ close(); fn(); }; t.appendChild(b); }
+  s.onclick=close;
+  document.body.appendChild(t);
+  setTimeout(()=>{ document.addEventListener("pointerdown",outside,true); window.addEventListener("scroll",close,{passive:true}); },300);
+  setTimeout(close,ms);
 }
+function toast(msg,undo){ showToast(msg,undo&&"Deshacer",undo,undo?4000:2200); }
 // Borra un mueble del plano y deja deshacerlo unos segundos
 function deleteItem(it){
   const {id,...body}=it; S.sel=null;
@@ -2348,13 +2360,7 @@ function useCalcoShape(){
   saveShape(r,r.calco.poly.map(q=>[q.x,q.y]));
   toast("La estancia ya tiene la forma del plano.",undo);
 }
-function toastAction(msg,label,fn){
-  document.querySelectorAll(".toast").forEach(x=>x.remove());
-  const t=document.createElement("div"); t.className="toast"; t.setAttribute("role","status");
-  const s=document.createElement("span"); s.textContent=msg; t.appendChild(s);
-  const b=document.createElement("button"); b.type="button"; b.textContent=label; b.onclick=()=>{ t.remove(); fn(); }; t.appendChild(b);
-  document.body.appendChild(t); setTimeout(()=>t.remove(),9000);
-}
+function toastAction(msg,label,fn){ showToast(msg,label,fn,7000); }
 
 /* ---------- Medidas apuntadas: huecos y aparatos para buscar muebles que encajen ---------- */
 const medDims=m=>[["ancho","Ancho"],["fondo","Fondo"],["alto","Alto"]].filter(([k])=>+m[k]>0);
