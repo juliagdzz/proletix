@@ -133,6 +133,13 @@ svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
 .cat button.prod span:first-child::before{content:"★ ";color:var(--gold)}
 .props{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .props .full{grid-column:1/-1}
+.rot-c{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.rot-c input[type=range]{flex:1 1 60px;min-width:44px;accent-color:var(--red);padding:0;background:none;border:0}
+.rot-c input[type=number]{width:46px;flex:none;padding:5px 4px;text-align:center}
+.rot-c{gap:3px}
+.icon-btn.sm{width:32px;height:32px;font-size:16px}
+.icon-btn[aria-pressed="true"]{background:var(--pink);color:var(--pink-ink);border-color:var(--pink)}
+.rot-sep{width:1px;height:22px;background:var(--line);margin:0 2px}
 .plan-main #props{border:2px solid var(--red);background:var(--surface)}
 .plan-main #props .props{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .swatches{display:flex;gap:6px}
@@ -1031,7 +1038,7 @@ function planHTML(p,r){
   const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
   const area=(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
   const v3=S.vista==="3d";
-  return `<div class="toolbar">${chips}<div class="tb-right"><div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="icon-btn pal" type="button" data-act="finishes" aria-label="Paredes y suelo" title="Paredes y suelo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="#F86C2F" stroke="none"/><circle cx="10" cy="7" r="1.3" fill="#8DB6C7" stroke="none"/><circle cx="14.5" cy="7" r="1.3" fill="#6D0101" stroke="none"/><circle cx="17.5" cy="10.5" r="1.3" fill="#9DAF8A" stroke="none"/></svg></button><details class="menu"><summary class="icon-btn" aria-label="Ajustes de la estancia" title="Ajustes de la estancia"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></summary>
+  return `<div class="toolbar">${chips}<div class="tb-right">${es?"":`<button class="btn primary sm" type="button" data-act="newProdHere">＋ Añadir producto</button>`}<div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="icon-btn pal" type="button" data-act="finishes" aria-label="Paredes y suelo" title="Paredes y suelo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="#F86C2F" stroke="none"/><circle cx="10" cy="7" r="1.3" fill="#8DB6C7" stroke="none"/><circle cx="14.5" cy="7" r="1.3" fill="#6D0101" stroke="none"/><circle cx="17.5" cy="10.5" r="1.3" fill="#9DAF8A" stroke="none"/></svg></button><details class="menu"><summary class="icon-btn" aria-label="Ajustes de la estancia" title="Ajustes de la estancia"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></summary>
       <div class="menu-p" role="menu"><button type="button" role="menuitem" data-act="editRoom">Medidas de ${esc(r.nombre)}</button><button type="button" role="menuitem" data-act="editShape">Dibujar la forma</button><button type="button" role="menuitem" data-act="dxf">Importar plano (DXF)</button>${r.calco?`${r.calco.poly?`<button type="button" role="menuitem" data-act="calcoShape">Usar el contorno del plano</button>`:""}<button type="button" role="menuitem" data-act="calcoOff">Quitar el plano de fondo</button>`:""}<hr><button type="button" role="menuitem" data-act="newRoom">Añadir otra estancia</button></div></details>`}</div></div>
   <div class="planner">
     <div class="plan-main"><div class="canvas">
@@ -1062,12 +1069,16 @@ function propsHTML(it){
     <div class="pr-h"><div style="min-width:0"><span class="label">Mueble seleccionado</span><h3>${esc(it.nombre)}</h3></div>
       <div class="pr-ic"><button class="icon-btn" type="button" data-act="dup" aria-label="Duplicar este mueble" title="Duplicar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button><button class="icon-btn danger" type="button" data-act="delItem" aria-label="Borrar este mueble" title="Borrar">${trash}</button><button class="icon-btn" type="button" data-act="unsel" aria-label="Cerrar" title="Cerrar">✕</button></div></div>
     <div class="props">
-      <div class="full"><label for="pr_rot">Giro</label><div class="rotrow"><input type="range" id="pr_rot" min="0" max="359" step="1" value="${rot}"><input type="number" id="pr_rotn" min="0" max="359" step="1" value="${rot}" inputmode="numeric" aria-label="Grados"><span>°</span></div>
-        <div class="rotq">${[-90,-15,15,90].map(v=>`<button class="btn sm" type="button" data-rotby="${v}">${v>0?"+":"−"}${Math.abs(v)}°</button>`).join("")}<button class="btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}">⇋ Simetría</button></div>
-        <div class="rotq"><button class="btn sm" type="button" data-rotto="h" aria-pressed="${rot%180===0}">▭ Horizontal</button><button class="btn sm" type="button" data-rotto="v" aria-pressed="${rot%180===90}">▯ Vertical</button></div></div>
-      <div><label for="pr_x">Desde la izq. (cm)</label><input id="pr_x" type="number" step="1" value="${Math.round(it.x)}" inputmode="numeric"></div>
-      <div><label for="pr_y">Desde arriba (cm)</label><input id="pr_y" type="number" step="1" value="${Math.round(it.y)}" inputmode="numeric"></div>
       ${it.tipo?"":`<div class="full"><label>Color</label><div class="swatches">${FILLS.map((f,i)=>`<button type="button" aria-label="Color ${i+1}" data-color="${i}" aria-pressed="${!it.hex&&(it.color??0)===i}" style="background:var(${f})"></button>`).join("")}<input type="color" id="pr_hex" value="${/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:"#b07a55"}" aria-label="Elegir color exacto" title="Color exacto"></div></div>`}
+      <div class="full"><label for="pr_rot">Giro</label><div class="rot-c">
+        <button class="icon-btn sm" type="button" data-rotby="-90" title="Girar 90° a la izquierda" aria-label="Girar 90° a la izquierda">↺</button>
+        <input type="range" id="pr_rot" min="0" max="359" step="1" value="${rot}" aria-label="Giro en grados"><input type="number" id="pr_rotn" min="0" max="359" step="1" value="${rot}" inputmode="numeric" aria-label="Grados"><span class="muted">°</span>
+        <button class="icon-btn sm" type="button" data-rotby="90" title="Girar 90° a la derecha" aria-label="Girar 90° a la derecha">↻</button>
+        <span class="rot-sep"></span>
+        <button class="icon-btn sm" type="button" data-rotto="h" aria-pressed="${rot%180===0}" title="Recto en horizontal" aria-label="Recto en horizontal"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="1.5"/></svg></button>
+        <button class="icon-btn sm" type="button" data-rotto="v" aria-pressed="${rot%180===90}" title="Recto en vertical" aria-label="Recto en vertical"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="3" width="8" height="18" rx="1.5"/></svg></button>
+        <button class="icon-btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}" title="Simetría" aria-label="Simetría">⇋</button>
+      </div></div>
       <div><label for="pr_w">Ancho (cm)</label><input id="pr_w" type="number" min="5" step="1" value="${it.w}" inputmode="numeric"></div>
       <div><label for="pr_d">Fondo (cm)</label><input id="pr_d" type="number" min="5" step="1" value="${it.d}" inputmode="numeric"></div>
       ${onTable(it)?`<div><label for="pr_z">Altura sobre el suelo</label><input id="pr_z" type="number" min="0" step="1" value="${Math.round(+it.z||0)}" inputmode="numeric"></div>`:""}
@@ -2400,6 +2411,8 @@ $("fProd").addEventListener("submit",async ev=>{
   try{
     S.lastList=data.busco; await ensureList(data.proyectoId,data.busco,data.estanciaId);
     await save("productos",id,data);
+    if(!edD&&S.addFromPlan&&+data.ancho>0&&+data.fondo>0&&!S.productos.some(y=>y.id!==id&&y.proyectoId===data.proyectoId&&y.busco===data.busco&&(y.estado==="elegido"||y.estado==="comprado"))){ S.addFromPlan=null; setTimeout(()=>choose(id),0); }
+    S.addFromPlan=null;
     // si el producto está en el plano, actualiza su tamaño
     for(const it of S.items.filter(i=>i.productoId===id)) if(+data.ancho>0&&+data.fondo>0&&(it.w!==+data.ancho||it.d!==+data.fondo||it.nombre!==data.nombre||(data.color&&it.hex!==data.color)||(it.forma||"")!==data.forma)){ const {id:iid,...b}=it; await save("items",iid,{...b,w:+data.ancho,d:+data.fondo,nombre:data.nombre,forma:data.forma,...(data.color?{hex:data.color}:{})}); }
     toast(edD?"Producto guardado":"Producto guardado en «"+data.busco+"»");
@@ -2587,7 +2600,7 @@ document.addEventListener("click",e=>{
     case "editProj": openProj(p); break;
     case "newRoom": openRoom(null); break;
     case "editRoom": openRoom(r); break;
-    case "newProd": openProd(null,{estanciaId:""}); break;
+    case "newProd": S.addFromPlan=null; openProd(null,{estanciaId:""}); break;
     case "newTask": openTask(null); break;
     case "editShape": S.editShape=true; S.vista="2d"; S.sel=null; S.shapeSel=null; render(); break;
     case "shapeDone": S.editShape=false; S.shapeSel=null; render(); break;
@@ -2597,6 +2610,7 @@ document.addEventListener("click",e=>{
     case "newCont": openCont(null); break;
     case "newGasto": openGasto(null); break;
     case "undo": undo(); break;
+    case "newProdHere": if(r){ S.addFromPlan=r.id; openProd(null,{estanciaId:r.id}); } break;
     case "openMenu": { const m=$("projMenu"); m.open=true; fitMenu(m); break; }
     case "bell": openBell(); break;
     case "checkPrices": checkPrices(true); break;
