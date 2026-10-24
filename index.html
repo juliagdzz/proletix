@@ -2632,13 +2632,15 @@ function showPhoto(src){ $("phImg").src=src; $("dlgPh").showModal(); }
 
 /* ---------- Vigilar precios: comprueba los productos elegidos y favoritos con enlace (solo fuera de Claude) ---------- */
 const PRICE_EVERY=12*3600e3;
+// las tiendas que solo se leen con ScraperAPI premium se miran cada 3 días para no gastar los créditos gratis
+const HARD_SHOP=/leroymerlin\.|amazon\.|bricomart\.|bauhaus\./i, PRICE_EVERY_HARD=72*3600e3;
 let checking=false;
 const dropOf=x=>+x.precioAntes>0&&+x.precio>0&&+x.precioAntes>+x.precio?Math.round((1-x.precio/x.precioAntes)*100):0;
 const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<2?"ahora mismo":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} días`; };
 function saveQuiet(col,id,data){ S.undoing=true; const p=save(col,id,data); S.undoing=false; return p; }
 async function checkPrices(force){
   if(!HAS_API||checking||S.mode==="loading") return;
-  const now=Date.now(), due=S.productos.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado)&&(force||now-(+x.check||0)>PRICE_EVERY));
+  const now=Date.now(), due=S.productos.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado)&&(force||now-(+x.check||0)>(HARD_SHOP.test(x.url)?PRICE_EVERY_HARD:PRICE_EVERY)));
   if(!due.length){ if(force) toast("No hay productos elegidos o favoritos con enlace que comprobar."); return; }
   checking=true; if(force) toast(`Comprobando ${due.length} precio${due.length>1?"s":""}…`);
   const drops=[]; let fails=0;
