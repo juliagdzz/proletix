@@ -65,7 +65,9 @@ function dims(t) {
     ancho: g(/(?:ancho|anchura)[^\d]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i),
     fondo: g(/(?:fondo|profundidad)[^\d]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i),
     alto: g(/(?:alto|altura)[^\d]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i),
+    diametro: g(/(?:di[aá]metro|[Øø⌀])[^\d]{0,15}(\d+(?:[.,]\d+)?)\s*cm/i),
   };
+  if (out.diametro && !out.ancho) { out.ancho = out.fondo = out.diametro; }
   if (!out.ancho) {
     const m = t.match(/(\d{2,3}(?:[.,]\d)?)\s*[x×]\s*(\d{2,3}(?:[.,]\d)?)(?:\s*[x×]\s*(\d{2,3}(?:[.,]\d)?))?\s*cm/i);
     if (m) { out.ancho = n(m[1]); out.fondo = n(m[2]); if (m[3]) out.alto = n(m[3]); }
@@ -81,23 +83,25 @@ function extract(html, url) {
   try { imagen = imagen ? new URL(imagen, url).href : ""; } catch { imagen = ""; }
   const nombre = decode(prod.name) || meta(html, "og:title") || decode((html.match(/<title[^>]*>([^<]*)/i) || [])[1]);
   const precio = price(prod.offers) || num(meta(html, "product:price:amount")) || num(meta(html, "og:price:amount")) || num(meta(html, "price"));
-  let ancho = toCm(prod.width), fondo = toCm(prod.depth), alto = toCm(prod.height);
+  let ancho = toCm(prod.width), fondo = toCm(prod.depth), alto = toCm(prod.height), diametro = null;
   for (const p of Array.isArray(prod.additionalProperty) ? prod.additionalProperty : []) {
     const name = String(p.name || "").toLowerCase(), v = toCm(p.unitCode ? p : p.value);
     if (!ancho && /ancho|width/.test(name)) ancho = v;
     if (!fondo && /fondo|profund|depth/.test(name)) fondo = v;
     if (!alto && /alto|altura|height/.test(name)) alto = v;
+    if (!diametro && /diam/.test(name)) diametro = v;
   }
-  if (!ancho || !fondo || !alto) {
-    const d = dims(textOf(html));
-    ancho = ancho || d.ancho; fondo = fondo || d.fondo; alto = alto || d.alto;
-  }
+  const d = dims(textOf(html));
+  diametro = diametro || d.diametro;
+  if (diametro && !ancho) { ancho = fondo = diametro; }
+  ancho = ancho || d.ancho; fondo = fondo || d.fondo; alto = alto || d.alto;
   const marca = prod.brand && typeof prod.brand === "object" ? prod.brand.name : prod.brand;
   return {
     nombre: nombre.slice(0, 90),
     tienda: meta(html, "og:site_name") || "",
     marca: marca || "",
     precio, ancho, fondo, alto, imagen,
+    redondo: !!diametro || /redond[ao]s?\b|ovalad/i.test(nombre),
     nota: decode(prod.description || meta(html, "og:description")).replace(/\s+/g, " ").slice(0, 140),
   };
 }

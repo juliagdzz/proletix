@@ -1255,7 +1255,8 @@ const ALTO={balda:3,cuadro:60,espejo:120,altillo:70,tvpared:72,aplique:25,sofa:8
   armario:220,vitrina:190,comoda:85,aparador:80,tele:50,estante:190,alfombra:1,alfombraR:1,lampara:160,planta:110,monstera:120,arbol:180,palmera:170,cactus:120,orquidea:50,suculenta:14,potus:35,plantaMesa:30,nevera:185,lavadora:85,bajo:90,isla:90,inodoro:78,lavabo:85,banera:55,ducha:6,caja:75};
 function detectForma(txt){
   const n=String(txt||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""), j=n.replace(/[\s\-_.]+/g,"");
-  const red=/redond|circular|ovalad|oval\b/.test(n);
+  // «esquinas redondeadas» no cuenta; «Ø 110», «diámetro» o «ovalada» sí
+  const red=/redond[ao]s?\b|circular|ovalad|\boval|\bround\b|diametro|[ø⌀]/.test(n);
   if(/alfombra|moqueta|felpudo/.test(n)) return red?"alfombraR":"alfombra";
   if(/rincon|esquiner|sofa en l\b|forma de l|en l\b/.test(n)) return "rinconera";
   if(/(chai?s|ches|chez|chest|chais|chaiz)e?l+o+n+g|tumbona|divan/.test(j)||/chaise|chaislong|chesslong/.test(n)) return "chaise";
@@ -1681,6 +1682,8 @@ function parseText(t){
   out.ancho=g(/(?:ancho|anchura)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
   out.fondo=g(/(?:fondo|profundidad)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
   out.alto=g(/(?:alto|altura)[^\d\n]{0,25}(\d+(?:[.,]\d+)?)\s*cm/i);
+  const dm=t.match(/(?:di[aá]metro|[ØøⲐ⌀])[^\d\n]{0,15}(\d+(?:[.,]\d+)?)\s*cm/i);
+  if(dm){ out.redondo=true; if(!out.ancho){ out.ancho=out.fondo=n(dm[1]); } }
   if(!out.ancho){ const m=t.match(/(\d{2,3}(?:[.,]\d)?)\s*[x×]\s*(\d{2,3}(?:[.,]\d)?)(?:\s*[x×]\s*(\d{2,3}(?:[.,]\d)?))?\s*cm/i);
     if(m){ out.ancho=n(m[1]); out.fondo=n(m[2]); if(m[3]) out.alto=n(m[3]); } }
   return out;
@@ -1689,6 +1692,8 @@ function applyImport(d){
   let c=0; const set=(id,v)=>{ if(v!==null&&v!==undefined&&v!==""&&!(typeof v==="number"&&!(v>0))){ $(id).value=v; c++; } };
   set("d_nombre",d.nombre); set("d_tienda",d.tienda); set("d_precio",d.precio); set("d_ancho",d.ancho); set("d_fondo",d.fondo); set("d_alto",d.alto);
   if(d.nota&&!$("d_nota").value) set("d_nota",d.nota);
+  // si la página habla de diámetro, el mueble es redondo
+  if(d.redondo&&!$("d_forma").value){ const f=detectForma(`${$("d_nombre").value} ${$("d_busco").value} redonda`); if(["redonda","centroR","alfombraR"].includes(f)){ $("d_forma").value=f; c++; } }
   return c;
 }
 async function fillFromPaste(){
@@ -1701,7 +1706,8 @@ async function fillFromPaste(){
 "nombre": nombre corto con modelo y color (máx. 70 caracteres),
 "tienda": nombre de la tienda,
 "precio": precio actual de venta en euros como número (sin envío; si hay oferta, el precio rebajado),
-"ancho": ancho en cm (medida frontal), "fondo": fondo o profundidad en cm, "alto": alto en cm (números; null si no aparecen),
+"ancho": ancho en cm (medida frontal), "fondo": fondo o profundidad en cm, "alto": alto en cm (números; null si no aparecen; si solo hay diámetro, ancho y fondo son el diámetro),
+"redondo": true si es redondo u ovalado (tiene diámetro), false si no,
 "nota": lo más útil para decidir en máx. 120 caracteres (material, plazo de entrega, montaje, variantes).
 Enlace: ${$("d_url").value||"desconocido"}
 
