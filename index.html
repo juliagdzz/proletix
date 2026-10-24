@@ -564,6 +564,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
     <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
     <div class="field h3"><label for="d_valor">Te gusta</label><select id="d_valor"><option value="0">Sin valorar</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
     <div class="field"><label for="d_forma">Tipo de mueble</label><select id="d_forma"></select><span class="hint">Para darle forma en el plano y en 3D</span></div>
+    <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="d_pared" style="width:auto"> Va colgado en la pared <span class="hint" style="margin:0">(balda, cuadro, espejo, tele…)</span></label>
     <div class="field h3"><label for="d_color">Color</label><input id="d_color" type="color" value="#b07a55" style="height:38px;padding:2px 4px"><span class="hint" id="d_colormsg">Para pintarlo en el plano</span></div>
     <div class="field h3"><label for="d_room">Estancia</label><select id="d_room"></select></div>
     <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
@@ -845,7 +846,7 @@ function render(){
   main.innerHTML=`
     <section class="proj">
       <div class="proj-pick">
-        <span class="kind"><b>${p.tipo==="estancia"?"Estancia":"Casa"}</b>${p.direccion?`<span class="muted" style="font-size:13px">${esc(p.direccion)}</span>`:""}</span>
+        ${p.direccion?`<span class="kind"><span class="muted" style="font-size:13px">${esc(p.direccion)}</span></span>`:""}
         <h1>${esc(p.nombre)}</h1>
       </div>
       <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
@@ -1104,6 +1105,7 @@ function propsHTML(it){
         <button class="icon-btn sm" type="button" data-rotto="h" aria-pressed="${rot%180===0}" title="Recto en horizontal" aria-label="Recto en horizontal"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="1.5"/></svg></button>
         <button class="icon-btn sm" type="button" data-rotto="v" aria-pressed="${rot%180===90}" title="Recto en vertical" aria-label="Recto en vertical"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="3" width="8" height="18" rx="1.5"/></svg></button>
         <button class="icon-btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}" title="Simetría" aria-label="Simetría">⇋</button>
+        ${it.tipo?"":`<button class="icon-btn sm" type="button" data-act="wallToggle" aria-pressed="${isWallItem(it)}" title="${isWallItem(it)?"Descolgar de la pared":"Colgar en la pared"}" aria-label="Colgar en la pared"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18"/><rect x="7" y="7" width="13" height="10" rx="1"/><path d="M10 14l2.5-3 2 2 1.5-1.5 2 2.5"/></svg></button>`}
       </div></div>
       <div><label for="pr_w">Ancho (cm)</label><input id="pr_w" type="number" min="5" step="1" value="${it.w}" inputmode="numeric"></div>
       <div><label for="pr_d">Fondo (cm)</label><input id="pr_d" type="number" min="5" step="1" value="${it.d}" inputmode="numeric"></div>
@@ -1150,7 +1152,20 @@ function dropItem(it,riders,r){
   held(()=>{ [it,...riders.map(x=>x.o)].forEach(o=>{ const {id,...b}=o; save("items",id,b).catch(()=>{}); }); });
 }
 const onTable=it=>SOBREMESA.has(shape3d(it).f);
-const isWallItem=it=>!it.tipo&&PARED.has(shape3d(it).f);
+// Va colgado si lo marcas tú (en el mueble o en su producto); si no, se deduce del tipo de mueble
+function isWallItem(it){
+  if(it.tipo) return false;
+  if(it.pared!=null&&it.pared!=="") return !!it.pared;
+  const prod=it.productoId&&S.productos.find(x=>x.id===it.productoId);
+  if(prod&&typeof prod.pared==="boolean") return prod.pared;
+  return PARED.has(shape3d(it).f);
+}
+// Cuelga o descuelga un mueble y lo deja a su altura
+function wallPatch(it,on){
+  const r=S.estancias.find(x=>x.id===it.estanciaId), t={...it,pared:on};
+  if(on) return {pared:true,...(r?snapToWall(t,r):{}),z:+it.z>0?+it.z:WALLZ[shape3d(it).f]||120};
+  return {pared:false,z:canStack(t)?supportHeight(t):0};
+}
 // Pega un objeto de pared a la pared más cercana, de espaldas a ella y mirando a la habitación
 function snapToWall(it,r){
   const P=pts(r), {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2; let best=null;
@@ -1216,6 +1231,8 @@ function detectForma(txt){
   if(/sofa|chester|chesterfield|futon|sofa ?cama/.test(n)) return "sofa";
   if(/sillon|butaca|orejero|mecedora|relax\b|balancin/.test(n)) return "sillon";
   if(/puff|pouf|puf\b/.test(n)) return "puff";
+  if(/aplique|(lampara|luz|foco) (de|para) pared/.test(n)) return "aplique";
+  if(/(estante|repisa|balda)s? (de|para) (la )?pared|estanteria (de|para) pared/.test(n)) return "balda";
   if(/lampara|lampara de pie|flexo de pie|pie de luz|lamparita/.test(n)) return "lampara";
   if(/monstera|costilla de adan/.test(n)) return "monstera";
   if(/ficus|arbol|olivo|limonero/.test(n)) return "arbol";
@@ -2012,13 +2029,13 @@ function projMenuHTML(){
   const apps=[["misproy","Mis proyectos","myProjects",S.proyectos.length,S.view==="proyectos"],["mispres","Mis presupuestos","allBudgets","",S.view==="presupuestos"],["nuevo","Nuevo proyecto","newProj","",false],
     ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[])];
   const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}${c?`<span class="app-n">${c}</span>`:""}</span>${n}</button>`).join("")}</div>`;
-  return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}"><span class="menu-k">${p.tipo==="estancia"?"Estancia":"Casa"}</span>${esc(p.nombre)}</button>`).join("")}`:""}`;
+  return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join("")}`:""}`;
 }
 function myProjectsHTML(){
   const ps=[...S.proyectos].sort((a,b)=>(b.creado||0)-(a.creado||0));
   return `<section class="proj"><div class="proj-pick"><span class="kind"><b>Todo lo tuyo</b></span><h1>Mis proyectos</h1></div>${S.proyId?`<button class="btn" type="button" data-act="backProj">Volver al proyecto</button>`:""}</section>
   <section class="pj-grid">${ps.map(p=>{ const rs=roomsOf(p.id).length, pr=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado").length, prev=budgetRows(p).reduce((s,r)=>s+r.prev,0);
-    return `<button type="button" class="pj" data-proj="${esc(p.id)}" aria-current="${p.id===S.proyId}"><span class="kind"><b>${p.tipo==="estancia"?"Estancia":"Casa"}</b></span><h3>${esc(p.nombre)}</h3>${p.direccion?`<span class="s">${esc(p.direccion)}</span>`:""}
+    return `<button type="button" class="pj" data-proj="${esc(p.id)}" aria-current="${p.id===S.proyId}"><h3>${esc(p.nombre)}</h3>${p.direccion?`<span class="s">${esc(p.direccion)}</span>`:""}
       <span class="n"><span><b>${rs}</b> estancia${rs===1?"":"s"}</span><span><b>${pr}</b> producto${pr===1?"":"s"}</span><span><b>${eur.format(prev)}</b> previsto${+p.presupuesto?` de ${eur.format(+p.presupuesto)}`:""}</span></span></button>`; }).join("")}
     <button type="button" class="pj new" data-act="newProj">${secIcon("nuevo",28)}Nuevo proyecto</button></section>`;
 }
@@ -2040,7 +2057,7 @@ function allBudgetsHTML(){
   const cards=data.map(d=>{
     const over=d.max&&d.prev>d.max;
     return `<section class="ab">
-      <div class="ab-h"><button type="button" class="ab-t" data-openbud="${esc(d.p.id)}"><span class="kind"><b>${d.p.tipo==="estancia"?"Estancia":"Casa"}</b></span><h3>${esc(d.p.nombre)}</h3></button>
+      <div class="ab-h"><button type="button" class="ab-t" data-openbud="${esc(d.p.id)}"><h3>${esc(d.p.nombre)}</h3></button>
         <span class="ab-n"><span>Previsto <b class="num">${eur.format(d.prev)}</b></span><span>Pagado <b class="num">${eur.format(d.real)}</b></span>${d.max?`<span>${over?"Te pasas":"Te queda"} <b class="num" style="${over?"color:var(--bad)":""}">${eur.format(Math.abs(d.max-d.prev))}</b> de ${eur.format(d.max)}</span>`:""}</span></div>
       ${d.max?`<div class="bar"><u style="width:${Math.min(100,d.prev/d.max*100)}%"></u><i class="${over?"over":""}" style="width:${Math.min(100,d.real/d.max*100)}%"></i></div>`:""}
       ${d.groups.length?`<div class="tbl-wrap"><table class="budget"><thead><tr><th>Estancia</th><th>Qué incluye</th><th class="r">Previsto</th><th class="r">Pagado</th></tr></thead><tbody>
@@ -2544,7 +2561,7 @@ function openProd(x,preset={}){
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
   fill($("d_estado"),ESTADOS_P,x?.estado||"visto"); fill($("d_room"),roomOpts(pid),x?.estanciaId??preset.estanciaId??"");
   $("d_busco").value=""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
-  fill($("d_forma"),FORMAS,x?.forma||""); fillLists(pid,x?.busco||preset.busco||S.lastList||"");
+  fill($("d_forma"),FORMAS,x?.forma||""); $("d_pared").checked=typeof x?.pared==="boolean"?x.pared:PARED.has(x?.forma||detectForma(`${x?.nombre||""} ${x?.busco||""}`)); $("d_pared").dataset.set=typeof x?.pared==="boolean"?"1":""; fillLists(pid,x?.busco||preset.busco||S.lastList||"");
   $("d_url").value=x?.url||""; lastUrl=x?.url||""; $("d_img").value=x?.imagen||""; $("d_color").value=x?.color||colorFromName(x?.nombre)||"#b07a55"; $("d_color").dataset.set=x?.color?"1":""; $("d_colormsg").textContent=x?.color?"Color guardado":"Para pintarlo en el plano"; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
   $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
@@ -2556,15 +2573,16 @@ $("fProd").addEventListener("submit",async ev=>{
   if(!$("d_busco").value.trim()){ ev.preventDefault(); $("d_busco").hidden=false; $("d_busco").focus(); toast("Elige una lista o escribe el nombre de una nueva."); return; }
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
-    forma:$("d_forma").value,conjuntoId:edD?.conjuntoId||S.prodFromCj||"",url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
+    forma:$("d_forma").value,pared:$("d_pared").checked,conjuntoId:edD?.conjuntoId||S.prodFromCj||"",url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
     estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
   try{
     S.lastList=data.busco; await ensureList(data.proyectoId,data.busco,data.estanciaId);
+    const wasWall=new Map(S.items.filter(i=>i.productoId===id).map(i=>[i.id,isWallItem(i)]));
     await save("productos",id,data);
     if(!edD&&S.addFromPlan&&+data.ancho>0&&+data.fondo>0&&!S.productos.some(y=>y.id!==id&&y.proyectoId===data.proyectoId&&y.busco===data.busco&&(y.estado==="elegido"||y.estado==="comprado"))){ S.addFromPlan=null; setTimeout(()=>choose(id),0); }
     S.addFromPlan=null;
     // si el producto está en el plano, actualiza su tamaño
-    for(const it of S.items.filter(i=>i.productoId===id)) if(+data.ancho>0&&+data.fondo>0&&(it.w!==+data.ancho||it.d!==+data.fondo||it.nombre!==data.nombre||(data.color&&it.hex!==data.color)||(it.forma||"")!==data.forma)){ const {id:iid,...b}=it; await save("items",iid,{...b,w:+data.ancho,d:+data.fondo,nombre:data.nombre,forma:data.forma,...(data.color?{hex:data.color}:{})}); }
+    for(const it of S.items.filter(i=>i.productoId===id)) if(+data.ancho>0&&+data.fondo>0&&(it.w!==+data.ancho||it.d!==+data.fondo||it.nombre!==data.nombre||(data.color&&it.hex!==data.color)||(it.forma||"")!==data.forma||wasWall.get(it.id)!==data.pared)){ const {id:iid,...b}=it; await save("items",iid,{...b,w:+data.ancho,d:+data.fondo,nombre:data.nombre,forma:data.forma,...(data.color?{hex:data.color}:{}),...(wasWall.get(it.id)!==data.pared?wallPatch({...it,w:+data.ancho,d:+data.fondo},data.pared):{}),pared:""}); }
     toast(edD?"Producto guardado":"Producto guardado en «"+data.busco+"»");
   }catch{}
 });
@@ -2701,6 +2719,10 @@ $("d_paste").addEventListener("paste",()=>{ fillFromPaste.lastPaste=Date.now(); 
 $("d_paste").addEventListener("input",()=>{ clearTimeout(fillFromPaste.t); if(Date.now()-(fillFromPaste.lastPaste||0)<1500) return; if($("d_paste").value.trim().length>80) fillFromPaste.t=setTimeout(fillFromPaste,900); });
 function updFormaHint(){ const o=$("d_forma").options[0]; if(o) o.textContent="Automático: "+((FORMAS.find(x=>x[0]===detectForma(`${$("d_nombre").value} ${$("d_busco").value}`))||["","Bloque"])[1]); }
 ["d_nombre","d_busco"].forEach(i=>$(i).addEventListener("input",updFormaHint));
+// la casilla de pared sigue al tipo de mueble mientras no la toques
+const autoPared=()=>{ if(!$("d_pared").dataset.set) $("d_pared").checked=PARED.has($("d_forma").value||detectForma(`${$("d_nombre").value} ${$("d_busco").value}`)); };
+["d_nombre","d_busco"].forEach(i=>$(i).addEventListener("input",autoPared)); $("d_forma").addEventListener("change",autoPared);
+$("d_pared").addEventListener("change",()=>{ $("d_pared").dataset.set="1"; });
 $("d_lista").addEventListener("change",()=>{ syncListField(); if($("d_lista").value==="__new"){ $("d_busco").value=""; $("d_busco").focus(); } });
 $("d_color").addEventListener("input",()=>{ $("d_color").dataset.set="1"; $("d_colormsg").textContent="Color elegido por ti"; });
 $("d_nombre").addEventListener("change",()=>{ if(!$("d_color").dataset.set){ const c=colorFromName($("d_nombre").value); if(c){ $("d_color").value=c; $("d_colormsg").textContent="Sacado del nombre"; } } });
@@ -2792,6 +2814,7 @@ document.addEventListener("click",e=>{
     case "unsel": S.sel=null; render(); break;
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
     case "mirror": { const it=selItem(); if(it) saveItem(it,{espejo:!it.espejo}); break; }
+    case "wallToggle": { const it=selItem(); if(!it) break; const on=!isWallItem(it); saveItem(it,wallPatch(it,on)); toast(on?`«${it.nombre}» colgado en la pared más cercana`:`«${it.nombre}» descolgado`); break; }
     case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
     case "delItem": { const it=selItem(); if(it) deleteItem(it); break; }
   }
