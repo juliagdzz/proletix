@@ -979,6 +979,7 @@ function authHTML(){
     </form>
     ${m==="entrar"?`<button type="button" class="linkb" data-act="authOlvido">¿Has olvidado la contraseña?</button>`:m==="olvido"?`<button type="button" class="linkb" data-act="authEntrar">Volver a entrar</button>`:""}
     ${m!=="nueva"?`<hr><button type="button" class="linkb muted" data-act="authLocal">Seguir sin cuenta (solo se guarda en este navegador)</button>`:""}
+    <a class="linkb muted" style="font-size:12px" href="/privacidad.html">Privacidad</a>
   </div></section>`;
 }
 async function submitAuth(){
