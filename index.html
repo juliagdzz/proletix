@@ -137,6 +137,13 @@ svg text{font-family:var(--f-body);fill:var(--ink);pointer-events:none}
 .rot-c input[type=range]{flex:1 1 60px;min-width:44px;accent-color:var(--red);padding:0;background:none;border:0}
 .rot-c input[type=number]{width:46px;flex:none;padding:5px 4px;text-align:center}
 .rot-c{gap:3px}
+.alt-c{display:flex;gap:14px;align-items:stretch}
+.alt-s{display:flex;flex-direction:column;align-items:center;gap:2px;font:600 10px var(--f-mono);color:var(--blue-ink);padding:2px 8px;border-radius:12px;background:linear-gradient(var(--blue-soft),var(--surface));border:1px solid var(--line)}
+.alt-s input[type=range]{writing-mode:vertical-lr;direction:rtl;height:128px;width:22px;margin:2px 0;padding:0;border:0;background:none;accent-color:var(--red)}
+.alt-b{display:flex;flex-direction:column;gap:8px;justify-content:center;min-width:0}
+.alt-n{display:flex;align-items:center;gap:4px}
+.props .alt-n input{width:64px;flex:none;padding:5px 4px;text-align:center}
+.alt-q{display:flex;gap:4px;flex-wrap:wrap}
 .icon-btn.sm{width:32px;height:32px;font-size:16px}
 .icon-btn[aria-pressed="true"]{background:var(--pink);color:var(--pink-ink);border-color:var(--pink)}
 .rot-sep{width:1px;height:22px;background:var(--line);margin:0 2px}
@@ -1116,9 +1123,9 @@ function propsHTML(it){
         <button class="icon-btn sm" type="button" data-act="mirror" aria-pressed="${!!it.espejo}" title="Simetría" aria-label="Simetría">⇋</button>
         ${it.tipo?"":`<button class="icon-btn sm" type="button" data-act="wallToggle" aria-pressed="${isWallItem(it)}" title="${isWallItem(it)?"Descolgar de la pared":"Colgar en la pared"}" aria-label="Colgar en la pared"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18"/><rect x="7" y="7" width="13" height="10" rx="1"/><path d="M10 14l2.5-3 2 2 1.5-1.5 2 2.5"/></svg></button>`}
       </div></div>
+      ${canLift(it)?altHTML(it):""}
       <div><label for="pr_w">Ancho (cm)</label><input id="pr_w" type="number" min="5" step="1" value="${it.w}" inputmode="numeric"></div>
       <div><label for="pr_d">Fondo (cm)</label><input id="pr_d" type="number" min="5" step="1" value="${it.d}" inputmode="numeric"></div>
-      ${onTable(it)||isWallItem(it)||+it.z>0?`<div><label for="pr_z">${isWallItem(it)?"Altura desde el suelo (cm)":"Altura sobre el suelo"}</label><input id="pr_z" type="number" min="0" step="1" value="${Math.round(+it.z||0)}" inputmode="numeric"></div>`:""}
       ${it.tipo?"":`<div><label for="pr_h">Alto (cm)</label><input id="pr_h" type="number" min="1" step="1" value="${S3.h}" inputmode="numeric"></div>`}
     </div>
     <details class="pr-more"${S.propsMore?" open":""}><summary>Nombre y tipo de mueble</summary>
@@ -1155,8 +1162,22 @@ function ridersOf(it){
   while(q.length){ const s=q.pop(); S.items.forEach(o=>{ if(o===it||out.includes(o)||!canStack(o)||!(+o.z>0)||o.estanciaId!==it.estanciaId) return; if(on(o,s)){ out.push(o); q.push(o); } }); }
   return out.map(o=>({o,x:o.x,y:o.y}));
 }
-function dropItem(it,riders,r){
-  if(canStack(it)) it.z=supportHeight(it);
+// Solo se suben los objetos pequeños y lo que va en la pared; sofás, camas, frigoríficos... siempre en el suelo
+const canLift=it=>isWallItem(it)||canStack(it);
+const techo=it=>+(S.estancias.find(r=>r.id===it.estanciaId)?.alto)||250;
+function altHTML(it){
+  const z=Math.round(+it.z||0), max=Math.max(techo(it),z), sup=canStack(it)?supportOf(it):null;
+  return `<div class="full"><label for="pr_zr">Altura desde el suelo</label><div class="alt-c">
+    <div class="alt-s"><span>${max}</span><input type="range" id="pr_zr" min="0" max="${max}" step="1" value="${z}" aria-label="Altura desde el suelo en centímetros"><span>0</span></div>
+    <div class="alt-b">
+      <div class="alt-n"><button class="icon-btn sm" type="button" data-zby="-5" aria-label="Bajar 5 cm" title="Bajar 5 cm">▼</button><input type="number" id="pr_z" min="0" max="${max}" step="1" value="${z}" inputmode="numeric" aria-label="Centímetros"><span class="muted">cm</span><button class="icon-btn sm" type="button" data-zby="5" aria-label="Subir 5 cm" title="Subir 5 cm">▲</button></div>
+      <div class="alt-q">${isWallItem(it)?"":`<button class="btn sm" type="button" data-zto="0" aria-pressed="${z===0}">Al suelo</button>`}${sup?`<button class="btn sm" type="button" data-zto="${Math.round(sup.top)}" aria-pressed="${z===Math.round(sup.top)}">Encima de «${esc(sup.o.nombre.length>18?sup.o.nombre.slice(0,17)+"…":sup.o.nombre)}»</button>`:""}${isWallItem(it)?[90,120,150].map(h=>`<button class="btn sm" type="button" data-zto="${h}" aria-pressed="${z===h}">${h} cm</button>`).join(""):""}</div>
+      <span class="hint">${isWallItem(it)?"Colgado en la pared: arrastra la barra para subirlo o bajarlo":"Al soltarlo encima de un mueble se apoya solo"}</span>
+    </div></div></div>`;
+}
+function liftPreview(it,z){ it.z=z; if(V.objs&&V.objs[it.id]){ place3d(V.objs[it.id],it); draw3d(); } }
+function dropItem(it,riders,r,resting=true){
+  if(canStack(it)&&resting) it.z=supportHeight(it);
   if(isWallItem(it)) Object.assign(it,snapToWall(it,r));
   held(()=>{ [it,...riders.map(x=>x.o)].forEach(o=>{ const {id,...b}=o; save("items",id,b).catch(()=>{}); }); });
 }
@@ -1204,7 +1225,7 @@ function bindPlan(r){
     if(!g){ if(S.sel){S.sel=null;render();} return; }
     const it=S.items.find(i=>i.id===g.dataset.item); if(!it) return;
     e.preventDefault();
-    S.preEdit={...it}; const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),moved:false,wasSel:S.sel===it.id};
+    S.preEdit={...it}; const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),rest:Math.abs((+it.z||0)-supportHeight(it))<2,moved:false,wasSel:S.sel===it.id};
     S.sel=it.id; S.dragging=true; g.classList.add("drag");
     svg.querySelector("#itemsLayer").appendChild(g);
     svg.setPointerCapture(e.pointerId);
@@ -1217,7 +1238,7 @@ function bindPlan(r){
   });
   const end=()=>{
     if(!drag) return; const d=drag; drag=null; S.dragging=false;
-    if(d.moved) dropItem(d.it,d.riders,r); else if(d.wasSel) rotateItem(d.it); else render();
+    if(d.moved) dropItem(d.it,d.riders,r,d.rest); else if(d.wasSel) rotateItem(d.it); else render();
   };
   svg.addEventListener("pointerup",end); svg.addEventListener("pointercancel",end);
 }
@@ -1522,7 +1543,7 @@ function ensure3d(){
     if(!hit) return;
     const it=S.items.find(i=>i.id===hit.object.userData.itemId), p=floorPt(e); if(!it||!p) return;
     V.controls.enabled=false; S.dragging=true;
-    S.preEdit={...it}; V.drag={it,ox:p.x-it.x,oz:p.z-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),moved:false,wasSel:S.sel===it.id};
+    S.preEdit={...it}; V.drag={it,ox:p.x-it.x,oz:p.z-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),rest:Math.abs((+it.z||0)-supportHeight(it))<2,moved:false,wasSel:S.sel===it.id};
     el.setPointerCapture(e.pointerId);
   },{capture:true});
   el.addEventListener("pointermove",e=>{
@@ -1537,7 +1558,7 @@ function ensure3d(){
   const up=e=>{
     const d=V.drag; V.drag=null; V.controls.enabled=true;
     const click=V.down&&Math.hypot(e.clientX-V.down.x,e.clientY-V.down.y)<5;
-    if(d){ S.dragging=false; S.sel=d.it.id; if(d.moved) dropItem(d.it,d.riders,V.room); else if(d.wasSel) rotateItem(d.it); else render(); }
+    if(d){ S.dragging=false; S.sel=d.it.id; if(d.moved) dropItem(d.it,d.riders,V.room,d.rest); else if(d.wasSel) rotateItem(d.it); else render(); }
     else if(click&&S.sel){ S.sel=null; render(); }
   };
   el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up);
@@ -2680,6 +2701,8 @@ document.addEventListener("input",e=>{
   if(qm){ const [,k,cid]=qm, v=e.target.value, q=S.qa[cid]=S.qa[cid]||{};
     if(k==="n"&&/^https?:\/\/\S+$/i.test(v.trim())){ qaUrl(cid,v.trim()); return; }
     q[{n:"nombre",c:"cantidad",p:"precio"}[k]]=v; if(k==="n"&&!v) delete S.qa[cid]; return; }
+  if(e.target.id==="pr_zr"){ const it=selItem(); if(!it) return; if(!S.preEdit||S.preEdit.id!==it.id) S.preEdit={...it};
+    S.dragging=true; liftPreview(it,+e.target.value); const n=$("pr_z"); if(n) n.value=e.target.value; return; }
   if(e.target.id!=="pr_rot") return; const it=selItem(); if(!it) return;
   if(!S.preEdit||S.preEdit.id!==it.id) S.preEdit={...it};
   let v=+e.target.value; const q=Math.round(v/90)*90; if(Math.abs(v-q)<=4){ v=q%360; e.target.value=v; }
@@ -2742,13 +2765,14 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
   if(d.vista){ S.editShape=false; S.vista=d.vista; lsSet("proletix:vista",S.vista); render(); return; }
   if(d.tab){ S.editShape=false; S.view="proyecto"; S.tab=d.tab; window.scrollTo(0,0); lsSet("proletix:tab",S.tab); render(); return; }
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
+  if(d.zby!=null||d.zto!=null){ const it=selItem(); if(it) saveItem(it,{z:Math.max(0,Math.min(techo(it),d.zto!=null?+d.zto:Math.round(+it.z||0)+(+d.zby)))}); return; }
   if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||"",...(c[6]?{h:c[6]}:{})}); return; }
   if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); return; }
   if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
@@ -2844,7 +2868,7 @@ document.addEventListener("change",e=>{
   if(id==="pr_w"&&+v>=5) saveItem(it,{w:+v});
   if(id==="pr_d"&&+v>=5) saveItem(it,{d:+v});
   if(id==="pr_h"&&+v>=1) saveItem(it,{h:+v});
-  if(id==="pr_z"&&v!=="") saveItem(it,{z:Math.max(0,+v)});
+  if((id==="pr_z"||id==="pr_zr")&&v!==""){ S.dragging=false; saveItem(it,{z:Math.max(0,Math.min(techo(it)*2,Math.round(+v)))}); }
   if(id==="pr_rot"||id==="pr_rotn"){ if(v!==""){ let a=+v; const q=Math.round(a/90)*90; if(Math.abs(a-q)<=4) a=q; rotateTo(it,a); } return; }
   if(id==="pr_forma") saveItem(it,{forma:v,h:""});
   if(id==="pr_lado") saveItem(it,{lado:v});
