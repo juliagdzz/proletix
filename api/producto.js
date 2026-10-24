@@ -106,27 +106,35 @@ function extract(html, url) {
   };
 }
 
-// Lee la página. Si la tienda bloquea la visita (403, 429…) y hay clave de ScraperAPI
-// en las variables de entorno de Vercel (SCRAPER_API_KEY), lo reintenta a través de ese servicio.
+// Lee la página. Si la tienda bloquea la visita (403, 429… o una página de «demuestra que no eres un robot»)
+// y hay clave de ScraperAPI en las variables de entorno de Vercel (SCRAPER_API_KEY), lo reintenta a través de ese servicio.
+// Para las tiendas más protegidas (Leroy Merlin, Amazon…) usa directamente su modo «premium», que gasta más créditos.
+const BLOCKED = /captcha-delivery\.com|geo\.captcha|datadome|px-captcha|cf-chl-|Access Denied|Request unsuccessful\. Incapsula/i;
+const HARD = /(^|\.)(leroymerlin\.[a-z.]+|amazon\.[a-z.]+|bricomart\.es|bauhaus\.es)$/i;
 async function getPage(url) {
   const timed = (ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return { signal: c.signal, done: () => clearTimeout(t) }; };
   let status = 0;
-  const a = timed(9000);
+  const a = timed(8000);
   try {
     const r = await fetch(url.href, { signal: a.signal, redirect: "follow", headers: { "user-agent": UA, accept: "text/html,application/xhtml+xml", "accept-language": "es-ES,es;q=0.9" } });
     if (PRIVATE.test(new URL(r.url).hostname)) return { error: 400 };
-    if (r.ok) return { html: await r.text() };
-    status = r.status;
+    if (r.ok) { const html = await r.text(); if (!BLOCKED.test(html.slice(0, 200000)) || /application\/ld\+json/.test(html)) return { html }; status = 403; }
+    else status = r.status;
   } catch { status = 504; } finally { a.done(); }
   const key = process.env.SCRAPER_API_KEY;
-  if (!key || ![401, 403, 429, 503, 504].includes(status)) return { error: status };
-  const b = timed(50000);
-  try {
-    const api = `https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&country_code=es&url=${encodeURIComponent(url.href)}`;
-    const r = await fetch(api, { signal: b.signal });
-    if (r.ok) return { html: await r.text(), via: "scraperapi" };
-    return { error: r.status, via: "scraperapi" };
-  } catch { return { error: 504, via: "scraperapi" }; } finally { b.done(); }
+  if (!key || ![401, 403, 405, 429, 503, 504].includes(status)) return { error: status };
+  const tries = HARD.test(url.hostname) ? [["premium", 45000]] : [["", 20000], ["premium", 28000]];
+  let last = 502;
+  for (const [mode, ms] of tries) {
+    const b = timed(ms);
+    try {
+      const api = `https://api.scraperapi.com/?api_key=${encodeURIComponent(key)}&country_code=es${mode ? `&${mode}=true` : ""}&url=${encodeURIComponent(url.href)}`;
+      const r = await fetch(api, { signal: b.signal });
+      if (r.ok) { const html = await r.text(); if (!BLOCKED.test(html.slice(0, 200000)) || /application\/ld\+json/.test(html)) return { html, via: "scraperapi" }; last = 403; }
+      else last = r.status;
+    } catch { last = 504; } finally { b.done(); }
+  }
+  return { error: last, via: "scraperapi" };
 }
 
 module.exports = async (req, res) => {
@@ -137,7 +145,9 @@ module.exports = async (req, res) => {
   if (page.error === 400) return res.status(400).json({ error: "El enlace no es válido." });
   if (page.error === 504) return res.status(504).json({ error: "La tienda ha tardado demasiado en responder." });
   if (page.error) {
-    const why = page.via ? `La tienda tampoco deja leer la página a través de ScraperAPI (error ${page.error}).` : `La tienda no deja leer esta página (error ${page.error}).`;
+    const why = page.via
+      ? (page.error === 401 ? "La clave de ScraperAPI no es válida." : page.error === 429 ? "Se han acabado los créditos de ScraperAPI de este mes." : `La tienda tampoco deja leer la página a través de ScraperAPI (error ${page.error}). Copia y pega el texto de la página.`)
+      : `La tienda no deja leer esta página (error ${page.error}). Copia y pega el texto de la página o añade la clave de ScraperAPI en Vercel.`;
     return res.status(502).json({ error: why });
   }
   res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
