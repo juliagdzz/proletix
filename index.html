@@ -222,8 +222,8 @@ dialog form{display:flex;flex-direction:column}
 .d-grp.web{background:var(--surface)}
 .d-gh{grid-column:1/-1;margin:0;font-size:17px;color:var(--granate);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .d-chk{align-self:end;min-height:40px}
-.readst{font:600 12px var(--f-body);padding:3px 10px;border-radius:999px;letter-spacing:0}
-.readst.ok{background:#E3F3E9;color:var(--ok)}.readst.bad{background:#FBE4E2;color:var(--bad)}
+.readst{grid-column:1/-1;font-size:14px;font-weight:600;padding:10px 14px;border-radius:12px;margin-top:-4px}
+.readst.ok{background:#E3F3E9;color:var(--ok)}.readst.warn{background:#FFF1DC;color:var(--warn)}.readst.bad{background:#FBE4E2;color:var(--bad)}
 .field.auto>label::after{content:"✓";color:var(--ok);font-weight:800;margin-left:6px}
 @media (max-width:480px){.field.h3,.field.h2{grid-column:span 6}}
 .field label,.props label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
@@ -608,6 +608,12 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 <dialog id="dlgProd"><form method="dialog" id="fProd">
   <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="d_ok">Añadir</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
+      <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
+    <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
+      <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí: la ficha se rellena sola"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm ghost" type="button" id="d_fill">Volver a rellenar</button><span class="hint" id="d_fillmsg"></span></div>
+    </details>
+    <div class="readst" id="d_readst" role="status" hidden></div>
     <div class="d-grp mine"><h3 class="d-gh">Lo que decides tú</h3>
       <div class="field"><label for="d_lista">Lista</label><select id="d_lista"></select><input id="d_busco" placeholder="Nombre de la lista nueva: Sofá del salón, Lámpara…" hidden><span class="hint">Los productos de la misma lista se comparan juntos</span></div>
       <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
@@ -617,12 +623,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
       <label class="field h3 d-chk" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="d_pared" style="width:auto"> Va colgado en la pared <span class="hint" style="margin:0">(balda, cuadro, espejo, tele…)</span></label>
       <div class="field"><label for="d_nota">Nota</label><textarea id="d_nota" placeholder="Desenfundable, plazo de entrega 6 semanas…"></textarea></div>
     </div>
-    <div class="d-grp web"><h3 class="d-gh">De la tienda <span class="readst" id="d_readst" hidden></span></h3>
-      <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
-    <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
-      <textarea id="d_paste" placeholder="En la página del producto pulsa Ctrl+A (en el móvil, «Seleccionar todo»), copia y pega aquí: la ficha se rellena sola"></textarea>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn sm ghost" type="button" id="d_fill">Volver a rellenar</button><span class="hint" id="d_fillmsg"></span></div>
-    </details>
+    <div class="d-grp web"><h3 class="d-gh">Datos del producto</h3>
       <div class="field"><label for="d_nombre">Producto</label><input id="d_nombre" required placeholder="Modelo, color, tela…"></div>
       <div class="field h3"><label for="d_tienda">Tienda</label><input id="d_tienda" list="shops"></div>
       <div class="field h3"><label for="d_precio">Precio (€)</label><input id="d_precio" type="number" min="0" step="any" inputmode="decimal"></div>
@@ -1874,16 +1875,16 @@ async function readUrl(u){
   try{
     const r=await fetch("/api/producto?url="+encodeURIComponent(u)), d=await r.json().catch(()=>({}));
     if($("d_url").value.trim()!==u) return;
-    if(!r.ok||d.error){ msg.textContent=(d.error||"No se ha podido leer la página.")+" Copia y pega el texto de la página abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer"); return; }
+    if(!r.ok||d.error){ msg.textContent=(d.error||"No se ha podido leer la página.")+" Copia y pega el texto de la página abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer la página. Pega el texto o rellena los datos a mano."); return; }
     const f=fromUrl(u), host=new URL(u).hostname.replace(/-/g,""), known=Object.keys(SHOPS).some(k=>host.includes(k));
     applyImport({...d,tienda:known?f.tienda:(d.tienda||f.tienda)});
     if(d.imagen){ $("d_img").value=d.imagen;
       if(!$("d_color").dataset.set) colorFromImage("/api/imagen?url="+encodeURIComponent(d.imagen)).then(c=>{ if(!$("d_color").dataset.set){ const v=c||colorFromName($("d_nombre").value); if(v){ $("d_color").value=v; $("d_color").dataset.set="1"; $("d_colormsg").textContent=c?"Sacado de la foto":"Sacado del nombre"; } } }); }
     const faltan=[!d.precio&&"el precio",!(d.ancho&&d.fondo)&&"las medidas"].filter(Boolean);
     msg.textContent=faltan.length?`Leído, pero no encuentro ${faltan.join(" ni ")}. Pega el texto de la página abajo o escríbelo.`:"Leído. Revisa los datos antes de guardar.";
-    readStatus("ok",faltan.length?`Leído (faltan ${faltan.join(" y ")})`:"Leído de la web");
+    readResult();
     if(faltan.length) $("d_more").open=true;
-  }catch{ msg.textContent="No se ha podido leer la página. Copia y pega el texto abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer"); }
+  }catch{ msg.textContent="No se ha podido leer la página. Copia y pega el texto abajo."; $("d_more").open=true; readStatus("bad","No se ha podido leer la página. Pega el texto o rellena los datos a mano."); }
 }
 const SHOPS={ikea:"IKEA",leroymerlin:"Leroy Merlin",maisonsdumonde:"Maisons du Monde",elcorteingles:"El Corte Inglés",conforama:"Conforama",amazon:"Amazon",zarahome:"Zara Home",sklum:"Sklum",kavehome:"Kave Home",westwing:"Westwing",jysk:"JYSK",bauhaus:"Bauhaus",laredoute:"La Redoute",carrefour:"Carrefour",mueblesboom:"Muebles BOOM",tuco:"Tuco",merkamueble:"Merkamueble",habitat:"Habitat",aliexpress:"AliExpress",wallapop:"Wallapop",milanuncios:"Milanuncios",temu:"Temu",shein:"Shein",lidl:"Lidl",action:"Action",casashops:"Casa",hm:"H&M Home",vidaxl:"vidaXL",miliboo:"Miliboo",ventaunica:"Venta Única",brico:"Bricodepot",bricomart:"Bricomart",mediamarkt:"MediaMarkt"};
 function fromUrl(u){
@@ -1914,7 +1915,13 @@ function parseText(t){
   return out;
 }
 // Marca con ✓ los campos que se han rellenado solos y el estado de la lectura de la web
-function readStatus(kind,txt){ const e=$("d_readst"); if(!kind){ e.hidden=true; return; } e.hidden=false; e.className="readst "+kind; e.textContent=(kind==="ok"?"✓ ":"✕ ")+txt; }
+function readStatus(kind,txt){ const e=$("d_readst"); if(!kind){ e.hidden=true; return; } e.hidden=false; e.className="readst "+kind; $("d_fillmsg").textContent=""; $("d_urlmsg").textContent=""; e.textContent=({ok:"✓ ",warn:"⚠ ",bad:"✕ "}[kind])+txt; }
+// tras leer la web: éxito si están nombre, precio y medidas; si no, dice qué falta revisar
+function readResult(){
+  const v=id=>$(id).value.trim(), falta=[!v("d_nombre")&&"el nombre",!v("d_precio")&&"el precio",!(v("d_ancho")&&v("d_fondo"))&&"las medidas"].filter(Boolean);
+  if(!falta.length) readStatus("ok","Campos completados con éxito. Échales un vistazo antes de guardar.");
+  else readStatus("warn",`Falta revisar ${falta.length>1?falta.slice(0,-1).join(", ")+" y "+falta.at(-1):falta[0]}. Los datos con ✓ se han leído bien.`);
+}
 function clearAuto(){ document.querySelectorAll("#dlgProd .field.auto").forEach(f=>f.classList.remove("auto")); readStatus(null); }
 document.addEventListener("input",e=>{ const f=e.target.closest?.("#dlgProd .field.auto"); if(f&&e.isTrusted) f.classList.remove("auto"); });
 function applyImport(d){
@@ -1948,7 +1955,7 @@ ${t.slice(0,60000)}`;
   }
   const c=applyImport(data&&typeof data==="object"?data:parseText(t));
   msg.textContent=c?"Listo. Revisa los datos antes de guardar.":"No he encontrado precio ni medidas. Rellénalos a mano.";
-  readStatus(c?"ok":"bad",c?"Leído del texto pegado":"No se ha podido leer");
+  if(c) readResult(); else readStatus("bad","No he encontrado datos en el texto pegado. Rellénalos a mano.");
 }
 const groupsIn=(pid,rid)=>{ const g={}; S.productos.filter(x=>x.proyectoId===pid&&x.estanciaId===rid&&x.estado!=="descartado").forEach(x=>(g[x.busco||"Sin nombre"] ||= []).push(x));
   S.listas.filter(l=>l.proyectoId===pid&&l.estanciaId===rid).forEach(l=>{ g[l.nombre] ||= []; }); return g; };
