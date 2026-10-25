@@ -1158,14 +1158,22 @@ function quadsOverlap(A,B){
   }
   return true;
 }
+// Para chocar con otros muebles, las plantas solo cuentan la maceta: las hojas pueden pasar por encima o al lado
+const POT_R={monstera:.42,arbol:.42,palmera:.4,cactus:.6,planta:.5,suculenta:.85,orquidea:.75,potus:.8,plantaMesa:.6};
+function hitCorners(it){
+  const f=shape3d(it).f;
+  if(!PLANTS.has(f)) return corners(it,it.x,it.y,1);
+  const {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2, h=Math.max(2,Math.min(+it.w,+it.d)/2*(POT_R[f]||.5)-1);
+  return [[cx-h,cy-h],[cx+h,cy-h],[cx+h,cy+h],[cx-h,cy+h]];
+}
 function problems(items,rm){
   const bad=new Set(), P=pts(rm), rug=i=>/alfombra/i.test(i.nombre||"")||["alfombra","alfombraR"].includes(i.forma)||isWallItem(i);
   items.forEach(a=>{
     if(!isHueco(a)&&!itemFits(a,a.x,a.y,P)) bad.add(a.id);
     if(a.tipo==="ventana"||rug(a)||onTable(a)) return;
-    const A=corners(a,a.x,a.y,1);
+    const A=hitCorners(a);
     const za=+a.z||0, ha=shape3d(a).h;
-    items.forEach(b=>{ if(a===b||b.tipo==="ventana"||rug(b)||onTable(b)) return; const zb=+b.z||0; if(za>=zb+shape3d(b).h-1||zb>=za+ha-1) return; if(quadsOverlap(A,corners(b,b.x,b.y,1))) bad.add(a.id); });
+    items.forEach(b=>{ if(a===b||b.tipo==="ventana"||rug(b)||onTable(b)) return; const zb=+b.z||0; if(za>=zb+shape3d(b).h-1||zb>=za+ha-1) return; if(quadsOverlap(A,hitCorners(b))) bad.add(a.id); });
   });
   return bad;
 }
