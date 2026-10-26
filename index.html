@@ -547,6 +547,16 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .avatar:hover{box-shadow:0 0 0 2px var(--red)}
 .avatar.lg{width:56px;height:56px;font-size:22px;cursor:default}.avatar.lg:hover{box-shadow:0 0 0 1px var(--line)}
 .ac-who{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.pc-intro{margin:0 0 12px;font-size:15px}
+.pc-ban{font-size:16px;font-weight:700;padding:14px 16px;border-radius:12px;margin-bottom:12px}
+.pc-ban.run{background:var(--blue-soft);color:var(--blue-ink)}.pc-ban.ok{background:#E3F3E9;color:var(--ok)}.pc-ban.warn{background:#FFF1DC;color:var(--warn)}.pc-ban.bad{background:#FBE4E2;color:var(--bad)}
+.pc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pc-r{display:grid;grid-template-columns:40px minmax(0,1fr);grid-template-areas:"img t" "img s";column-gap:10px;row-gap:4px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
+.pc-r img,.pc-sw{grid-area:img;width:40px;height:40px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+.pc-t{grid-area:t;display:flex;flex-direction:column;min-width:0}.pc-t b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pc-t small{color:var(--muted);font-size:12px}
+.pc-s{grid-area:s;justify-self:start;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px}
+.pc-s.wait{background:var(--bg);color:var(--muted)}.pc-s.run{background:var(--blue-soft);color:var(--blue-ink)}
+.pc-s.same{background:#E3F3E9;color:var(--ok)}.pc-s.down{background:var(--ok);color:#fff}.pc-s.up{background:#FFF1DC;color:var(--warn)}.pc-s.fail{background:#FBE4E2;color:var(--bad)}
 .ac-sync{margin:0;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600}
 .ac-sync.ok{background:#E3F3E9;color:var(--ok)}.ac-sync.wait{background:var(--blue-soft);color:var(--blue-ink)}
 /* Toques de azul para detalles: interruptores, contadores, medidas y pasar el ratón */
@@ -748,6 +758,17 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 <dialog id="dlgBell"><form method="dialog">
   <div class="dlg-h"><h2>Rebajas</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
   <div class="dlg-b" style="display:block" id="bellBody"></div>
+</form></dialog>
+
+<!-- Comprobar precios -->
+<dialog id="dlgPrices"><form method="dialog">
+  <div class="dlg-h"><h2>Comprobar precios</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
+  <div class="dlg-b" style="display:block">
+    <p class="pc-intro">🔗 Miro en la tienda el precio de hoy de tus productos <b>con enlace</b> que tienes como <b>elegido</b> o <b>favorito</b>. Si alguno ha bajado, se actualiza aquí y te aviso.</p>
+    <div class="pc-ban run" id="pcBan" role="status" aria-live="polite"></div>
+    <ul class="pc-list" id="pcList"></ul>
+    <p class="muted" id="pcNote" style="font-size:13px;margin:10px 0 0"></p>
+  </div>
 </form></dialog>
 
 <!-- Cuenta -->
@@ -2716,30 +2737,58 @@ let checking=false;
 const dropOf=x=>+x.precioAntes>0&&+x.precio>0&&+x.precioAntes>+x.precio?Math.round((1-x.precio/x.precioAntes)*100):0;
 const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<2?"ahora mismo":m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} días`; };
 function saveQuiet(col,id,data){ S.undoing=true; const p=save(col,id,data); S.undoing=false; return p; }
-async function checkPrices(force){
-  if(!HAS_API||checking||S.mode==="loading") return;
-  const now=Date.now(), due=S.productos.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado)&&(force||now-(+x.check||0)>(HARD_SHOP.test(x.url)?PRICE_EVERY_HARD:PRICE_EVERY)));
-  if(!due.length){ if(force) toast("No hay productos elegidos o favoritos con enlace que comprobar."); return; }
-  checking=true; if(force) toast(`Comprobando ${due.length} precio${due.length>1?"s":""}…`);
-  const drops=[]; let fails=0;
+// list y onRow solo los usa la ventana «Comprobar precios», que va enseñando el resultado de cada producto
+async function checkPrices(force,list,onRow){
+  if(!HAS_API||checking||S.mode==="loading") return null;
+  const now=Date.now(), due=list||S.productos.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado)&&(force||now-(+x.check||0)>(HARD_SHOP.test(x.url)?PRICE_EVERY_HARD:PRICE_EVERY)));
+  if(!due.length) return null;
+  checking=true;
+  const drops=[], res={total:0,down:0,up:0,same:0,fail:0};
   for(const x of due.slice(0,force?30:10)){
+    onRow?.(x,{k:"run"}); let out={k:"fail"};
     try{
       const r=await fetch("/api/producto?url="+encodeURIComponent(x.url)), d=await r.json().catch(()=>({}));
       const cur=S.productos.find(y=>y.id===x.id); if(!cur) continue;
       const {id,...b}=cur, patch={check:Date.now()}, old=+cur.precio||0, nw=+d.precio||0;
-      if(!r.ok||!nw) fails++;
+      if(!r.ok||!nw) out={k:"fail",why:d.error||""};
       else if(Math.abs(nw-old)>=.01){
         patch.precio=nw; patch.historial=[...(cur.historial||[]),{f:Date.now(),p:nw}].slice(-20);
-        if(old&&nw<old){ patch.precioAntes=Math.max(old,+cur.precioAntes||0); patch.bajadaVista=false; drops.push({...cur,...patch}); }
-        else if(+cur.precioAntes&&nw>=+cur.precioAntes){ patch.precioAntes=""; }
-      }
+        if(old&&nw<old){ patch.precioAntes=Math.max(old,+cur.precioAntes||0); patch.bajadaVista=false; drops.push({...cur,...patch}); out={k:"down",old,nw}; }
+        else { if(+cur.precioAntes&&nw>=+cur.precioAntes) patch.precioAntes=""; out={k:old?"up":"same",old,nw}; }
+      } else out={k:"same",old,nw};
       await saveQuiet("productos",id,{...b,...patch});
-    }catch{ fails++; }
+    }catch{ out={k:"fail"}; }
+    res.total++; res[out.k]++; onRow?.(x,out);
     await new Promise(r=>setTimeout(r,700));
   }
   checking=false;
-  if(drops.length) notifyDrops(drops);
-  else if(force) toast(fails===due.length?"No he podido leer los precios: las tiendas bloquean la lectura.":"Precios al día: ninguno ha bajado.");
+  if(drops.length&&!onRow) notifyDrops(drops);
+  return res;
+}
+// Ventana «Comprobar precios»: explica qué se revisa y enseña el resultado de cada producto
+async function openPriceCheck(){
+  if(checking){ toast("Ya estoy comprobando precios. Espera unos segundos."); return; }
+  const mine=S.productos.filter(x=>x.proyectoId===S.proyId&&x.estado!=="descartado");
+  const due=mine.filter(x=>safeUrl(x.url)&&["elegido","favorito"].includes(x.estado));
+  const visto=mine.filter(x=>safeUrl(x.url)&&!["elegido","favorito"].includes(x.estado)).length, sin=mine.filter(x=>!safeUrl(x.url)).length;
+  $("pcNote").textContent=[visto?`${visto} producto${visto>1?"s":""} con enlace no se ${visto>1?"miran":"mira"} porque ${visto>1?"están":"está"} como «visto»: márcalo${visto>1?"s":""} como favorito o elegido si quieres vigilarlo${visto>1?"s":""}.`:"",sin?`${sin} producto${sin>1?"s":""} sin enlace no se ${sin>1?"pueden":"puede"} comprobar.`:""].filter(Boolean).join(" ");
+  const ban=(k,t)=>{ const b=$("pcBan"); b.className="pc-ban "+k; b.textContent=t; };
+  const fmt=v=>eur2.format(v);
+  $("pcList").innerHTML=due.map(x=>`<li class="pc-r" id="pc_${esc(x.id)}">${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="pc-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}<span class="pc-t"><b>${esc(x.nombre)}</b><small>${esc([x.tienda,x.busco].filter(Boolean).join(" · "))}</small></span><span class="pc-s wait">En cola</span></li>`).join("");
+  $("dlgPrices").showModal();
+  if(!due.length){ ban("warn","No hay nada que comprobar todavía. Pega el enlace de la tienda en tus productos y márcalos como favorito o elegido."); return; }
+  ban("run",`Comprobando ${due.length} precio${due.length>1?"s":""} en las tiendas… Puede tardar un poco.`);
+  const res=await checkPrices(true,due,(x,o)=>{
+    const s=document.querySelector(`#pc_${CSS.escape(x.id)} .pc-s`); if(!s) return;
+    s.className="pc-s "+o.k;
+    s.textContent=o.k==="run"?"Mirando…":o.k==="same"?`✓ Igual · ${fmt(o.nw)}`:o.k==="down"?`↓ Ha bajado · ${fmt(o.old)} → ${fmt(o.nw)}`:o.k==="up"?`↑ Ha subido · ${fmt(o.old)} → ${fmt(o.nw)}`:"✕ No se ha podido leer";
+    if(o.k==="fail"&&o.why) s.title=o.why;
+  });
+  if(!res) return;
+  ban(res.down?"ok":res.fail===res.total?"bad":"ok",
+    res.down?`¡${res.down} producto${res.down>1?"s han":" ha"} bajado de precio! Ya está actualizado en tu lista.${res.fail?` ${res.fail} no se ${res.fail>1?"han":"ha"} podido leer.`:""}`
+    :res.fail===res.total?"No he podido leer ningún precio: las tiendas bloquean la lectura. Prueba más tarde o revisa la clave de ScraperAPI."
+    :`Precios al día: ${res.same+res.up} revisado${res.same+res.up>1?"s":""}${res.up?`, ${res.up} ha${res.up>1?"n":""} subido`:""} y ninguno ha bajado.${res.fail?` ${res.fail} no se ${res.fail>1?"han":"ha"} podido leer.`:""}`);
 }
 function notifyDrops(drops){
   const one=drops[0];
@@ -2797,7 +2846,7 @@ function compareHTML(list){
     ${maxP!==null&&min!==null&&maxP>min?`<p class="muted" style="font-size:12px;margin:6px 0 0">Entre la opción más barata y la más cara hay ${eur.format(maxP-min)} de diferencia.</p>`:""}`;
 }
 function shopHTML(p,prods){
-  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${HAS_API?`<button class="btn ghost" type="button" data-act="checkPrices" title="Mira si han bajado tus elegidos y favoritos">Comprobar precios</button>`:""}${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Crear lista</button><button class="btn primary" type="button" data-act="newProd">Crear producto</button></span></div>`;
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${HAS_API?`<button class="btn ghost" type="button" data-act="checkPrices" title="Revisa en la tienda el precio de hoy de tus productos con enlace"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;margin-right:6px"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Comprobar precios</button>`:""}${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Crear lista</button><button class="btn primary" type="button" data-act="newProd">Crear producto</button></span></div>`;
   const emptyLists=listsOf(p.id).filter(l=>!prods.some(x=>x.busco===l.nombre));
   if(!prods.length&&!emptyLists.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
   const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
@@ -3174,7 +3223,7 @@ document.addEventListener("click",e=>{
     case "newProdHere": if(r){ S.addFromPlan=r.id; openProd(null,{estanciaId:r.id}); } break;
     case "openMenu": { const m=$("projMenu"); m.open=true; fitMenu(m); break; }
     case "bell": openBell(); break;
-    case "checkPrices": checkPrices(true); break;
+    case "checkPrices": openPriceCheck(); break;
     case "askNotify": try{ Notification.requestPermission().then(p=>{ toast(p==="granted"?"Te avisaré en el móvil cuando baje un precio.":"Sin permiso para avisos: los verás solo dentro de la app."); if($("dlgBell").open) $("bellBody").innerHTML=bellHTML(); }); }catch{ toast("Este navegador no permite avisos."); } break;
     case "newMed": openMed(null); break;
     case "dxf": $("dxfIn").value=""; $("dxfIn").click(); break;
