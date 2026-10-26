@@ -342,6 +342,12 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .rl-o{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;width:100%}
 .rl-o:hover{background:var(--bg)}
 .rl-o[aria-pressed="true"]{border-color:var(--red);background:var(--surface)}
+.rl-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px}
+.rl-add{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--blue-ink);border-color:var(--blue);background:var(--blue-soft)}
+.rl-add:hover:not([disabled]){background:var(--blue);color:var(--blue-ink)}
+.rl-add[disabled]{opacity:.45;cursor:not-allowed}
+.rl-add .sh{display:none}
+@media (max-width:560px){ .rl-add .lg{display:none} .rl-add .sh{display:inline} .rl-add{padding:6px 9px} }
 .rl-o img,.rl-sw{width:44px;height:44px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line)}
 .rl-t{min-width:0}.rl-t b{display:block;font-weight:600;overflow-wrap:anywhere}.rl-t small{display:block;font-size:12px;color:var(--muted)}
 .rl-p{font-size:14px}
@@ -616,7 +622,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 
 <!-- Producto -->
 <dialog id="dlgProd"><form method="dialog" id="fProd">
-  <div class="dlg-h"><h2 id="dlgProdT">Nuevo producto</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="d_ok">Añadir</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
+  <div class="dlg-h"><h2 id="dlgProdT">Crear producto</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="d_ok">Crear</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
       <div class="field"><label for="d_url">Enlace del producto</label><input id="d_url" type="url" placeholder="Pega el enlace de IKEA, Leroy Merlin, Amazon…"><span class="hint" id="d_urlmsg"></span><input type="hidden" id="d_img"></div>
     <details class="field" id="d_more"><summary>Rellenar precio y medidas desde la página</summary>
@@ -667,7 +673,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 
 <!-- Lista -->
 <dialog id="dlgList"><form method="dialog" id="fList">
-  <div class="dlg-h"><h2 id="dlgListT">Nueva lista</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="l_ok">Crear lista</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
+  <div class="dlg-h"><h2 id="dlgListT">Crear lista</h2><div class="dlg-hb"><button class="btn primary" value="ok" id="l_ok">Crear lista</button><button class="btn ghost sm" value="cancel" formnovalidate>Cerrar</button></div></div>
   <div class="dlg-b">
     <div class="field"><label for="l_nombre">Nombre</label><input id="l_nombre" required placeholder="Mueble de TV, sofá, lámpara de techo…"></div>
     <div class="field"><label for="l_room">Estancia</label><select id="l_room"></select></div>
@@ -1325,7 +1331,7 @@ function planHTML(p,r){
   const myProds=S.productos.filter(x=>x.proyectoId===p.id&&+x.ancho>0&&+x.fondo>0&&x.estado!=="descartado");
   const area=(polyArea(P)/10000).toLocaleString("es-ES",{maximumFractionDigits:1});
   const v3=S.vista==="3d";
-  return `<div class="toolbar">${chips}<div class="tb-right">${es?"":`<button class="btn primary sm" type="button" data-act="newProdHere">＋ Añadir producto</button>`}<div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="icon-btn pal" type="button" data-act="finishes" aria-label="Paredes y suelo" title="Paredes y suelo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="#F86C2F" stroke="none"/><circle cx="10" cy="7" r="1.3" fill="#8DB6C7" stroke="none"/><circle cx="14.5" cy="7" r="1.3" fill="#6D0101" stroke="none"/><circle cx="17.5" cy="10.5" r="1.3" fill="#9DAF8A" stroke="none"/></svg></button><details class="menu"><summary class="icon-btn" aria-label="Ajustes de la estancia" title="Ajustes de la estancia"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></summary>
+  return `<div class="toolbar">${chips}<div class="tb-right">${es?"":`<button class="btn primary sm" type="button" data-act="newProdHere">＋ Crear producto</button>`}<div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="icon-btn pal" type="button" data-act="finishes" aria-label="Paredes y suelo" title="Paredes y suelo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="#F86C2F" stroke="none"/><circle cx="10" cy="7" r="1.3" fill="#8DB6C7" stroke="none"/><circle cx="14.5" cy="7" r="1.3" fill="#6D0101" stroke="none"/><circle cx="17.5" cy="10.5" r="1.3" fill="#9DAF8A" stroke="none"/></svg></button><details class="menu"><summary class="icon-btn" aria-label="Ajustes de la estancia" title="Ajustes de la estancia"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></summary>
       <div class="menu-p" role="menu"><button type="button" role="menuitem" data-act="editRoom">Medidas de ${esc(r.nombre)}</button><button type="button" role="menuitem" data-act="editShape">Dibujar la forma</button><button type="button" role="menuitem" data-act="dxf">Importar plano (DXF)</button>${r.calco?`${r.calco.poly?`<button type="button" role="menuitem" data-act="calcoShape">Usar el contorno del plano</button>`:""}<button type="button" role="menuitem" data-act="calcoOff">Quitar el plano de fondo</button>`:""}<hr><button type="button" role="menuitem" data-act="newRoom">Añadir otra estancia</button></div></details>`}</div></div>
   <div class="planner">
     <div class="plan-main"><div class="canvas">
@@ -1993,10 +1999,12 @@ function roomListsHTML(p,r){
     return `<details class="rl-d" data-rl="${esc(n)}"${open?" open":""}>
       <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Sin elegir":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
       <div class="rl-b">${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0, sw=prodHex(x);
-        return `<button type="button" class="rl-o" data-choose="${esc(x.id)}" aria-pressed="${on}">
+        const enPlano=S.items.filter(i=>i.estanciaId===r.id&&i.productoId===x.id).length;
+        return `<div class="rl-row"><button type="button" class="rl-o" data-choose="${esc(x.id)}" aria-pressed="${on}">
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
-          <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":""].filter(Boolean).map(esc).join(" · ")}</small></span>
-          <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span><span class="radio"></span></button>`; }).join("")}
+          <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":"",enPlano?(enPlano>1?`${enPlano} en el plano`:"en el plano"):""].filter(Boolean).map(esc).join(" · ")}</small></span>
+          <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span><span class="radio"></span></button>
+          <button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div>`; }).join("")}
         <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button><button class="btn ghost sm" type="button" data-editlist="${esc(n)}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar lista</button></div></div>
     </details>`; }).join("")}
     ${total?`<div class="rl-tot"><span>Lo elegido en ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
@@ -2011,7 +2019,7 @@ function listsHTML(p,r){
         ${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0;
           return `<button type="button" class="opt" data-choose="${esc(x.id)}" aria-pressed="${on}"><span class="radio"></span><span class="on">${esc(x.nombre)}<small>${esc(x.tienda||"")}${fits?`${x.tienda?" · ":""}${cm(x.ancho)}×${cm(x.fondo)}`:`${x.tienda?" · ":""}sin medidas`}${x.estado==="comprado"?" · comprado":""}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></button>`}).join("")}</div>`}).join("")
     :`<p class="muted" style="margin:0;font-size:13px">Crea una lista por cada cosa que buscas aquí (mueble de TV, sofá, lámpara…), mete las opciones que vayas viendo y pulsa una para verla en el plano.</p>`}
-    <button class="btn sm" type="button" data-act="newList">+ Nueva lista</button></div>`;
+    <button class="btn sm" type="button" data-act="newList">+ Crear lista</button></div>`;
 }
 const choose=id=>held(()=>choose0(id));
 async function choose0(id){
@@ -2195,7 +2203,7 @@ let edL=null;
 function openList(preset={}){
   const l=preset.edit?listsOf(S.proyId).find(x=>x.nombre===preset.edit):null;
   edL=l?{nombre:l.nombre,estanciaId:l.estanciaId||""}:null;
-  $("dlgListT").textContent=l?"Editar lista":"Nueva lista"; $("l_ok").textContent=l?"Guardar":"Crear lista";
+  $("dlgListT").textContent=l?"Editar lista":"Crear lista"; $("l_ok").textContent=l?"Guardar":"Crear lista";
   $("l_nombre").value=l?.nombre||""; fill($("l_room"),roomOpts(S.proyId),l?l.estanciaId||"":preset.estanciaId||"");
   const ld=l?S.listas.find(x=>x.proyectoId===S.proyId&&x.nombre===l.nombre):null; if(edL) edL.medidaId=ld?.medidaId||"";
   fill($("l_med"),[["","Ninguna"],...S.medidas.filter(m=>m.proyectoId===S.proyId).map(m=>[m.id,medText(m)])],ld?.medidaId||"");
@@ -2789,7 +2797,7 @@ function compareHTML(list){
     ${maxP!==null&&min!==null&&maxP>min?`<p class="muted" style="font-size:12px;margin:6px 0 0">Entre la opción más barata y la más cara hay ${eur.format(maxP-min)} de diferencia.</p>`:""}`;
 }
 function shopHTML(p,prods){
-  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${HAS_API?`<button class="btn ghost" type="button" data-act="checkPrices" title="Mira si han bajado tus elegidos y favoritos">Comprobar precios</button>`:""}${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Nueva lista</button><button class="btn primary" type="button" data-act="newProd">Añadir producto</button></span></div>`;
+  const head=`<div class="toolbar"><span class="label">Lo que has ido viendo, agrupado por lo que buscas</span><span class="tb-right">${HAS_API?`<button class="btn ghost" type="button" data-act="checkPrices" title="Mira si han bajado tus elegidos y favoritos">Comprobar precios</button>`:""}${listsOf(p.id).length>1?`<button class="btn ghost" type="button" data-act="foldAll">${listsOf(p.id).every(l=>S.foldedLists.has(l.nombre+"\u0001"+(roomName(l.estanciaId)||"Toda la casa")))?"Desplegar todas":"Plegar todas"}</button>`:""}<button class="btn" type="button" data-act="newList">Crear lista</button><button class="btn primary" type="button" data-act="newProd">Crear producto</button></span></div>`;
   const emptyLists=listsOf(p.id).filter(l=>!prods.some(x=>x.busco===l.nombre));
   if(!prods.length&&!emptyLists.length) return head+`<div class="blank"><h2>Guarda lo que vas viendo</h2><p>¿Buscas sofá y has visto diez? Apunta cada uno con su precio, tienda, enlace y medidas bajo «Sofá del salón». Aquí los tienes juntos para comparar, y con las medidas puedes colocarlos en el plano para ver si caben.</p></div>`;
   const groups={}; prods.forEach(x=>(groups[(x.busco||"Sin agrupar")+"\u0001"+(roomName(x.estanciaId)||"Toda la casa")] ||= []).push(x));
@@ -2910,7 +2918,7 @@ $("fRoom").addEventListener("submit",async ev=>{
 
 let edD=null;
 function openProd(x,preset={}){
-  edD=x||null; S.prodFromCj=null; clearAuto(); $("dlgProdT").textContent=x?"Editar producto":"Añadir producto"; $("d_ok").textContent=x?"Guardar":"Añadir";
+  edD=x||null; S.prodFromCj=null; clearAuto(); $("dlgProdT").textContent=x?"Editar producto":"Crear producto"; $("d_ok").textContent=x?"Guardar":"Crear";
   const pid=x?.proyectoId||S.proyId;
   $("needs").innerHTML=[...new Set(S.productos.filter(y=>y.proyectoId===pid).map(y=>y.busco))].map(n=>`<option value="${esc(n)}">`).join("");
   $("shops").innerHTML=[...new Set(S.productos.map(y=>y.tienda).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
@@ -3112,7 +3120,8 @@ document.addEventListener("click",e=>{
   if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); return; }
   if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
     if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
-    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); toast(`Colocado en ${target.nombre}. Arrástralo a su sitio.`); return; }
+    if(!(+x.ancho>0&&+x.fondo>0)){ toast("Añade sus medidas para ponerlo en el plano."); openProd(x); return; }
+    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x),forma:x.forma||""}); window.scrollTo({top:0,behavior:"smooth"}); toast(`«${x.nombre}» añadido al plano. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
   if(d.photo){ e.stopPropagation(); const [mid,i]=d.photo.split("|"); const m=S.medidas.find(x=>x.id===mid); if(m?.fotos?.[+i]) showPhoto(m.fotos[+i]); return; }
