@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#FFF3FC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Proletia">
+<meta name="apple-mobile-web-app-title" content="Proyectia">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
@@ -20,7 +20,7 @@ addEventListener("appinstalled", () => { window.__pwaPrompt = null; const b = do
 <script>window.SUPA = { url: "https://nydbggxqvukjitvuxenz.supabase.co", key: "sb_publishable_GqeFHk0MzYtc5JVOwqEiGw_eoAaIDQu" };</script>
 </head>
 <body>
-<title>Proletia</title>
+<title>Proyectia</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -587,8 +587,8 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 
 <div class="wrap">
   <header class="top">
-    <div class="brand"><svg role="img" aria-label="Logo de Proletia"><use href="#logo"/></svg>
-      <div class="wordmark">Proletia<small>Casa, reformas y compras</small></div></div>
+    <div class="brand"><svg role="img" aria-label="Logo de Proyectia"><use href="#logo"/></svg>
+      <div class="wordmark">Proyectia<small>Casa, reformas y compras</small></div></div>
     <div class="actions">
       <span class="mode" id="mode" hidden>Conectando…</span>
       <button class="icon-btn" id="btnBell" type="button" data-act="bell" aria-label="Rebajas de tus productos" title="Rebajas de tus productos" hidden><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellN"></span></button>
@@ -2589,7 +2589,7 @@ async function importContacts(list){
   const nuevos=list.map(x=>({nombre:x.nombre||x.org||x.tels[0]||"Sin nombre",oficio:x.cargo||"",tel:x.tels[0]||"",email:x.emails[0]||"",notas:[x.org&&x.nombre?x.org:"",x.notas||""].filter(Boolean).join(" · ")}))
     .filter(c=>!(c.tel&&have.has(normTel(c.tel)))&&!(!c.tel&&haveN.has(c.nombre.toLowerCase())));
   const rep=list.length-nuevos.length;
-  if(!nuevos.length){ toast(rep?"Esos contactos ya estaban en Proletia.":"No había contactos que importar."); return; }
+  if(!nuevos.length){ toast(rep?"Esos contactos ya estaban en Proyectia.":"No había contactos que importar."); return; }
   await held(async()=>{ for(const c of nuevos) await save("contactos",uid(),c).catch(()=>{}); });
   toast(`${nuevos.length} contacto${nuevos.length>1?"s":""} importado${nuevos.length>1?"s":""}${rep?` (${rep} ya estaba${rep>1?"n":""})`:""}`,undo);
 }
@@ -2678,7 +2678,7 @@ const listMed=(pid,nombre)=>{ const l=S.listas.find(l=>l.proyectoId===pid&&l.nom
 function medidasHTML(p){
   const ms=S.medidas.filter(m=>m.proyectoId===p.id).sort((a,b)=>(a.creado||0)-(b.creado||0));
   const head=`<div class="toolbar"><span class="label">Lo que has medido con el metro, para buscar muebles que encajen</span><button class="btn primary" type="button" data-act="newMed">Añadir medida</button></div>`;
-  if(!ms.length) return head+`<div class="blank"><h2>Apunta tus medidas</h2><p>El hueco de la lavadora, el espacio entre la ventana y la esquina, el ancho del pasillo… Guárdalas aquí con su ancho, fondo y alto. Luego puedes unir una lista de productos a un hueco y Proletia te dice qué opciones caben y cuánto sobra.</p></div>`;
+  if(!ms.length) return head+`<div class="blank"><h2>Apunta tus medidas</h2><p>El hueco de la lavadora, el espacio entre la ventana y la esquina, el ancho del pasillo… Guárdalas aquí con su ancho, fondo y alto. Luego puedes unir una lista de productos a un hueco y Proyectia te dice qué opciones caben y cuánto sobra.</p></div>`;
   const prods=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado");
   return head+`<div class="meds">${ms.map(m=>{
     const fitsN=prods.filter(x=>fitsMed(x,m)?.ok).length, lists=S.listas.filter(l=>l.proyectoId===p.id&&l.medidaId===m.id).map(l=>l.nombre);
