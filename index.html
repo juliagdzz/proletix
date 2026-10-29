@@ -339,9 +339,21 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .rl-s{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rl-s i{color:var(--muted)}
 .rl-c{font-size:12px;color:var(--muted)}
 .rl-b{display:flex;flex-direction:column;gap:4px;padding:8px 10px 10px}
-.rl-o{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;width:100%}
+.rl-o{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;width:100%}
 .rl-o:hover{background:var(--bg)}
-.rl-o[aria-pressed="true"]{border-color:var(--red);background:var(--surface)}
+.rl-o.on{border-color:var(--ok);background:var(--surface)}
+.rl-acts{display:flex;gap:6px;align-items:center}
+.rl-bud{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.btn.rl-bud.on,.btn.rl-bud[aria-pressed="true"]{background:#E3F3E9;color:var(--ok);border-color:var(--ok);font-weight:700}
+.rl-bud .sh{display:none}
+@media (max-width:560px){ .rl-bud .lg{display:none} .rl-bud .sh{display:inline} .rl-acts{flex-direction:column;align-items:stretch} .rl-bud{padding:6px 9px} }
+.ba-h{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:15px;color:var(--granate)}
+.ba-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ba-r{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px}
+.ba-t{display:flex;flex-direction:column;min-width:0}.ba-t b{overflow-wrap:anywhere}.ba-t small{color:var(--muted);font-size:12px}
+.ba-r img,.ba-r .ba-sw{width:40px;height:40px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+.ba-in summary{cursor:pointer;font-weight:600;color:var(--granate);margin:8px 0}
+@media (max-width:560px){ .ba-r{grid-template-columns:40px minmax(0,1fr) auto} .ba-r .num{display:none} }
 .rl-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px}
 .rl-add{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--blue-ink);border-color:var(--blue);background:var(--blue-soft)}
 .rl-add:hover:not([disabled]){background:var(--blue);color:var(--blue-ink)}
@@ -833,6 +845,12 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 </form></dialog>
 
 <button class="undo-fab" id="undoFab" type="button" data-act="undo" hidden aria-label="Deshacer el último cambio"><span aria-hidden="true">↶</span> Deshacer</button>
+
+<!-- Añadir productos al presupuesto -->
+<dialog id="dlgBudAdd"><form method="dialog">
+  <div class="dlg-h"><h2>Añadir al presupuesto</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
+  <div class="dlg-b" style="display:block"><p class="muted" style="margin:0 0 10px;font-size:14px">Pulsa «€ Al presupuesto» en lo que vayas a comprar y se suma al total.</p><div id="budAddBody"></div></div>
+</form></dialog>
 
 <!-- Compartir -->
 <dialog id="dlgShare"><form method="dialog">
@@ -2477,25 +2495,26 @@ function roomListsHTML(p,r){
   S.productos.filter(x=>x.proyectoId===pid&&x.estado!=="descartado"&&(x.estanciaId===r.id||!x.estanciaId)).forEach(x=>(g[x.busco||"Sin lista"] ||= []).push(x));
   S.listas.filter(l=>l.proyectoId===pid&&(l.estanciaId===r.id||!l.estanciaId)).forEach(l=>{ g[l.nombre] ||= []; });
   const names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
-  const head=`<div class="rl-h"><h3>Muebles de ${esc(r.nombre)}</h3><span class="muted" style="font-size:13px">Abre una lista y pulsa un producto para verlo en el plano</span></div>`;
+  const head=`<div class="rl-h"><h3>Muebles de ${esc(r.nombre)}</h3><span class="muted" style="font-size:13px">Abre una lista: «Al presupuesto» lo suma a lo que vas a gastar y «Al plano» lo coloca en la estancia</span></div>`;
   if(!names.length) return `<section class="rl">${head}<div class="rl-empty">Aún no hay listas para esta estancia. Créalas en <button class="btn sm" type="button" data-tab="productos">Productos</button> (por ejemplo «Mueble de TV» o «Sofá»), mete las opciones que veas y aparecerán aquí para elegir.</div></section>`;
   const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
-  const total=names.reduce((s,n)=>s+(+(win(n)?.precio)||0),0);
+  const ons=n=>g[n].filter(x=>x.estado==="comprado"||x.estado==="elegido");
+  const total=names.reduce((s,n)=>s+ons(n).reduce((t,x)=>t+(+x.precio||0),0),0);
   return `<section class="rl">${head}${names.map(n=>{
     const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9)), w=win(n), open=S.openLists.has(n);
     const lid=list[0]?.estanciaId??(S.listas.find(l=>l.proyectoId===pid&&l.nombre===n)?.estanciaId||"");
     return `<details class="rl-d" data-rl="${esc(n)}"${open?" open":""}>
-      <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Sin elegir":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
+      <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${ons(n).length>1?`<b>${ons(n).length} en el presupuesto</b> · ${eur.format(ons(n).reduce((t,x)=>t+(+x.precio||0),0))}`:w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Nada en el presupuesto":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
       <div class="rl-b">${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0, sw=prodHex(x);
         const enPlano=S.items.filter(i=>i.estanciaId===r.id&&i.productoId===x.id).length;
-        return `<div class="rl-row"><button type="button" class="rl-o" data-choose="${esc(x.id)}" aria-pressed="${on}">
+        return `<div class="rl-row"><div class="rl-o${on?" on":""}" data-editprod="${esc(x.id)}" role="button" tabindex="0" title="Ver o editar el producto">
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
           <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":"",enPlano?(enPlano>1?`${enPlano} en el plano`:"en el plano"):""].filter(Boolean).map(esc).join(" · ")}</small></span>
-          <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span><span class="radio"></span></button>
-          <button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div>`; }).join("")}
+          <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></div>
+          <div class="rl-acts">${budBtn(x)}<button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div></div>`; }).join("")}
         <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button><button class="btn ghost sm" type="button" data-editlist="${esc(n)}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar lista</button></div></div>
     </details>`; }).join("")}
-    ${total?`<div class="rl-tot"><span>Lo elegido en ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
+    ${total?`<div class="rl-tot"><span>En el presupuesto de ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
 }
 function listsHTML(p,r){
   const g=groupsIn(p.id,r.id), names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"es"));
@@ -2582,6 +2601,32 @@ function rotPreview(it,rot){
 }
 
 /* ---------- Presupuesto ---------- */
+// Botón «Al presupuesto»: un producto está en el presupuesto si está elegido o comprado
+function budBtn(x){
+  const on=x.estado==="elegido"||x.estado==="comprado", bought=x.estado==="comprado";
+  return `<button type="button" class="btn sm rl-bud${on?" on":""}" data-budget="${esc(x.id)}" aria-pressed="${on}" title="${bought?"Ya está comprado":on?"Quitar del presupuesto":"Sumar al presupuesto"}"${bought?" disabled":""}>${on?`<span class="lg">${bought?"✓ Comprado":"✓ En presupuesto"}</span><span class="sh">✓ Presup.</span>`:`<span class="lg">€ Al presupuesto</span><span class="sh">€ Presup.</span>`}</button>`;
+}
+function budToggle(id){
+  const x=S.productos.find(y=>y.id===id); if(!x) return;
+  if(x.estado==="comprado"){ toast("Ya está comprado. Si quieres, cámbialo en su ficha."); return; }
+  const on=x.estado==="elegido", {id:_,...b}=x;
+  save("productos",id,{...b,estado:on?"favorito":"elegido"}).catch(()=>{});
+  toast(on?`«${x.nombre}» quitado del presupuesto`:`«${x.nombre}» sumado al presupuesto${x.precio?` (${eur.format(+x.precio)})`:""}`);
+  if($("dlgBudAdd").open) setTimeout(fillBudAdd,30);
+}
+// Ventana «Añadir productos al presupuesto»
+function fillBudAdd(){
+  const p=proyecto(); if(!p) return;
+  const prods=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado");
+  const out=prods.filter(x=>x.estado!=="elegido"&&x.estado!=="comprado"), inn=prods.filter(x=>x.estado==="elegido"||x.estado==="comprado");
+  const groups={}; out.forEach(x=>(groups[x.busco||"Sin lista"] ||= []).push(x));
+  const row=x=>`<li class="ba-r">${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="ba-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}<span class="ba-t"><b>${esc(x.nombre)}</b><small>${esc([x.tienda,roomName(x.estanciaId)].filter(Boolean).join(" · "))}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):"—"}</span>${budBtn(x)}</li>`;
+  $("budAddBody").innerHTML=(out.length?Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es")).map(g=>`<h4 class="ba-h">${listIcon(g)}${esc(g)}</h4><ul class="ba-l">${groups[g].map(row).join("")}</ul>`).join("")
+      :`<p class="muted" style="margin:0">Todos tus productos ya están en el presupuesto.</p>`)
+    +`<div style="margin:14px 0"><button class="btn" type="button" data-act="budNewProd">＋ Crear producto nuevo</button></div>`
+    +(inn.length?`<details class="ba-in"><summary>Ya en el presupuesto (${inn.length})</summary><ul class="ba-l">${inn.map(row).join("")}</ul></details>`:"");
+}
+function openBudAdd(){ fillBudAdd(); $("dlgBudAdd").showModal(); }
 function budgetRows(p){
   const prods=S.productos.filter(x=>x.proyectoId===p.id&&(x.estado==="elegido"||x.estado==="comprado"));
   const tasks=S.tareas.filter(x=>x.proyectoId===p.id), gastos=S.gastos.filter(x=>x.proyectoId===p.id);
@@ -2605,7 +2650,7 @@ function budgetHTML(p){
     <div class="fig"><span class="label">Pagado</span><span class="v">${eur.format(real)}</span><span class="s">${prev?`${Math.round(real/prev*100)} % de lo previsto`:"Nada todavía"}</span></div>
     <div class="fig"><span class="label">${max?(left>=0?"Te queda":"Te pasas"):"Por decidir"}</span><span class="v" style="${max&&left<0?"color:var(--bad)":""}">${max?eur.format(Math.abs(left)):open.length}</span><span class="s">${max?(open.length?`y ${open.length} ${open.length>1?"listas":"lista"} sin elegir`:"todo decidido"):(open.length>1?"listas sin producto elegido":"lista sin producto elegido")}</span></div>
   </section>`;
-  const head=`<div class="toolbar"><span class="label">Todo lo que cuesta este proyecto, por estancias</span><button class="btn primary" type="button" data-act="newGasto">Añadir gasto</button></div>`;
+  const head=`<div class="toolbar"><span class="label">Todo lo que cuesta este proyecto, por estancias</span><span class="tb-right"><button class="btn primary" type="button" data-act="budAdd">＋ Añadir productos</button><button class="btn" type="button" data-act="newGasto">Añadir gasto</button></span></div>`;
   if(!rows.length) return figs+head+`<div class="blank"><h2>Aún no hay nada que sumar</h2><p>Aquí se suman solos los productos que elijas en cada lista, tus conjuntos, las tareas de la reforma con su coste y los gastos sueltos que añadas (transporte, montaje, licencia de obra…).</p></div>`;
   const roomsOrder=["",...roomsOf(p.id).map(r=>r.id)];
   const extra=[...new Set(rows.map(r=>r.room))].filter(id=>!roomsOrder.includes(id));
@@ -2622,7 +2667,7 @@ function budgetHTML(p){
   });
   return figs+head+`<div class="tbl-wrap"><table class="budget"><thead><tr><th>Concepto</th><th>Tipo</th><th>Estado</th><th class="r">Previsto</th><th class="r">Pagado</th></tr></thead>
     <tbody>${body}<tr class="tot"><td colspan="3">Total</td><td class="r num">${eur.format(prev)}</td><td class="r num">${eur.format(real)}</td></tr></tbody></table></div>
-    ${open.length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Sin elegir todavía: ${open.map(k=>esc(k.split("\u0001")[1])).join(", ")}. <button class="btn ghost sm" type="button" data-tab="productos">Ir a Productos</button></p>`:""}`;
+    ${open.length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Sin elegir todavía: ${open.map(k=>esc(k.split("\u0001")[1])).join(", ")}. <button class="btn ghost sm" type="button" data-act="budAdd">Añadir al presupuesto</button></p>`:""}`;
 }
 let edG=null;
 function openGasto(g){
@@ -3626,7 +3671,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-budget],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -3634,6 +3679,7 @@ document.addEventListener("click",e=>{
   if(d.tab){ S.editShape=false; S.view="proyecto"; S.tab=d.tab; window.scrollTo(0,0); lsSet("proletix:tab",S.tab); render(); return; }
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.cam){ moveCam(d.cam); return; }
+  if(d.budget){ budToggle(d.budget); return; }
   if(d.shcopy){ const l=shareLink(d.shcopy); (navigator.clipboard?.writeText(l)||Promise.reject()).then(()=>toast("Enlace copiado. Pégalo en WhatsApp o en un correo."),()=>{ $("shLink")?.select(); toast("Copia el enlace seleccionado"); }); return; }
   if(d.shsend){ navigator.share({title:"Proyectia",text:`Te comparto mi proyecto «${proyecto()?.nombre||""}» en Proyectia`,url:shareLink(d.shsend)}).catch(()=>{}); return; }
   if(d.shimport){ importShare(d.shimport); return; }
@@ -3725,6 +3771,8 @@ document.addEventListener("click",e=>{
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
     case "myProjects": S.view="proyectos"; render(); window.scrollTo(0,0); break;
     case "account": openAccount(); break;
+    case "budAdd": openBudAdd(); break;
+    case "budNewProd": $("dlgBudAdd").close(); openProd(null,{}); setTimeout(()=>{ $("d_estado").value="elegido"; },0); break;
     case "lockItem": { const it=selItem(); if(it){ saveItem(it,{bloq:!it.bloq}); toast(it.bloq?"Desbloqueado: ya puedes moverlo":"Bloqueado: ya no se moverá sin querer"); } break; }
     case "unlockAll": { const p0=proyecto(), r0=p0&&room(p0); if(!r0) break; const its=S.items.filter(i=>i.estanciaId===r0.id&&i.bloq);
       // se guardan todos de una vez y se repinta una sola vez, para que no se quede pensando
