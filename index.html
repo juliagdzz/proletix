@@ -534,6 +534,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .wl-n{width:24px;height:24px;border-radius:50%;background:var(--blue-ink);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
 .fx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .fx-list li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.fx-ic.hole{background:var(--blue-soft)}
 .fx-ic{width:28px;height:28px;border-radius:8px;background:var(--wall);color:#fff;display:grid;place-items:center;font-size:14px;flex:none}
 .fx-t{flex:1;display:flex;flex-direction:column;min-width:0}.fx-t small{color:var(--muted);font-size:12px}
 .fx-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;border-radius:12px;background:var(--blue-soft);border:1px solid var(--blue)}
@@ -1328,7 +1329,7 @@ function shapeHandlesSVG(P,hs){
   + P.map((p,i)=>{ const q=P[(i+1)%P.length], mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2;
     return Math.hypot(q[0]-p[0],q[1]-p[1])<hs*5?"":`<g data-mid="${i}" style="cursor:copy"><circle cx="${mx}" cy="${my}" r="${hs*.75}" fill="var(--surface)" stroke="var(--red)" stroke-width="${hs*.2}"/><path d="M${mx-hs*.4} ${my}H${mx+hs*.4}M${mx} ${my-hs*.4}V${my+hs*.4}" stroke="var(--red)" stroke-width="${hs*.22}"/></g>`; }).join("")
   + P.map((p,i)=>`<circle data-vtx="${i}" cx="${p[0]}" cy="${p[1]}" r="${hs}" fill="${sel.t==="v"&&sel.i===i?"var(--red)":"var(--surface)"}" stroke="var(--red)" stroke-width="${hs*.3}" style="cursor:move"/>`).join("")
-  + (isRect(P)?"":P.map((p,i)=>{ const q=P[(i+1)%P.length], [nx,ny]=inward(P,i), mx=(p[0]+q[0])/2+nx*hs*2.6, my=(p[1]+q[1])/2+ny*hs*2.6;
+  + (P.map((p,i)=>{ const q=P[(i+1)%P.length], [nx,ny]=inward(P,i), mx=(p[0]+q[0])/2+nx*hs*2.6, my=(p[1]+q[1])/2+ny*hs*2.6;
       return `<g pointer-events="none"><circle cx="${mx}" cy="${my}" r="${hs*1.1}" fill="var(--blue-ink)"/><text x="${mx}" y="${my}" font-size="${hs*1.3}" text-anchor="middle" dominant-baseline="central" style="fill:#fff;font-weight:700">${i+1}</text></g>`; }).join(""));
 }
 // Panel único de la estancia: nombre y medidas, paredes, y vigas, pilares y tabiques con las medidas que hayas tomado
@@ -1338,6 +1339,7 @@ const isRect=P=>P.length===4&&P.every((p,i)=>{ const q=P[(i+1)%4]; return p[0]==
 function shapePanel(r,P){
   const {W,L}=bbox(P), rect=isRect(P), alto=techoR(r), f=S.fixForm;
   const fixed=S.items.filter(i=>i.estanciaId===r.id&&(isFixed(i)||/^Pilar/.test(i.nombre||"")));
+  const holes=S.items.filter(i=>i.estanciaId===r.id&&isHueco(i));
   const num=(id,label,v,extra="")=>`<div><label for="${id}">${label}</label><input id="${id}" type="number" min="1" step="1" inputmode="numeric" value="${v??""}"${extra}></div>`;
   const walls=P.map((p,i)=>{ const q=P[(i+1)%P.length]; return `<div class="wl"><span class="wl-n">${i+1}</span><label for="wl_${i}">Pared ${i+1}</label><input id="wl_${i}" data-wl="${i}" type="number" min="10" step="1" inputmode="numeric" value="${Math.round(Math.hypot(q[0]-p[0],q[1]-p[1]))}"><span class="muted">cm</span></div>`; }).join("");
   let form="";
@@ -1369,12 +1371,65 @@ function shapePanel(r,P){
       ${fixed.length?`<ul class="fx-list">${fixed.map(it=>{ const k=shape3d(it).f==="viga"?"viga":/^Pilar/.test(it.nombre||"")?"pilar":"tabique"; return `<li><span class="fx-ic">${k==="viga"?"▬":k==="pilar"?"■":"▮"}</span><span class="fx-t"><b>${esc(it.nombre)}</b><small>${cm(it.w)} × ${cm(it.d)} cm${k==="viga"?` · baja ${cm(it.h)} cm`:""}</small></span><button class="btn ghost sm" type="button" data-fxedit="${esc(it.id)}">Editar</button><button class="icon-btn sm danger" type="button" data-fxdel="${esc(it.id)}" aria-label="Borrar ${esc(it.nombre)}">✕</button></li>`; }).join("")}</ul>`:`<p class="muted" style="margin:0;font-size:13px">Añade lo que hay en la habitación y no se mueve, con las medidas que hayas tomado.</p>`}
       ${form||`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-fxnew="viga">＋ Viga</button><button class="btn sm" type="button" data-fxnew="pilar">＋ Columna o pilar</button><button class="btn sm" type="button" data-fxnew="tabique">＋ Tabique</button></div>`}
     </section>
-    <section class="re-s"><h4>4 · Puertas, ventanas y colores</h4>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="shapeDone" data-then="doors">🚪 Puertas y ventanas</button><button class="btn sm" type="button" data-act="finishes">🎨 Paredes y suelo</button><button class="btn sm ghost" type="button" data-act="dxf">Importar plano (DXF)</button>
+    <section class="re-s"><h4>4 · Puertas y ventanas</h4>
+      ${holes.length?`<ul class="fx-list">${holes.map(it=>{ const hw=holeWall(r,it); return `<li><span class="fx-ic hole">${isPuerta(it)?"🚪":"🪟"}</span><span class="fx-t"><b>${esc(it.nombre)}</b><small>${cm(it.w)} cm · pared ${hw.i+1} · a ${cm(hw.s)} cm de la esquina con la pared ${(hw.i-1+P.length)%P.length+1}${it.tipo==="ventana"?` · a ${cm(holeSill(it))} cm del suelo`:""}</small></span><button class="btn ghost sm" type="button" data-hledit="${esc(it.id)}">Editar</button><button class="icon-btn sm danger" type="button" data-fxdel="${esc(it.id)}" aria-label="Borrar ${esc(it.nombre)}">✕</button></li>`; }).join("")}</ul>`:`<p class="muted" style="margin:0;font-size:13px">Elige en qué pared va y a cuántos centímetros está de la esquina.</p>`}
+      ${S.holeForm?holeFormHTML(r,P):`<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-hlnew="puerta">＋ Puerta</button><button class="btn sm" type="button" data-hlnew="puerta2">＋ Puerta doble</button><button class="btn sm" type="button" data-hlnew="ventana">＋ Ventana</button><button class="btn sm" type="button" data-hlnew="balconera">＋ Balconera</button></div>`}
+    </section>
+    <section class="re-s"><h4>5 · Colores y plano de fondo</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="finishes">🎨 Paredes y suelo</button><button class="btn sm ghost" type="button" data-act="dxf">Importar plano (DXF)</button>
       ${r.calco?`${r.calco.poly?`<button class="btn sm ghost" type="button" data-act="calcoShape">Usar el contorno del plano</button>`:""}<button class="btn sm ghost" type="button" data-act="calcoOff">Quitar el plano de fondo</button>`:""}</div>
     </section>
     <button class="btn danger sm" type="button" data-act="delRoom" style="align-self:flex-start">Borrar esta estancia</button>
   </div>`;
+}
+/* Puertas y ventanas colocadas con medidas: pared, distancia a una esquina y, en ventanas, altura */
+const holeSill=it=>it.z!=null&&it.z!==""?+it.z:/balconera/i.test(it.nombre||"")?0:90;
+const holeTall=it=>+it.h||(/balconera/i.test(it.nombre||"")?220:isPuerta(it)?210:130);
+// En qué pared está y a cuántos cm de su primera esquina (P[i]) empieza el hueco
+function holeWall(r,it){
+  const P=pts(r), {fw,fd}=footprint(it), cx=it.x+fw/2, cy=it.y+fd/2; let best=null;
+  P.forEach((p,i)=>{ const q=P[(i+1)%P.length], dx=q[0]-p[0], dy=q[1]-p[1], L2=dx*dx+dy*dy; if(L2<1) return;
+    const t=Math.max(0,Math.min(1,((cx-p[0])*dx+(cy-p[1])*dy)/L2)), dist=Math.hypot(cx-p[0]-dx*t,cy-p[1]-dy*t);
+    if(!best||dist<best.dist) best={i,dist,len:Math.sqrt(L2),t}; });
+  if(!best) return {i:0,s:0,len:0};
+  return {i:best.i,len:best.len,s:Math.max(0,Math.round(best.t*best.len-(+it.w)/2))};
+}
+function holeFormHTML(r,P){
+  const f=S.holeForm, it=f.id&&S.items.find(x=>x.id===f.id), win=f.tipo==="ventana"||f.tipo==="balconera";
+  const wl=i=>{ const p=P[i], q=P[(i+1)%P.length]; return Math.round(Math.hypot(q[0]-p[0],q[1]-p[1])); };
+  const n=P.length, prev=(+f.pared-1+n)%n, next=(+f.pared+1)%n;
+  const num=(id,label,v)=>`<div><label for="${id}">${label}</label><input id="${id}" type="number" min="0" step="1" inputmode="numeric" value="${v??""}"></div>`;
+  return `<div class="fx-form"><h4>${it?"Editar":"Nueva"} ${{puerta:"puerta",puerta2:"puerta doble",ventana:"ventana",balconera:"balconera"}[f.tipo]}</h4>
+    <div class="full"><label for="hl_pared">¿En qué pared?</label><select id="hl_pared">${P.map((_,i)=>`<option value="${i}"${+f.pared===i?" selected":""}>Pared ${i+1} · ${cm(wl(i))} cm</option>`).join("")}</select></div>
+    ${num("hl_w","Ancho del hueco (cm)",f.w)}${num("hl_s","Distancia a la esquina (cm)",f.s)}
+    <div class="full"><label for="hl_from">Medida desde la esquina con…</label><select id="hl_from"><option value="a"${f.from!=="b"?" selected":""}>la pared ${prev+1}</option><option value="b"${f.from==="b"?" selected":""}>la pared ${next+1}</option></select></div>
+    ${win?num("hl_z","Altura desde el suelo (cm)",f.z)+num("hl_h","Alto de la ventana (cm)",f.h):`<label class="full" style="display:flex;align-items:center;gap:8px;font-size:14px;text-transform:none;letter-spacing:0"><input type="checkbox" id="hl_flip" style="width:auto"${f.flip?" checked":""}> Que abra hacia el otro lado</label>`}
+    <p class="muted full" style="margin:0;font-size:12px">La distancia va desde la esquina hasta el borde del hueco. Los números de las paredes salen en el plano.</p>
+    <div class="full" style="display:flex;gap:6px"><button class="btn primary sm" type="button" data-act="hlSave">${it?"Guardar":"Añadir al plano"}</button><button class="btn ghost sm" type="button" data-act="hlCancel">Cancelar</button></div></div>`;
+}
+function hlOpen(r,tipo,it){
+  if(it){ const hw=holeWall(r,it); S.holeForm={tipo:it.tipo==="ventana"&&/balconera/i.test(it.nombre||"")?"balconera":it.tipo,id:it.id,pared:hw.i,w:it.w,s:hw.s,from:"a",z:it.tipo==="ventana"?holeSill(it):"",h:it.tipo==="ventana"?holeTall(it):"",flip:!!it.espejo}; }
+  else S.holeForm={tipo,pared:0,w:tipo==="puerta2"?140:tipo==="balconera"?160:tipo==="ventana"?120:80,s:50,from:"a",z:tipo==="ventana"?90:tipo==="balconera"?0:"",h:tipo==="ventana"?120:tipo==="balconera"?220:"",flip:false};
+  render(); setTimeout(()=>{ document.querySelector(".fx-form")?.scrollIntoView({behavior:"smooth",block:"center"}); },60);
+}
+function hlSave(r){
+  const f=S.holeForm; if(!f) return;
+  const P=pts(r), i=+$("hl_pared").value, p=P[i], q=P[(i+1)%P.length], len=Math.hypot(q[0]-p[0],q[1]-p[1])||1;
+  const w=Math.round(+$("hl_w").value||0), dist=Math.round(+$("hl_s").value||0), from=$("hl_from").value;
+  if(w<20){ toast("Escribe el ancho del hueco."); return; }
+  if(dist+w>len+0.5){ toast(`No cabe: la pared ${i+1} mide ${cm(Math.round(len))} cm.`); return; }
+  const ux=(q[0]-p[0])/len, uy=(q[1]-p[1])/len, along=from==="b"?len-dist-w/2:dist+w/2, [nx,ny]=inward(P,i);
+  const tipo=f.tipo==="balconera"?"ventana":f.tipo, d=tipo==="puerta"?w:tipo==="puerta2"?w/2:12;
+  const rot=((Math.round(Math.atan2(-nx,ny)*180/Math.PI)%360)+360)%360;
+  // las puertas empiezan en la pared y abren hacia dentro; las ventanas se quedan sobre la pared
+  const off=tipo==="ventana"?-(d/2-2):d/2, cx=p[0]+ux*along+nx*off, cy=p[1]+uy*along+ny*off;
+  const it=f.id&&S.items.find(x=>x.id===f.id), fp=footprint({w,d,rot});
+  const nombre=it?.nombre&&!/^(Puerta|Ventana|Balconera)( doble)? \d+$/.test(it.nombre)?it.nombre:`${{puerta:"Puerta",puerta2:"Puerta doble",ventana:"Ventana",balconera:"Balconera"}[f.tipo]} ${w}`;
+  const data={...(it||{}),estanciaId:r.id,tipo,nombre,w,d,rot,color:0,x:Math.round((cx-fp.fw/2)*10)/10,y:Math.round((cy-fp.fd/2)*10)/10,
+    ...(tipo==="ventana"?{z:Math.max(0,Math.round(+$("hl_z").value||0)),h:Math.max(20,Math.round(+$("hl_h").value||120))}:{espejo:!!$("hl_flip")?.checked})};
+  delete data.id; S.holeForm=null;
+  if(it) save("items",it.id,data).catch(()=>{}); else save("items",uid(),{...data,creado:Date.now()}).catch(()=>{});
+  toast(it?"Guardado":`${nombre} colocada a ${cm(dist)} cm de la esquina`);
 }
 // Guarda un elemento fijo con las medidas del formulario
 function fxSave(r){
@@ -2033,7 +2088,8 @@ function build3dRoom(r){
       if(it.tipo==="puerta2"){ add(wd+10,210,105,0xFFF8EF,.4); const dt=wd/4/best.sg.len;
         [-1,1].forEach(k=>{ const m=new T.Mesh(new T.PlaneGeometry(wd/2-3,203),mat(0x8A5A3C,glow)); m.userData.itemId=it.id; putOn(m,best.sg,best.t+k*dt,101.5,.8); G.add(m); }); }
       else if(isPuerta(it)){ add(wd+10,210,105,0xFFF8EF,.4); add(wd-4,203,101.5,0x8A5A3C,.8); }
-      else { add(wd+10,130,155,0xFFF8EF,.4); add(wd-6,118,155,0xC0D6FF,.8,{emissive:0x9DBBF0,emissiveIntensity:.35,roughness:.2}); add(3,118,155,0xFFF8EF,1.1); add(wd+16,5,88,0xFFF8EF,1.2); }
+      else { const z0=holeSill(it), hh=Math.min(holeTall(it),H-z0-2), yc=z0+hh/2;
+        add(wd+10,hh,yc,0xFFF8EF,.4); add(wd-6,hh-12,yc,0xC0D6FF,.8,{emissive:0x9DBBF0,emissiveIntensity:.35,roughness:.2}); add(3,hh-12,yc,0xFFF8EF,1.1); if(z0>5) add(wd+16,5,z0-2,0xFFF8EF,1.2); }
       return;
     }
     const g=new T.Group(), {f,h,lado}=shape3d(it), w=+it.w, d=+it.d;
@@ -3306,7 +3362,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -3314,9 +3370,11 @@ document.addEventListener("click",e=>{
   if(d.tab){ S.editShape=false; S.view="proyecto"; S.tab=d.tab; window.scrollTo(0,0); lsSet("proletix:tab",S.tab); render(); return; }
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.cam){ moveCam(d.cam); return; }
-  if(d.fxnew){ fxOpen(r,d.fxnew); return; }
+  if(d.fxnew){ S.holeForm=null; fxOpen(r,d.fxnew); return; }
+  if(d.hlnew){ S.fixForm=null; hlOpen(r,d.hlnew); return; }
+  if(d.hledit){ const it=S.items.find(x=>x.id===d.hledit); if(it){ S.fixForm=null; hlOpen(r,it.tipo,it); } return; }
   if(d.fxedit){ const it=S.items.find(x=>x.id===d.fxedit); if(it) fxOpen(r,shape3d(it).f==="viga"?"viga":/^Pilar/.test(it.nombre||"")?"pilar":"tabique",it); return; }
-  if(d.fxdel){ const it=S.items.find(x=>x.id===d.fxdel); if(it){ S.fixForm=null; deleteItem(it); } return; }
+  if(d.fxdel){ const it=S.items.find(x=>x.id===d.fxdel); if(it){ S.fixForm=null; S.holeForm=null; deleteItem(it); } return; }
   if(d.addcat){ S.openCats.add(d.addcat); render(); setTimeout(()=>{ const el=document.querySelector(`.cat-d[data-cat="${CSS.escape(d.addcat)}"]`); if(el){ el.open=true; el.scrollIntoView({behavior:"smooth",block:"center"}); } },50); return; }
   if(d.hex2!=null){ const it=selItem(); if(it) saveItem(it,{hex2:d.hex2}); return; }
   if(d.zby!=null||d.zto!=null){ const it=selItem(); if(it) saveItem(it,{z:Math.max(0,Math.min(techo(it),d.zto!=null?+d.zto:Math.round(+it.z||0)+(+d.zby)))}); return; }
@@ -3368,8 +3426,10 @@ document.addEventListener("click",e=>{
     case "newProd": S.addFromPlan=null; openProd(null,{estanciaId:""}); break;
     case "newTask": openTask(null); break;
     case "editShape": S.editShape=true; S.vista="2d"; S.sel=null; S.shapeSel=null; S.fixForm=null; render(); window.scrollTo({top:0,behavior:"smooth"}); break;
-    case "shapeDone": S.editShape=false; S.shapeSel=null; S.fixForm=null; if(d.then==="doors") S.openCats.add("Paredes, puertas y ventanas"); render(); if(d.then==="doors") setTimeout(()=>document.querySelector('.cat-d[data-cat="Paredes, puertas y ventanas"]')?.scrollIntoView({behavior:"smooth",block:"center"}),60); break;
+    case "shapeDone": S.editShape=false; S.shapeSel=null; S.fixForm=null; S.holeForm=null; if(d.then==="doors") S.openCats.add("Paredes, puertas y ventanas"); render(); if(d.then==="doors") setTimeout(()=>document.querySelector('.cat-d[data-cat="Paredes, puertas y ventanas"]')?.scrollIntoView({behavior:"smooth",block:"center"}),60); break;
     case "fxSave": fxSave(r); break;
+    case "hlSave": hlSave(r); break;
+    case "hlCancel": S.holeForm=null; render(); break;
     case "fxCancel": S.fixForm=null; render(); break;
     case "delRoom": if(confirm(`¿Borrar «${r.nombre}» y todo lo que tiene dentro? Puedes recuperarla con Deshacer.`)){ held(async()=>{ for(const it of S.items.filter(i=>i.estanciaId===r.id)) await remove("items",it.id); await remove("estancias",r.id); }); S.editShape=false; S.roomId=null; toast("Estancia borrada"); } break;
     case "delVtx": { const P0=pts(r).map(x=>[...x]); if(S.shapeSel?.t==="v"&&P0.length>3){ P0.splice(S.shapeSel.i,1); S.shapeSel=null; saveShape(r,P0); } break; }
@@ -3423,6 +3483,7 @@ document.addEventListener("change",e=>{
     if((id==="rp_ancho"||id==="rp_largo")&&+e.target.value>=50) saveRoomDims(r0,{[id==="rp_ancho"?"ancho":"largo"]:+e.target.value});
     return; }
   if(e.target.dataset.wl!=null){ const p0=proyecto(), r0=p0&&room(p0); if(r0&&+e.target.value>=10) setWallLen(r0,+e.target.dataset.wl,+e.target.value); return; }
+  if(/^hl_/.test(id)&&S.holeForm){ const k={hl_pared:"pared",hl_w:"w",hl_s:"s",hl_from:"from",hl_z:"z",hl_h:"h",hl_flip:"flip"}[id]; if(k) S.holeForm[k]=id==="hl_flip"?e.target.checked:e.target.value; if(id==="hl_pared") render(); return; }
   if(/^fx_/.test(id)&&S.fixForm){ S.fixForm[{fx_w:"w",fx_d:"d",fx_h:"h",fx_x:"x",fx_y:"y"}[id]||"dir"]=e.target.value; return; }
   if(id==="sh_len"){ const p0=proyecto(), r0=p0&&room(p0), P0=r0&&pts(r0).map(x=>[...x]), i=S.shapeSel?.i;
     if(P0&&S.shapeSel?.t==="s"&&+e.target.value>=10){ const a=P0[i], j=(i+1)%P0.length, b=P0[j], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1, nl=+e.target.value;
