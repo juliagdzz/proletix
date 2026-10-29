@@ -347,6 +347,10 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .btn.rl-bud.on,.btn.rl-bud[aria-pressed="true"]{background:#E3F3E9;color:var(--ok);border-color:var(--ok);font-weight:700}
 .rl-bud .sh{display:none}
 @media (max-width:560px){ .rl-bud .lg{display:none} .rl-bud .sh{display:inline} .rl-acts{flex-direction:column;align-items:stretch} .rl-bud{padding:6px 9px} }
+.cat-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cat-tools input{flex:1 1 150px;min-width:0;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--blue);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2323407E' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat 11px center;font-size:15px}
+.cat-tools input:focus{outline:2px solid var(--blue);outline-offset:1px}
+.cat-n{display:inline-flex;align-items:center;gap:6px;font-size:13px}
 .qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--surface);overflow:hidden}
 .qty button{width:28px;height:30px;border:0;background:none;font-size:17px;font-weight:700;color:var(--blue-ink);cursor:pointer;padding:0}
 .qty button[disabled]{opacity:.3;cursor:default}
@@ -923,7 +927,8 @@ const CATALOGO = [
   ["Dormitorio",[["Cama 180",190,210,1,3],["Cama 150",160,205,1,3],["Cama 135",145,200,1,3],["Cama 90",100,200,1,3],["Cuna",65,125,1,3],["Mesita de noche",45,40,1,4],["Armario 2 puertas",100,60,1,4],["Armario 3 puertas",150,60,1,4],["Armario 4 puertas",200,60,1,4],["Cómoda",100,48,1,4],["Zapatero",80,30,1,4]]],
   ["Despacho",[["Escritorio 120",120,60,1,4],["Escritorio 160",160,75,1,4],["Silla de oficina",60,60,1,4],["Cajonera",40,50,1,4],["Estantería",80,30,1,4]]],
   ["Cocina",[["Módulo bajo 60",60,60,1,5],["Módulo bajo 80",80,60,1,5],["Fregadero 80",80,60,1,5],["Placa de cocina 60",60,60,1,5],["Horno 60",60,60,1,5],["Isla",180,90,0,5],["Mesa de cocina",100,70,0,4],["Taburete alto",40,40,0,4]]],
-  ["Electrodomésticos",[["Frigorífico",60,66,1,5],["Frigorífico americano",90,72,1,5],["Congelador vertical",60,63,1,5],["Lavadora",60,60,1,5],["Secadora",60,60,1,5],["Lavavajillas",60,60,1,5],["Microondas",50,38,0,5,"",30],["Televisor 55\" con peana",123,25,0,5,"",78],["Radiador 80",80,10,1,5,"",60],["Termo eléctrico 50 l",45,45,1,5,"",80]]],
+  ["Electrodomésticos",[["Frigorífico",60,66,1,5],["Frigorífico americano",90,72,1,5],["Congelador vertical",60,63,1,5],["Lavadora",60,60,1,5],["Secadora",60,60,1,5],["Lavavajillas",60,60,1,5],["Televisor 55\" con peana",123,25,0,5,"",78],["Radiador 80",80,10,1,5,"",60],["Termo eléctrico 50 l",45,45,1,5,"",80]]],
+  ["Pequeños electrodomésticos",[["Cafetera",25,35,1,5,"",35],["Cafetera de cápsulas",15,40,1,5,"",28],["Tostadora",30,18,1,5,"",20],["Hervidor de agua",22,16,1,5,"",25],["Microondas",50,38,1,5,"",30],["Robot de cocina",33,33,1,5,"",32],["Batidora de vaso",18,18,1,5,"",40],["Freidora de aire",30,35,1,5,"",32],["Exprimidor",20,20,1,5,"",22],["Horno pequeño de sobremesa",45,35,1,5,"",28],["Aspiradora escoba",28,22,1,5,"",115],["Robot aspirador",34,34,0,5,"",9],["Ventilador de pie",40,40,0,5,"",120],["Deshumidificador",35,25,1,5,"",50],["Purificador de aire",30,30,1,5,"",60],["Estufa eléctrica",60,25,1,5,"",60],["Impresora",45,35,1,5,"",20],["Router wifi",20,12,1,5,"",18]]],
   ["Baño",[["Plato de ducha 120",120,80,0,0],["Plato de ducha 90",90,90,0,0],["Bañera",170,70,0,0],["Inodoro",38,65,1,5],["Bidé",38,55,1,5],["Lavabo con mueble",80,46,1,5],["Mueble columna",35,30,1,5,"",170]]],
   ["Taller de cerámica",[["Torno cerámico",60,70,0,5,"",60],["Horno cerámico circular",75,75,0,5,"",95],["Estantería flotante con cerámica",100,25,0,4,"",120],["Mesa de trabajo",150,75,0,4],["Estantería de secado",100,40,1,4,"",180],["Taburete",40,40,0,4]]],
   ["En la pared",[["Balda 80",80,22,0,4,"",3],["Balda 120",120,25,0,4,"",3],["Cuadro 50×70",50,3,0,1,"",70],["Cuadro 30×40",30,3,0,0,"",40],["Espejo 60×120",60,3,0,5,"",120],["Mueble alto de cocina 80",80,35,0,5,"",70],["Televisor 55\"",123,6,0,5,"",72],["Aplique de pared",20,20,0,5,"",25]]],
@@ -1384,6 +1389,7 @@ function render(){
     <nav class="sec-bar" aria-label="Secciones del proyecto">${sections(p).map(([k,n,c])=>`<button type="button" class="sec-t" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}</span>${n}</button>`).join("")}</nav>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
   if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); try{el.setSelectionRange(keep.s,keep.s)}catch{} } }
+  applyCatFilter();
   const sheet=!!document.querySelector(".side #props"); document.body.classList.toggle("sheet-on",sheet);
   // en el móvil, al elegir un mueble, sube el plano arriba para que se vea por encima del editor
   if(sheet&&S.sel!==S.lastSheet&&innerWidth<=900){ const c=main.querySelector(".canvas"); if(c) window.scrollTo({top:Math.max(0,c.getBoundingClientRect().top+scrollY-8),behavior:"smooth"}); }
@@ -1747,7 +1753,11 @@ function planHTML(p,r){
     <div class="side">
       ${es||!sel?"":propsHTML(sel)}
       ${es?shapePanel(r,P):""}
-      ${es?"":`<div class="panel"><h3>Muebles de ejemplo</h3><p class="muted" style="margin:0;font-size:12px">Pulsa uno para ponerlo en ${esc(r.nombre)}</p>
+      ${es?"":`<div class="panel cat-panel"><h3>Muebles de ejemplo</h3>
+        <div class="cat-tools"><input id="cat_q" type="search" placeholder="Buscar: sofá, cafetera, escalera…" autocomplete="off" value="${esc(S.catQ||"")}" aria-label="Buscar muebles de ejemplo">
+          <span class="cat-n" title="Cuántas unidades se añaden al pulsar uno"><span class="muted">Añadir</span><span class="qty"><button type="button" data-addn="-1" aria-label="Una menos"${(S.addN||1)<=1?" disabled":""}>−</button><b>${S.addN||1}</b><button type="button" data-addn="1" aria-label="Una más">+</button></span></span></div>
+        <p class="muted" style="margin:0;font-size:12px">Pulsa uno para ponerlo en ${esc(r.nombre)}${(S.addN||1)>1?` · se añadirán <b>${S.addN} unidades</b>`:""}</p>
+        <p class="muted cat-none" style="margin:0;font-size:13px" hidden>No hay nada con ese nombre. Prueba con otra palabra.</p>
         ${(()=>{ const grp=(key,title,btns,n)=>`<details class="cat-d" data-cat="${esc(key)}"${S.openCats.has(key)?" open":""}><summary>${title}<span class="num">${n}</span></summary><div class="cat">${btns}</div></details>`;
           const cjs=S.conjuntos.filter(c=>c.proyectoId===p.id&&+c.ancho>0&&+c.fondo>0);
           return (cjs.length?grp("_cj","Mis conjuntos",cjs.map(c=>`<button class="prod" type="button" data-addcj="${esc(c.id)}"><span>${esc(c.nombre)}</span><span>${cm(c.ancho)}×${cm(c.fondo)}</span></button>`).join(""),cjs.length):"")
@@ -1889,6 +1899,16 @@ function freeSpot(it,r){
   }
   return null;
 }
+// Añade n unidades seguidas (cada una en su hueco libre) en un solo paso de «Deshacer»
+function addUnits(n,fn){ if(n<=1){ fn(); return; } held(()=>{ for(let i=0;i<n;i++) fn(); }); }
+// Buscador de muebles de ejemplo: filtra sin repintar el plano
+function applyCatFilter(){
+  const q=lnorm(S.catQ||""), panel=document.querySelector(".cat-panel"); if(!panel) return; let any=false;
+  panel.querySelectorAll(".cat-d").forEach(det=>{ let n=0;
+    det.querySelectorAll(".cat button").forEach(b=>{ const ok=!q||lnorm(b.textContent).includes(q)||lnorm(det.dataset.cat).includes(q)||(q.length>=3&&listScore(b.textContent,q)>=40); b.hidden=!ok; if(ok) n++; });
+    det.hidden=!n; if(q) det.open=n>0; else det.open=S.openCats.has(det.dataset.cat); if(n) any=true; });
+  panel.querySelector(".cat-none").hidden=!q||any;
+}
 function addItem(r,base){
   const {fw,fd}=footprint({...base,rot:0});
   const it={estanciaId:r.id,rot:0,color:0,...base,x:Math.max(0,Math.round((r.ancho-fw)/2/5)*5),y:Math.max(0,Math.round((r.largo-fd)/2/5)*5),creado:Date.now()};
@@ -1938,6 +1958,7 @@ function detectForma(txt){
   const n=String(txt||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""), j=n.replace(/[\s\-_.]+/g,"");
   // «esquinas redondeadas» no cuenta; «Ø 110», «diámetro» o «ovalada» sí
   const red=/redond[ao]s?\b|circular|ovalad|\boval|\bround\b|diametro|[ø⌀]/.test(n);
+  if(/robot de cocina|horno pequeno|horno de sobremesa|freidora|tostadora|cafetera|hervidor|batidora|exprimidor|microondas/.test(n)) return "caja";
   if(/\bviga\b|jacena/.test(n)) return "viga";
   if(/caracol|helicoidal/.test(n)) return "caracol";
   if(/escalera|escalones|peldano/.test(n)&&!/de mano|plegable de pintor|taburete/.test(n)) return "escalera";
@@ -2521,7 +2542,7 @@ function roomListsHTML(p,r){
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
           <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":"",enPlano?(enPlano>1?`${enPlano} en el plano`:"en el plano"):""].filter(Boolean).map(esc).join(" · ")}</small></span>
           <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></div>
-          <div class="rl-acts">${on?qtyBox(x):""}${budBtn(x)}<button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div></div>`; }).join("")}
+          <div class="rl-acts">${on?qtyBox(x):""}${budBtn(x)}<button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano${qty(x)-enPlano>1?` × ${qty(x)-enPlano}`:""}</span><span class="sh">Al plano${qty(x)-enPlano>1?` ×${qty(x)-enPlano}`:""}</span></button></div></div>`; }).join("")}
         <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button><button class="btn ghost sm" type="button" data-editlist="${esc(n)}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar lista</button></div></div>
     </details>`; }).join("")}
     ${total?`<div class="rl-tot"><span>En el presupuesto de ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
@@ -3610,6 +3631,7 @@ $("fEl").addEventListener("submit",async ev=>{
   await saveEls(c,(c.elementos||[]).map(x=>x.id===edEl.eid?{...x,...patch}:x));
 });
 document.addEventListener("input",e=>{
+  if(e.target.id==="cat_q"){ S.catQ=e.target.value; applyCatFilter(); return; }
   const qm=/^qa_([ncp])_(.+)$/.exec(e.target.id||"");
   if(qm){ const [,k,cid]=qm, v=e.target.value, q=S.qa[cid]=S.qa[cid]||{};
     if(k==="n"&&/^https?:\/\/\S+$/i.test(v.trim())){ qaUrl(cid,v.trim()); return; }
@@ -3689,7 +3711,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-qty],[data-cmppick],[data-cmpclear],[data-budget],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-addn],[data-qty],[data-cmppick],[data-cmpclear],[data-budget],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -3715,12 +3737,15 @@ document.addEventListener("click",e=>{
   if(d.addcat){ S.openCats.add(d.addcat); render(); setTimeout(()=>{ const el=document.querySelector(`.cat-d[data-cat="${CSS.escape(d.addcat)}"]`); if(el){ el.open=true; el.scrollIntoView({behavior:"smooth",block:"center"}); } },50); return; }
   if(d.hex2!=null){ const it=selItem(); if(it) saveItem(it,{hex2:d.hex2}); return; }
   if(d.zby!=null||d.zto!=null){ const it=selItem(); if(it) saveItem(it,{z:Math.max(0,Math.min(techo(it),d.zto!=null?+d.zto:Math.round(+it.z||0)+(+d.zby)))}); return; }
-  if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||"",...(c[6]?{h:c[6]}:/^(Tabique|Pilar|Escalera)/.test(c[0])?{h:techoR(r)}:{})}); return; }
-  if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x)}); return; }
+  if(d.addgen){ const [gi,ci]=d.addgen.split(".").map(Number); const c=CATALOGO[gi][1][ci]; addUnits(S.addN||1,()=>addItem(r,{nombre:c[0],w:c[1],d:c[2],back:!!c[3],color:Math.max(0,c[4]),tipo:c[5]||"",...(c[6]?{h:c[6]}:/^(Tabique|Pilar|Escalera)/.test(c[0])?{h:techoR(r)}:{})})); return; }
+  if(d.addprod){ const x=S.productos.find(y=>y.id===d.addprod); addUnits(S.addN||1,()=>addItem(r,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x),forma:x.forma||""})); return; }
+  if(d.addn){ S.addN=Math.max(1,Math.min(20,(S.addN||1)+(+d.addn))); render(); return; }
   if(d.place){ const x=S.productos.find(y=>y.id===d.place); const target=S.estancias.find(e=>e.id===x.estanciaId)||r;
     if(!target){ toast("Crea primero una estancia en la pestaña Plano."); return; }
     if(!(+x.ancho>0&&+x.fondo>0)){ toast("Añade sus medidas para ponerlo en el plano."); openProd(x); return; }
-    S.roomId=target.id; S.tab="plano"; addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x),forma:x.forma||""}); window.scrollTo({top:0,behavior:"smooth"}); toast(`«${x.nombre}» añadido al plano. Arrástralo a su sitio.`); return; }
+    const ya=S.items.filter(i=>i.estanciaId===target.id&&i.productoId===x.id).length, n=Math.max(1,qty(x)-ya);
+    S.roomId=target.id; S.tab="plano"; addUnits(n,()=>addItem(target,{nombre:x.nombre,w:+x.ancho,d:+x.fondo,h:+x.alto||"",back:true,color:4,productoId:x.id,grupo:x.busco,hex:prodHex(x),forma:x.forma||""})); window.scrollTo({top:0,behavior:"smooth"});
+    toast(n>1?`${n} × «${x.nombre}» añadidos al plano. Arrástralos a su sitio.`:`«${x.nombre}» añadido al plano. Arrástralo a su sitio.`); return; }
   if(d.choose){ choose(d.choose); return; }
   if(d.addopt){ openProd(null,{busco:d.addopt,estanciaId:d.optroom??r?.id??""}); return; }
   if(d.photo){ e.stopPropagation(); const [mid,i]=d.photo.split("|"); const m=S.medidas.find(x=>x.id===mid); if(m?.fotos?.[+i]) showPhoto(m.fotos[+i]); return; }
