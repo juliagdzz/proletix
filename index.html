@@ -523,6 +523,15 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .cj-inlist{font-size:12px;color:var(--ok);font-weight:600}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Compartir */
+.share-btn{display:inline-flex;align-items:center;gap:6px;color:var(--blue-ink);border-color:var(--blue);background:var(--blue-soft)}
+.share-btn.on{background:var(--blue);font-weight:700}
+.proj-acts{display:flex;align-items:center;gap:8px;margin-left:auto}
+.sh-link{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}.sh-link input{flex:1;min-width:180px;font-family:var(--f-mono);font-size:13px}
+.sh-acts{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px}
+.sh-steps{margin:0 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.sh-badge{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--blue-soft);color:var(--blue-ink)}
+.pj-sh{align-self:flex-start;font-size:12px;font-weight:700;color:var(--blue-ink);background:var(--blue-soft);padding:2px 8px;border-radius:999px}
 /* Panel de editar estancia */
 .room-ed{gap:14px}
 .re-s{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
@@ -813,6 +822,12 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 
 <button class="undo-fab" id="undoFab" type="button" data-act="undo" hidden aria-label="Deshacer el último cambio"><span aria-hidden="true">↶</span> Deshacer</button>
 
+<!-- Compartir -->
+<dialog id="dlgShare"><form method="dialog">
+  <div class="dlg-h"><h2>Compartir proyecto</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
+  <div class="dlg-b" style="display:block" id="shareBody"></div>
+</form></dialog>
+
 <!-- Cuenta -->
 <dialog id="dlgCuenta"><form method="dialog">
   <div class="dlg-h"><h2>Mi cuenta</h2><div class="dlg-hb"><button class="btn ghost sm" value="cancel">Cerrar</button></div></div>
@@ -996,29 +1011,44 @@ async function cloudBoot(){
   });
   let session=null;
   try{ ({data:{session}}=await SB.auth.getSession()); }catch{}
+  const inv=new URLSearchParams(location.search).get("unirse");
+  if(inv&&!session){ lsSet("proletix:unirse",inv); history.replaceState(null,"",location.pathname); S.mode="auth"; S.auth={modo:"entrar",msg:"Te han compartido un proyecto. Entra o crea tu cuenta para abrirlo."}; render(); return; }
   if(session) await startCloud(session.user);
   else if(lsGet("proletix:sinCuenta",false)) startLocal();
   else { S.mode="auth"; S.auth=S.auth||{modo:"entrar"}; render(); }
 }
 async function startCloud(user,recovery){
   S.user=user; S.mode="cloud"; S.hist=[]; lsSet("proletix:sinCuenta",false); if(!recovery) S.view="proyecto"; else S.view="auth";
-  cloudQ=lsGet(ck("cola"),[]); COLS.forEach(c=>S[c]=lsGet(ck(c),[])); render();
+  cloudQ=lsGet(ck("cola"),[]); COLS.forEach(c=>S[c]=lsGet(ck(c),[]));
+  SHARES=new Map(lsGet(ck("shares"),[]).map(x=>[x.id,x])); DOCSHARE=new Map(Object.entries(lsGet(ck("shareMap"),{}))); render();
   await cloudReload();
+  { const code=new URLSearchParams(location.search).get("unirse")||lsGet("proletix:unirse",null);
+    if(code){ lsSet("proletix:unirse",null); history.replaceState(null,"",location.pathname); joinShare(code); } }
   SB.channel("docs-"+user.id).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:`user_id=eq.${user.id}`},onCloudChange).subscribe();
   cloudFlush(); startPriceWatch();
   // una vez: cierra cualquier otra sesión abierta antes del cambio a PKCE (por si un enlace de vuelta acabó en otra web)
   if(!lsGet("proletix:revocado1",false)) SB.auth.signOut({scope:"others"}).then(({error})=>{ if(!error) lsSet("proletix:revocado1",true); }).catch(()=>{});
   if(localData()&&!lsGet(ck("migrado"),false)) openMigrate();
 }
+async function pageAll(q){ const out=[]; for(let from=0;;from+=1000){ const {data,error}=await q().range(from,from+999); if(error) throw error; out.push(...data); if(data.length<1000) break; } return out; }
 async function cloudReload(){
   try{
-    const rows=[];
-    for(let from=0;;from+=1000){ const {data,error}=await SB.from("docs").select("col,id,data").range(from,from+999); if(error) throw error; rows.push(...data); if(data.length<1000) break; }
+    const rows=await pageAll(()=>SB.from("docs").select("col,id,data"));
     const next={}; COLS.forEach(c=>next[c]=[]);
     rows.forEach(r=>{ if(next[r.col]) next[r.col].push({...r.data,id:r.id}); });
+    // copias compartidas en las que estás (si las tablas aún no existen en Supabase, se sigue sin ellas)
+    const shares=new Map(), dmap=new Map();
+    try{
+      const sh=await pageAll(()=>SB.from("shares").select("id,owner,nombre,origen,mapa"));
+      sh.forEach(x=>shares.set(x.id,x));
+      if(shares.size){ const sd=await pageAll(()=>SB.from("share_docs").select("share_id,col,id,data"));
+        sd.forEach(r=>{ if(!next[r.col]||!shares.has(r.share_id)) return; next[r.col].push({...r.data,id:r.id}); dmap.set(r.col+":"+r.id,r.share_id); }); }
+      S.shareReady=true;
+    }catch(e){ S.shareReady=false; }
     // lo que aún no ha subido manda sobre lo que hay en la nube
-    cloudQ.forEach(q=>{ const a=next[q.col]; if(!a) return; const i=a.findIndex(x=>x.id===q.id); if(q.data){ if(i>=0) a[i]=q.data; else a.push(q.data); } else if(i>=0) a.splice(i,1); });
+    cloudQ.forEach(q=>{ const a=next[q.col]; if(!a) return; const i=a.findIndex(x=>x.id===q.id); if(q.share) dmap.set(q.col+":"+q.id,q.share); if(q.data){ if(i>=0) a[i]=q.data; else a.push(q.data); } else if(i>=0) a.splice(i,1); });
     COLS.forEach(c=>{ S[c]=next[c]; lsSet(ck(c),S[c]); });
+    if(S.shareReady){ SHARES=shares; DOCSHARE=dmap; saveShareCache(); subscribeShares(); }
     S.syncErr=false; render();
   }catch(e){ S.syncErr=true; if(navigator.onLine) toast("No se ha podido leer tu cuenta. Uso lo guardado en este dispositivo."); }
 }
@@ -1031,17 +1061,22 @@ function onCloudChange(p){
   lsSet(ck(r.col),arr); render();
 }
 function cloudPush(col,id,data){
-  cloudQ=cloudQ.filter(q=>!(q.col===col&&q.id===id)); cloudQ.push({col,id,data});
+  const share=routeShare(col,id,data); if(share&&data) DOCSHARE.set(col+":"+id,share);
+  cloudQ=cloudQ.filter(q=>!(q.col===col&&q.id===id)); cloudQ.push({col,id,data,...(share?{share}:{})});
+  if(share) saveShareCache();
   lsSet(ck("cola"),cloudQ); clearTimeout(cloudPush.t); cloudPush.t=setTimeout(cloudFlush,250);
 }
 async function cloudFlush(){
   if(flushing||!SB||!S.user||!cloudQ.length||!navigator.onLine) return;
   flushing=true; const batch=cloudQ.slice(0,300), uidN=S.user.id, now=new Date().toISOString();
   try{
-    const ups=batch.filter(q=>q.data).map(q=>{ const {id,...data}=q.data; return {user_id:uidN,col:q.col,id:q.id,data,updated_at:now}; });
+    const ups=batch.filter(q=>q.data&&!q.share).map(q=>{ const {id,...data}=q.data; return {user_id:uidN,col:q.col,id:q.id,data,updated_at:now}; });
     if(ups.length){ const {error}=await SB.from("docs").upsert(ups); if(error) throw error; }
-    const dels={}; batch.filter(q=>!q.data).forEach(q=>(dels[q.col] ||= []).push(q.id));
-    for(const [col,ids] of Object.entries(dels)){ const {error}=await SB.from("docs").delete().eq("col",col).in("id",ids); if(error) throw error; }
+    const sups=batch.filter(q=>q.data&&q.share).map(q=>{ const {id,...data}=q.data; return {share_id:q.share,col:q.col,id:q.id,data,updated_at:now,updated_by:uidN}; });
+    if(sups.length){ const {error}=await SB.from("share_docs").upsert(sups); if(error) throw error; }
+    const dels={}; batch.filter(q=>!q.data).forEach(q=>(dels[(q.share||"")+"|"+q.col] ||= []).push(q.id));
+    for(const [k,ids] of Object.entries(dels)){ const [sh,col]=k.split("|");
+      const {error}=sh?await SB.from("share_docs").delete().eq("share_id",sh).eq("col",col).in("id",ids):await SB.from("docs").delete().eq("col",col).in("id",ids); if(error) throw error; }
     cloudQ=cloudQ.filter(q=>!batch.includes(q)); lsSet(ck("cola"),cloudQ); S.syncErr=false;
   }catch(e){ S.syncErr=true; clearTimeout(cloudFlush.t); cloudFlush.t=setTimeout(cloudFlush,8000); }
   finally{ flushing=false; }
@@ -1049,6 +1084,133 @@ async function cloudFlush(){
   if($("dlgCuenta").open) fillAccount();
 }
 addEventListener("online",()=>{ if(S.mode==="cloud"){ cloudFlush(); cloudReload(); } });
+
+/* ---------- Proyectos compartidos ----------
+   Compartir crea una COPIA del proyecto que editan todas las personas con el enlace (tabla share_docs).
+   Tu proyecto original no cambia; desde él puedes «Traer cambios» de la copia cuando quieras. */
+let SHARES=new Map(), DOCSHARE=new Map();
+const PROJ_COLS=["proyectos","estancias","items","productos","listas","conjuntos","medidas","tareas","gastos"];
+const shareOfProj=pid=>pid&&DOCSHARE.get("proyectos:"+pid)||null;
+function saveShareCache(){ if(!S.user) return; lsSet(ck("shares"),[...SHARES.values()]); lsSet(ck("shareMap"),Object.fromEntries(DOCSHARE)); }
+// A qué copia compartida va un documento: la suya, o la del proyecto o la estancia a la que pertenece
+function routeShare(col,id,data){
+  const k=col+":"+id; if(DOCSHARE.has(k)) return DOCSHARE.get(k);
+  if(!data) return null;
+  return (data.proyectoId&&DOCSHARE.get("proyectos:"+data.proyectoId))||(data.estanciaId&&DOCSHARE.get("estancias:"+data.estanciaId))||null;
+}
+function subscribeShares(){
+  if(S.shareChan){ SB.removeChannel(S.shareChan); S.shareChan=null; }
+  const ids=[...SHARES.keys()]; if(!ids.length) return;
+  S.shareChan=SB.channel("share-docs-"+S.user.id).on("postgres_changes",{event:"*",schema:"public",table:"share_docs",filter:`share_id=in.(${ids.join(",")})`},onShareChange).subscribe();
+}
+function onShareChange(p){
+  const r=p.eventType==="DELETE"?p.old:p.new;
+  if(!r||!SHARES.has(r.share_id)||!COLS.includes(r.col)||pendingCloud(r.col,r.id)) return;
+  const arr=S[r.col], i=arr.findIndex(x=>x.id===r.id), k=r.col+":"+r.id;
+  if(p.eventType==="DELETE"){ if(i<0) return; arr.splice(i,1); DOCSHARE.delete(k); }
+  else { const row={...r.data,id:r.id}; DOCSHARE.set(k,r.share_id); if(i>=0){ if(sameDoc(arr[i],row)) return; arr[i]=row; } else arr.push(row); }
+  lsSet(ck(r.col),arr); saveShareCache(); render();
+}
+// Todo lo que forma un proyecto
+function projectDocs(pid){
+  const rooms=new Set(S.estancias.filter(e=>e.proyectoId===pid).map(e=>e.id)), out=[];
+  PROJ_COLS.forEach(col=>S[col].forEach(d=>{ if(col==="proyectos"?d.id===pid:col==="items"?rooms.has(d.estanciaId):d.proyectoId===pid) out.push({col,doc:d}); }));
+  return out;
+}
+// Cambia los ids de un documento (y sus referencias: proyectoId, estanciaId, productoId…) según el mapa
+function remapDoc(doc,map){ const o={}; for(const [k,v] of Object.entries(doc)){ if(k==="id") continue; o[k]=typeof v==="string"&&/Id$/.test(k)&&map[v]?map[v]:v; } return o; }
+const shareCode=()=>{ const a=new Uint8Array(12); crypto.getRandomValues(a); return [...a].map(b=>"abcdefghijkmnpqrstuvwxyz23456789"[b%32]).join(""); };
+const shareLink=code=>`${location.origin}/?unirse=${code}`;
+async function createShare(p){
+  const docs=projectDocs(p.id), map={}; docs.forEach(({doc})=>{ map[doc.id]=uid(); });
+  const code=shareCode(), uidN=S.user.id, now=new Date().toISOString();
+  const rows=docs.map(({col,doc})=>({share_id:code,col,id:map[doc.id],data:remapDoc(doc,map),updated_at:now,updated_by:uidN}));
+  let e=(await SB.from("shares").insert({id:code,owner:uidN,nombre:p.nombre||"Proyecto",origen:p.id,mapa:map})).error; if(e) throw e;
+  e=(await SB.from("share_members").insert({share_id:code,user_id:uidN})).error; if(e) throw e;
+  for(let i=0;i<rows.length;i+=400){ e=(await SB.from("share_docs").upsert(rows.slice(i,i+400))).error; if(e) throw e; }
+  SHARES.set(code,{id:code,owner:uidN,nombre:p.nombre,origen:p.id,mapa:map});
+  rows.forEach(r=>{ S[r.col].push({...r.data,id:r.id}); DOCSHARE.set(r.col+":"+r.id,code); });
+  COLS.forEach(c=>lsSet(ck(c),S[c])); saveShareCache(); subscribeShares(); render();
+  return code;
+}
+async function joinShare(code){
+  if(S.mode!=="cloud"){ lsSet("proletix:unirse",code); S.mode="auth"; S.auth={modo:"entrar",msg:"Entra o crea tu cuenta para abrir el proyecto que te han compartido."}; render(); return; }
+  const {data,error}=await SB.rpc("join_share",{code});
+  if(error){ toast(/no existe/.test(error.message||"")?"Ese enlace ya no existe: quizá han dejado de compartir el proyecto.":"No he podido abrir el proyecto compartido."); return; }
+  await cloudReload();
+  const pid=[...DOCSHARE].find(([k,v])=>v===code&&k.startsWith("proyectos:"))?.[0].slice(10);
+  if(pid){ S.proyId=pid; S.view="proyecto"; S.tab="plano"; lsSet("proletix:proy",pid); render(); }
+  toast(`Ya tienes «${data}» en tus proyectos. Lo que cambiéis lo veréis todos.`);
+}
+// Copia privada de un proyecto (compartido o no): ids nuevos, solo tuya
+async function copyProject(p){
+  const docs=projectDocs(p.id), map={}; docs.forEach(({doc})=>{ map[doc.id]=uid(); });
+  await held(async()=>{ for(const {col,doc} of docs){ const d=remapDoc(doc,map); if(col==="proyectos"){ d.nombre=`${p.nombre} (mi copia)`; d.creado=Date.now(); } await save(col,map[doc.id],d).catch(()=>{}); } });
+  S.proyId=map[p.id]; lsSet("proletix:proy",S.proyId); S.view="proyecto"; render(); toast("Copia guardada en tus proyectos");
+}
+async function leaveShare(code){
+  if(!confirm("¿Salir de este proyecto compartido? Dejarás de verlo. Si quieres conservarlo, antes pulsa «Guardar una copia para mí».")) return;
+  const {error}=await SB.from("share_members").delete().eq("share_id",code).eq("user_id",S.user.id); if(error){ toast("No se ha podido salir. Prueba otra vez."); return; }
+  dropShareLocal(code); toast("Has salido del proyecto compartido");
+}
+async function stopShare(code){
+  if(!confirm("¿Dejar de compartir? La copia compartida se borra para todas las personas. Tu proyecto original no cambia.")) return;
+  const {error}=await SB.from("shares").delete().eq("id",code); if(error){ toast("No se ha podido borrar. Prueba otra vez."); return; }
+  dropShareLocal(code); toast("Has dejado de compartir el proyecto");
+}
+function dropShareLocal(code){
+  const keys=[...DOCSHARE].filter(([,v])=>v===code).map(([k])=>k);
+  keys.forEach(k=>{ const i=k.indexOf(":"), col=k.slice(0,i), id=k.slice(i+1); S[col]=S[col].filter(x=>x.id!==id); DOCSHARE.delete(k); });
+  cloudQ=cloudQ.filter(q=>q.share!==code); lsSet(ck("cola"),cloudQ);
+  SHARES.delete(code); COLS.forEach(c=>lsSet(ck(c),S[c])); saveShareCache(); subscribeShares();
+  if(!S.proyectos.some(x=>x.id===S.proyId)) S.proyId=null; $("dlgShare").close(); render();
+}
+// Traer los cambios de la copia compartida al proyecto original (solo cuando tú lo pides)
+async function importShare(code){
+  const sh=SHARES.get(code); if(!sh) return;
+  const orig=S.proyectos.find(x=>x.id===sh.origen&&!shareOfProj(x.id)); if(!orig){ toast("No encuentro tu proyecto original."); return; }
+  const mapa={...(sh.mapa||{})}, rev={}; Object.entries(mapa).forEach(([o,c])=>{ rev[c]=o; });
+  const shared=[]; PROJ_COLS.forEach(col=>S[col].forEach(d=>{ if(DOCSHARE.get(col+":"+d.id)===code) shared.push({col,doc:d}); }));
+  const sproj=shared.find(x=>x.col==="proyectos"); if(!sproj) return;
+  const idMap={[sproj.doc.id]:orig.id};
+  shared.forEach(({col,doc})=>{ if(col==="proyectos") return; const o=rev[doc.id]||uid(); idMap[doc.id]=o; mapa[o]=doc.id; });
+  const ops=[], present=new Set(shared.map(x=>x.doc.id)); let nuevos=0, cambiados=0, borrados=0;
+  shared.forEach(({col,doc})=>{ if(col==="proyectos") return; const o=idMap[doc.id], d=remapDoc(doc,idMap), cur=S[col].find(x=>x.id===o);
+    if(!cur){ nuevos++; ops.push(["save",col,o,d]); } else if(!sameDoc(cur,{...d,id:o})){ cambiados++; ops.push(["save",col,o,d]); } });
+  Object.entries(sh.mapa||{}).forEach(([o,c])=>{ if(o===orig.id||present.has(c)) return; for(const col of PROJ_COLS){ if(S[col].some(x=>x.id===o)){ borrados++; ops.push(["remove",col,o]); delete mapa[o]; break; } } });
+  if(!ops.length){ toast("Tu proyecto ya está igual que la copia compartida."); return; }
+  if(!confirm(`Traer los cambios de la copia compartida a «${orig.nombre}»:\n\n· ${nuevos} cosa${nuevos===1?"":"s"} nueva${nuevos===1?"":"s"}\n· ${cambiados} cambiada${cambiados===1?"":"s"}\n· ${borrados} borrada${borrados===1?"":"s"}\n\nLo que hayas añadido tú después de compartir se queda. Si no te convence, puedes deshacerlo con «Deshacer».`)) return;
+  await held(async()=>{ for(const op of ops){ if(op[0]==="save") await save(op[1],op[2],op[3]).catch(()=>{}); else await remove(op[1],op[2]).catch(()=>{}); } });
+  sh.mapa=mapa; SHARES.set(code,sh); saveShareCache(); SB.from("shares").update({mapa}).eq("id",code).then(()=>{});
+  $("dlgShare").close(); S.proyId=orig.id; lsSet("proletix:proy",orig.id); render(); toast(`Cambios traídos a «${orig.nombre}»`);
+}
+// Ventana «Compartir»
+async function openShare(){
+  const p=proyecto(); if(!p) return; const body=$("shareBody");
+  if(S.mode!=="cloud"){
+    body.innerHTML=`<p style="margin:0">Para compartir proyectos necesitas entrar con tu cuenta en la web de Proyectia.</p>${cloudOn()?`<button class="btn primary" type="button" data-act="goAuth" style="margin-top:12px">Crear cuenta o entrar</button>`:""}`;
+    $("dlgShare").showModal(); return; }
+  if(!S.shareReady){ body.innerHTML=`<p style="margin:0">Falta preparar Supabase para compartir: hay que ejecutar una vez el archivo <b>supabase/compartir.sql</b> en el <b>SQL Editor</b>.</p>`; $("dlgShare").showModal(); return; }
+  const mine=S.user.id, code=shareOfProj(p.id), sh=code&&SHARES.get(code);
+  const linkBox=c=>`<div class="sh-link"><input id="shLink" readonly value="${esc(shareLink(c))}"><button class="btn primary sm" type="button" data-shcopy="${esc(c)}">Copiar enlace</button>${navigator.share?`<button class="btn sm" type="button" data-shsend="${esc(c)}">Enviar…</button>`:""}</div>`;
+  if(sh){
+    const orig=sh.owner===mine&&S.proyectos.find(x=>x.id===sh.origen&&!shareOfProj(x.id));
+    body.innerHTML=`<p class="sh-badge">👥 Estás en la <b>copia compartida</b>. Lo que cambie cualquiera se ve al momento para todos.</p>
+      <span class="label">Enlace para invitar a más gente</span>${linkBox(code)}<p class="muted" id="shCount" style="margin:6px 0 0;font-size:13px"></p>
+      <div class="sh-acts">${orig?`<button class="btn" type="button" data-shimport="${esc(code)}">⬇ Traer estos cambios a mi «${esc(orig.nombre)}»</button>`:""}
+        <button class="btn" type="button" data-act="shCopyMine">📄 Guardar una copia para mí</button>
+        ${sh.owner===mine?`<button class="btn danger" type="button" data-shstop="${esc(code)}">Dejar de compartir (se borra para todos)</button>`:`<button class="btn danger" type="button" data-shleave="${esc(code)}">Salir de este proyecto compartido</button>`}</div>`;
+    SB.from("share_members").select("user_id",{count:"exact",head:true}).eq("share_id",code).then(({count})=>{ const c=$("shCount"); if(c&&count) c.textContent=count===1?"Por ahora solo estás tú.":`${count} personas en este proyecto.`; });
+  } else {
+    const out=[...SHARES.values()].find(x=>x.origen===p.id&&x.owner===mine);
+    body.innerHTML=out?`<p style="margin:0 0 10px">Ya tienes una copia compartida de este proyecto. Tu versión no cambia aunque otros modifiquen la copia.</p>
+      <span class="label">Enlace para invitar</span>${linkBox(out.id)}
+      <div class="sh-acts"><button class="btn" type="button" data-shopen="${esc(out.id)}">👥 Abrir la copia compartida</button><button class="btn" type="button" data-shimport="${esc(out.id)}">⬇ Traer cambios de la copia…</button><button class="btn danger" type="button" data-shstop="${esc(out.id)}">Dejar de compartir</button></div>`
+      :`<ol class="sh-steps"><li>Se crea una <b>copia compartida</b> de «${esc(p.nombre)}» y te doy un enlace.</li><li>Quien lo abra la verá en sus proyectos y podrá cambiarla. Todos veis los cambios al momento.</li><li><b>Tu proyecto se queda como está.</b> Cuando quieras, pulsas «Traer cambios» y decides si los pasas al tuyo.</li></ol>
+      <button class="btn primary" type="button" data-act="shCreate">👥 Crear copia compartida</button>`;
+  }
+  $("dlgShare").showModal();
+}
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&S.mode==="cloud"&&Date.now()-(cloudReload.last||0)>60e3){ cloudReload.last=Date.now(); cloudFlush(); cloudReload(); } });
 // Pasar a la cuenta lo que había guardado solo en este navegador
 function openMigrate(){
@@ -1123,7 +1285,7 @@ function openAccount(){ fillAccount(); $("dlgCuenta").showModal(); }
 async function logout(){
   if(cloudQ.length&&!confirm("Hay cambios sin subir todavía. Si cierras la sesión ahora se quedarán en este dispositivo y subirán la próxima vez que entres. ¿Cerrar igualmente?")) return;
   $("dlgCuenta").close(); try{ SB.removeAllChannels(); await SB.auth.signOut({scope:"global"}); }catch{}
-  S.user=null; cloudQ=[]; S.hist=[]; COLS.forEach(c=>S[c]=[]); S.mode="auth"; S.auth={modo:"entrar"}; render();
+  S.user=null; cloudQ=[]; S.hist=[]; SHARES=new Map(); DOCSHARE=new Map(); S.shareChan=null; COLS.forEach(c=>S[c]=[]); S.mode="auth"; S.auth={modo:"entrar"}; render();
 }
 
 /* ---------- Selección actual ---------- */
@@ -1174,7 +1336,8 @@ function render(){
         ${p.direccion?`<span class="kind"><span class="muted" style="font-size:13px">${esc(p.direccion)}</span></span>`:""}
         <h1>${esc(p.nombre)}</h1>
       </div>
-      <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <div class="proj-acts"><button class="btn sm share-btn${shareOfProj(p.id)?" on":""}" type="button" data-act="share" title="Compartir este proyecto con otras personas"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M17 8v6M14 11h6"/></svg><span>${shareOfProj(p.id)?"Compartido":"Compartir"}</span></button>
+      <button class="icon-btn gear" type="button" data-act="editProj" aria-label="Ajustes del proyecto" title="Ajustes del proyecto"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     </section>
     <nav class="sec-bar" aria-label="Secciones del proyecto">${sections(p).map(([k,n,c])=>`<button type="button" class="sec-t" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}"><span class="app-i">${secIcon(k)}</span>${n}</button>`).join("")}</nav>
     <section>${S.tab==="plano"?planHTML(p,r):S.tab==="productos"?shopHTML(p,prods):S.tab==="conjuntos"?conjuntosHTML(p):S.tab==="medidas"?medidasHTML(p):S.tab==="presupuesto"?budgetHTML(p):S.tab==="reforma"?taskHTML(p,tasks):peopleHTML(tasks)}</section>`;
@@ -2662,13 +2825,13 @@ function projMenuHTML(){
     ...(HAS_API||nd?[["rebajas","Rebajas","bell",nd||"",false]]:[]),...(window.__pwaPrompt?[["instalar","Instalar la app","install","",false]]:[]),
     ...(S.mode==="cloud"?[["cuenta","Mi cuenta","account","",false]]:S.mode==="local"&&cloudOn()?[["cuenta","Crear cuenta o entrar","goAuth","",false]]:[])];
   const grid=`<div class="app-grid">${apps.map(([ic,n,act,c,on])=>`<button type="button" role="menuitem" class="app-t" data-act="${act}" aria-current="${on?"page":"false"}"><span class="app-i">${secIcon(ic)}</span>${n}</button>`).join("")}</div>`;
-  return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}">${esc(p.nombre)}</button>`).join("")}`:""}`;
+  return `${grid}${ps.length>1?`<hr><span class="menu-l">Cambiar de proyecto</span>${ps.map(p=>`<button type="button" role="menuitemradio" aria-checked="${!["presupuestos","proyectos"].includes(S.view)&&p.id===cur}" data-proj="${esc(p.id)}">${shareOfProj(p.id)?"👥 ":""}${esc(p.nombre)}</button>`).join("")}`:""}`;
 }
 function myProjectsHTML(){
   const ps=[...S.proyectos].sort((a,b)=>(b.creado||0)-(a.creado||0));
   return `<section class="proj"><div class="proj-pick"><span class="kind"><b>Todo lo tuyo</b></span><h1>Mis proyectos</h1></div>${S.proyId?`<button class="btn" type="button" data-act="backProj">Volver al proyecto</button>`:""}</section>
   <section class="pj-grid">${ps.map(p=>{ const rs=roomsOf(p.id).length, pr=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado").length, prev=budgetRows(p).reduce((s,r)=>s+r.prev,0);
-    return `<button type="button" class="pj" data-proj="${esc(p.id)}" aria-current="${p.id===S.proyId}"><h3>${esc(p.nombre)}</h3>${p.direccion?`<span class="s">${esc(p.direccion)}</span>`:""}
+    return `<button type="button" class="pj" data-proj="${esc(p.id)}" aria-current="${p.id===S.proyId}">${shareOfProj(p.id)?`<span class="pj-sh">👥 Compartido</span>`:""}<h3>${esc(p.nombre)}</h3>${p.direccion?`<span class="s">${esc(p.direccion)}</span>`:""}
       <span class="n"><span><b>${rs}</b> estancia${rs===1?"":"s"}</span><span><b>${pr}</b> producto${pr===1?"":"s"}</span><span><b>${eur.format(prev)}</b> previsto${+p.presupuesto?` de ${eur.format(+p.presupuesto)}`:""}</span></span></button>`; }).join("")}
     <button type="button" class="pj new" data-act="newProj">${secIcon("nuevo",28)}Nuevo proyecto</button></section>`;
 }
@@ -3404,7 +3567,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -3412,6 +3575,12 @@ document.addEventListener("click",e=>{
   if(d.tab){ S.editShape=false; S.view="proyecto"; S.tab=d.tab; window.scrollTo(0,0); lsSet("proletix:tab",S.tab); render(); return; }
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.cam){ moveCam(d.cam); return; }
+  if(d.shcopy){ const l=shareLink(d.shcopy); (navigator.clipboard?.writeText(l)||Promise.reject()).then(()=>toast("Enlace copiado. Pégalo en WhatsApp o en un correo."),()=>{ $("shLink")?.select(); toast("Copia el enlace seleccionado"); }); return; }
+  if(d.shsend){ navigator.share({title:"Proyectia",text:`Te comparto mi proyecto «${proyecto()?.nombre||""}» en Proyectia`,url:shareLink(d.shsend)}).catch(()=>{}); return; }
+  if(d.shimport){ importShare(d.shimport); return; }
+  if(d.shstop){ stopShare(d.shstop); return; }
+  if(d.shleave){ leaveShare(d.shleave); return; }
+  if(d.shopen){ const pid=[...DOCSHARE].find(([k,v])=>v===d.shopen&&k.startsWith("proyectos:"))?.[0].slice(10); if(pid){ $("dlgShare").close(); S.proyId=pid; lsSet("proletix:proy",pid); S.view="proyecto"; render(); } return; }
   if(d.fxnew){ S.holeForm=null; fxOpen(r,d.fxnew); return; }
   if(d.hlnew){ S.fixForm=null; hlOpen(r,d.hlnew); return; }
   if(d.hledit){ const it=S.items.find(x=>x.id===d.hledit); if(it){ S.fixForm=null; hlOpen(r,it.tipo,it); } return; }
@@ -3497,6 +3666,9 @@ document.addEventListener("click",e=>{
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
     case "myProjects": S.view="proyectos"; render(); window.scrollTo(0,0); break;
     case "account": openAccount(); break;
+    case "share": openShare(); break;
+    case "shCreate": { const p0=proyecto(); if(!p0) break; t.disabled=true; t.textContent="Creando la copia…"; createShare(p0).then(()=>openShare()).catch(()=>{ t.disabled=false; t.textContent="👥 Crear copia compartida"; toast("No se ha podido compartir. Comprueba la conexión."); }); break; }
+    case "shCopyMine": { const p0=proyecto(); if(p0){ $("dlgShare").close(); copyProject(p0); } break; }
     case "logout": logout(); break;
     case "goAuth": lsSet("proletix:sinCuenta",false); S.mode="auth"; S.auth={modo:"entrar"}; render(); break;
     case "authEntrar": S.auth={...S.auth,modo:"entrar",mail:$("au_mail")?.value.trim()||S.auth?.mail||"",msg:""}; render(); break;
