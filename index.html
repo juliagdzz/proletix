@@ -523,6 +523,18 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
 .cj-inlist{font-size:12px;color:var(--ok);font-weight:600}
 .fit{font-size:12px;font-weight:600}.fit.ok{color:var(--ok)}.fit.bad{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Herramientas en la esquina del plano: deshacer y bloquear */
+.plan-tools{position:sticky;top:8px;z-index:4;height:0;display:flex;gap:6px;padding-left:4px}
+.pt-btn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--blue);background:rgb(255 255 255 / .94);color:var(--blue-ink);font-weight:700;font-size:14px;box-shadow:0 4px 14px rgb(35 64 126 / .16);cursor:pointer;white-space:nowrap}
+.pt-btn span[aria-hidden]{font-size:18px}
+.pt-btn[disabled]{opacity:.45;cursor:default;box-shadow:none}
+.pt-btn.on{background:var(--blue-ink);color:#fff;border-color:var(--blue-ink)}
+@media (max-width:560px){ .pt-btn{height:34px;padding:0 11px;font-size:13px} }
+.icon-btn.lock-btn.on,.icon-btn.lock-btn[aria-pressed="true"]{background:var(--blue-ink);color:#fff;border-color:var(--blue-ink)}
+.lock-note{margin:0;padding:8px 12px;border-radius:10px;background:var(--blue-soft);color:var(--blue-ink);font-size:13px;font-weight:600}
+.pr-fs{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.pr-fs[disabled]{opacity:.5}
+#plan .it.locked{cursor:not-allowed}
 /* Compartir */
 .share-btn{display:inline-flex;align-items:center;gap:6px;color:var(--blue-ink);border-color:var(--blue);background:var(--blue-soft)}
 .share-btn.on{background:var(--blue);font-weight:700}
@@ -641,7 +653,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
     <div class="actions">
       <span class="mode" id="mode" hidden>Conectando…</span>
       <button class="icon-btn" id="btnBell" type="button" data-act="bell" aria-label="Rebajas de tus productos" title="Rebajas de tus productos" hidden><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="bellN"></span></button>
-      <button class="icon-btn" id="btnUndo" type="button" data-act="undo" disabled title="Deshacer el último cambio (Ctrl+Z)" aria-label="Atrás: deshacer el último cambio">↶</button>
+      <button class="icon-btn" id="btnUndo" type="button" data-act="undo" hidden disabled title="Deshacer el último cambio (Ctrl+Z)" aria-label="Atrás: deshacer el último cambio">↶</button>
       <button class="avatar" id="btnAvatar" type="button" data-act="account" aria-label="Mi cuenta" title="Mi cuenta" hidden></button>
       <details class="menu" id="projMenu"><summary class="btn" aria-label="Menú"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg><span class="lbl">Menú</span></summary><div class="menu-p" role="menu" id="projMenuP"></div></details>
     </div>
@@ -1317,7 +1329,9 @@ function render(){
   const authOn=S.mode==="auth"||S.view==="auth"; document.body.classList.toggle("auth-on",authOn);
   if(authOn){ main.innerHTML=authHTML(); if(keep){ const el=$(keep.id); if(el){ el.value=keep.v; el.focus(); } } else setTimeout(()=>($("au_mail")||$("au_pass"))?.focus(),30); return; }
   const p=proyecto(); S.proyId=p?.id||null;
-  $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length; $("undoFab").hidden=!S.hist.length;
+  $("projMenuP").innerHTML=projMenuHTML(); $("btnUndo").disabled=!S.hist.length;
+  // en el plano, «Deshacer» va en la esquina del plano; en el resto de pestañas, flotando abajo
+  $("undoFab").hidden=!S.hist.length||(S.view!=="presupuestos"&&S.view!=="proyectos"&&S.tab==="plano"&&!!S.proyectos.length&&!S.editShape);
   { const nd=S.productos.filter(x=>dropOf(x)), un=nd.filter(x=>!x.bajadaVista).length; $("btnBell").hidden=true; paintAvatar(); $("bellN").textContent=un||""; $("bellN").hidden=!un; }
   if(S.view==="presupuestos"&&S.proyectos.length){ main.innerHTML=allBudgetsHTML(); return; }
   if(S.view==="proyectos"&&S.proyectos.length){ main.innerHTML=myProjectsHTML(); return; }
@@ -1438,7 +1452,8 @@ function itemSVG(it,bad){
       <text x="${fw/2}" y="${ly+fs*1.2}" font-size="${fs*.8}" text-anchor="middle" opacity=".65"${tst}>${cm(it.w)}×${cm(it.d)}</text>`:"";
     body=`<g transform="${local}">${round?`<ellipse cx="${w0/2}" cy="${d0/2}" rx="${w0/2}" ry="${d0/2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}/>`:`<rect x="0" y="0" width="${w0}" height="${d0}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash}${dash2}/>`}${symbol2d(shp,w0,d0,isDark(it.hex)?"#fff":"var(--ink)",S3.lado)}</g>${label}`;
   }
-  return `<g class="it" data-item="${esc(it.id)}"${!it.tipo&&FIXED.has(shape3d(it).f)?" data-fx":""} transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm${rot?` · ${rot}°`:""}</title>${body}</g>`;
+  if(it.bloq){ const k=Math.max(9,Math.min(16,Math.min(fw,fd)*.3)); body+=`<g transform="translate(${fw-k-2} 2) scale(${k/24})" pointer-events="none"><rect x="1" y="1" width="22" height="22" rx="6" fill="var(--blue-ink)"/><g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><rect x="7" y="11" width="10" height="8" rx="1.5"/><path d="M9 11V8.5a3 3 0 0 1 6 0V11"/></g></g>`; }
+  return `<g class="it${it.bloq?" locked":""}" data-item="${esc(it.id)}"${!it.tipo&&FIXED.has(shape3d(it).f)?" data-fx":""} transform="translate(${it.x} ${it.y})"><title>${esc(it.nombre)} · ${cm(it.w)} × ${cm(it.d)} cm${rot?` · ${rot}°`:""}</title>${body}</g>`;
 }
 /* ---------- Forma de la estancia (polígono en cm) ---------- */
 function pts(r){
@@ -1692,7 +1707,8 @@ function planHTML(p,r){
   return `<div class="toolbar">${chips}<div class="tb-right">${es?"":`<button class="btn primary sm" type="button" data-act="newProdHere">＋ Crear producto</button>`}<div class="seg" role="group" aria-label="Vista"><button type="button" data-vista="2d" aria-pressed="${!v3}">2D</button><button type="button" data-vista="3d" aria-pressed="${v3}">3D</button></div>${es?"":`<button class="icon-btn pal" type="button" data-act="finishes" aria-label="Paredes y suelo" title="Paredes y suelo"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="#F86C2F" stroke="none"/><circle cx="10" cy="7" r="1.3" fill="#8DB6C7" stroke="none"/><circle cx="14.5" cy="7" r="1.3" fill="#6D0101" stroke="none"/><circle cx="17.5" cy="10.5" r="1.3" fill="#9DAF8A" stroke="none"/></svg></button><button class="btn sm room-btn" type="button" data-act="editShape" title="Medidas, paredes, vigas y columnas de la estancia"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V3h18v18z"/><path d="M3 9h6V3M15 21v-6h6"/></svg><span>Editar estancia</span></button>`}</div></div>
   <div class="planner">
     <div class="plan-main"><div class="canvas">
-      ${v3?`<div id="view3d"><div class="cam" role="group" aria-label="Mover la vista"><button type="button" data-cam="left" title="Girar la vista a la izquierda" aria-label="Girar la vista a la izquierda">↺</button><button type="button" data-cam="right" title="Girar la vista a la derecha" aria-label="Girar la vista a la derecha">↻</button><button type="button" data-cam="up" title="Ver más desde arriba" aria-label="Ver más desde arriba">⤒</button><button type="button" data-cam="down" title="Ver más de lado" aria-label="Ver más de lado">⤓</button><button type="button" data-cam="in" title="Acercar" aria-label="Acercar">＋</button><button type="button" data-cam="out" title="Alejar" aria-label="Alejar">－</button><button type="button" data-cam="top" title="Vista desde arriba" aria-label="Vista desde arriba">⊡</button><button type="button" data-cam="reset" title="Vista inicial" aria-label="Vista inicial">⟲</button></div></div><span class="hint">Usa los botones para girar, inclinar y acercar la vista · arrastra un mueble para moverlo · púlsalo otra vez para girarlo</span>`:`<svg id="plan" data-pad="${pad}" data-hs="${hs}" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
+      ${es?"":`<div class="plan-tools"><button class="pt-btn" type="button" data-act="undo"${S.hist.length?"":" disabled"} title="Deshacer el último cambio (Ctrl+Z)"><span aria-hidden="true">↶</span> Deshacer</button>${items.length?(()=>{ const all=items.every(i=>i.bloq); return `<button class="pt-btn${all?" on":""}" type="button" data-act="lockAll" title="${all?"Desbloquear todos los muebles de la estancia":"Bloquear todos los muebles para no moverlos sin querer"}">${all?LOCK_SVG:UNLOCK_SVG}<span>${all?"Todo bloqueado":"Bloquear todo"}</span></button>`; })():""}</div>`}
+      ${v3?`<div id="view3d"></div><span class="hint">Arrastra el fondo para girar la vista · pellizca o usa la rueda para acercar · arrastra un mueble para moverlo</span>`:`<svg id="plan" data-pad="${pad}" data-hs="${hs}" viewBox="${-pad} ${-pad} ${W+pad*2} ${L+pad*2}" role="img" aria-label="Plano de ${esc(r.nombre)}">
         <g id="roomGeom">${roomGeomSVG(P,pad,r.sueloColor||DEF_FIN.sueloColor)}</g>${r.calco?`<g id="calco" opacity=".55" pointer-events="none">${calcoSVG(r.calco)}</g>`:""}
         <g id="itemsLayer"${es?' class="es-dim" style="pointer-events:none"':""}>${[...items].sort((a,b)=>(a.tipo==="alfombra"||/alfombra/i.test(a.nombre)?-1:0)-(b.tipo==="alfombra"||/alfombra/i.test(b.nombre)?-1:0)).map(i=>itemSVG(i,bad.has(i.id))).join("")}</g>
         ${es?`<g id="shapeLayer">${shapeHandlesSVG(P,hs)}</g>`:""}
@@ -1718,7 +1734,9 @@ function propsHTML(it){
   const trash=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>`;
   return `<div class="panel" id="props">
     <div class="pr-h"><div style="min-width:0"><span class="label">Mueble seleccionado</span><h3>${esc(it.nombre)}</h3></div>
-      <div class="pr-ic"><button class="icon-btn" type="button" data-act="dup" aria-label="Duplicar este mueble" title="Duplicar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button><button class="icon-btn danger" type="button" data-act="delItem" aria-label="Borrar este mueble" title="Borrar">${trash}</button><button class="icon-btn" type="button" data-act="unsel" aria-label="Cerrar" title="Cerrar">✕</button></div></div>
+      <div class="pr-ic"><button class="icon-btn lock-btn${it.bloq?" on":""}" type="button" data-act="lockItem" aria-pressed="${!!it.bloq}" aria-label="${it.bloq?"Desbloquear":"Bloquear"} este mueble" title="${it.bloq?"Bloqueado: púlsalo para poder moverlo":"Bloquear para no moverlo sin querer"}">${it.bloq?LOCK_SVG:UNLOCK_SVG}</button><button class="icon-btn" type="button" data-act="dup" aria-label="Duplicar este mueble" title="Duplicar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button><button class="icon-btn danger" type="button" data-act="delItem" aria-label="Borrar este mueble" title="${it.bloq?"Desbloquéalo para poder borrarlo":"Borrar"}"${it.bloq?" disabled":""}>${trash}</button><button class="icon-btn" type="button" data-act="unsel" aria-label="Cerrar" title="Cerrar">✕</button></div></div>
+    ${it.bloq?`<p class="lock-note">🔒 Bloqueado: no se puede mover, girar ni cambiar. Pulsa el candado para editarlo.</p>`:""}
+    <fieldset class="pr-fs"${it.bloq?" disabled":""}>
     <div class="props">
       ${it.tipo?"":`<div class="full"><label>Color</label><div class="swatches">${FILLS.map((f,i)=>`<button type="button" aria-label="Color ${i+1}" data-color="${i}" aria-pressed="${!it.hex&&(it.color??0)===i}" style="background:var(${f})"></button>`).join("")}<input type="color" id="pr_hex" value="${/^#[0-9a-f]{6}$/i.test(it.hex||"")?it.hex:"#b07a55"}" aria-label="Elegir color exacto" title="Color exacto"></div></div>
       <div class="full"><label for="pr_hex2">Patas, estructura y tiradores</label><div class="swatches">${["#6B4A33","#C9A27A","#26262A","#9DA1A6","#FAF6F0","#B8895A"].map(c=>`<button type="button" aria-label="Color de patas ${c}" data-hex2="${c}" aria-pressed="${(it.hex2||"")===c}" style="background:${c}"></button>`).join("")}<input type="color" id="pr_hex2" value="${/^#[0-9a-f]{6}$/i.test(it.hex2||"")?it.hex2:"#6b4a33"}" aria-label="Color exacto de patas y estructura" title="Color exacto">${it.hex2?`<button type="button" class="btn ghost sm" data-hex2="">Original</button>`:""}</div></div>`}
@@ -1743,10 +1761,12 @@ function propsHTML(it){
         ${it.tipo?"":`<div class="full"><label for="pr_forma">Tipo de mueble</label><select id="pr_forma">${FORMAS.map(([k,n])=>`<option value="${k}"${(it.forma||"")===k?" selected":""}>${k?n:`${n}: ${(FORMAS.find(x=>x[0]===detectForma(`${it.nombre} ${it.grupo||""}`))||["","Bloque"])[1]}`}</option>`).join("")}</select></div>
         ${["chaise","rinconera"].includes(S3.f)?`<div class="full"><label for="pr_lado">Lado de la chaise</label><select id="pr_lado"><option value="der"${S3.lado==="der"?" selected":""}>Derecha</option><option value="izq"${S3.lado==="izq"?" selected":""}>Izquierda</option></select></div>`:""}`}
       </div></details>
+    </fieldset>
     ${prod?`<p style="margin:0;font-size:13px" class="muted">Es tu producto de «${esc(prod.busco)}»${prod.precio?` · ${eur2.format(+prod.precio)}`:""}${prod.tienda?` · ${esc(prod.tienda)}`:""}</p>`:""}
   </div>`;
 }
 // Objetos que se apoyan encima de otro más grande al soltarlos sobre él (macetas, cajas, colchón...)
+const LOCK_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>', UNLOCK_SVG='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>';
 const FLOOR=new Set(["escalera","caracol","torno","hornoCer","tabique","viga","sofa","chaise","rinconera","sillon","puff","cama","mesita","mesa","redonda","centro","centroR","escritorio","silla","taburete","banco","armario","vitrina","comoda","aparador","tele","estante","alfombra","alfombraR","lampara","planta","monstera","arbol","palmera","cactus","nevera","lavadora","bajo","isla","inodoro","lavabo","banera","ducha"]);
 const isRug=i=>["alfombra","alfombraR"].includes(shape3d(i).f)||/alfombra/i.test(i.nombre||"");
 const canStack=it=>!it.tipo&&!isWallItem(it)&&!FLOOR.has(shape3d(it).f);
@@ -1792,6 +1812,7 @@ function colorPreview(it){
     if(V.room&&$("view3d")){ build3dRoom(V.room); draw3d(); }
   });
 }
+function lockedHint(){ if(Date.now()-(lockedHint.t||0)<2500) return; lockedHint.t=Date.now(); toast("Está bloqueado. Pulsa el candado para moverlo."); }
 function liftPreview(it,z){ it.z=z; if(V.objs&&V.objs[it.id]){ place3d(V.objs[it.id],it); draw3d(); } }
 function dropItem(it,riders,r,resting=true){
   if(canStack(it)&&resting) it.z=supportHeight(it);
@@ -1841,6 +1862,7 @@ function bindPlan(r){
     const g=e.target.closest(".it");
     if(!g){ if(S.sel){S.sel=null;render();} return; }
     const it=S.items.find(i=>i.id===g.dataset.item); if(!it) return;
+    if(it.bloq){ e.preventDefault(); if(S.sel!==it.id){ S.sel=it.id; render(); } lockedHint(); return; }
     e.preventDefault();
     S.preEdit={...it}; const p=toCm(e); drag={it,g,dx:p.x-it.x,dy:p.y-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),rest:Math.abs((+it.z||0)-supportHeight(it))<2,moved:false,wasSel:S.sel===it.id};
     S.sel=it.id; S.dragging=true; g.classList.add("drag");
@@ -2242,6 +2264,7 @@ function ensure3d(){
     if(!hit&&$("dlgFin").open&&hits[0]&&hits[0].object.userData.wallIdx!=null){ S.finWall=hits[0].object.userData.wallIdx; refreshFin(); render(); return; }
     if(!hit) return;
     const it=S.items.find(i=>i.id===hit.object.userData.itemId), p=floorPt(e); if(!it||!p) return;
+    if(it.bloq){ if(S.sel!==it.id){ S.sel=it.id; render(); } lockedHint(); return; }
     V.controls.enabled=false; S.dragging=true;
     S.preEdit={...it}; V.drag={it,ox:p.x-it.x,oz:p.z-it.y,x0:it.x,y0:it.y,riders:ridersOf(it),rest:Math.abs((+it.z||0)-supportHeight(it))<2,moved:false,wasSel:S.sel===it.id};
     el.setPointerCapture(e.pointerId);
@@ -3687,6 +3710,9 @@ document.addEventListener("click",e=>{
     case "allBudgets": S.view="presupuestos"; render(); window.scrollTo(0,0); break;
     case "myProjects": S.view="proyectos"; render(); window.scrollTo(0,0); break;
     case "account": openAccount(); break;
+    case "lockItem": { const it=selItem(); if(it){ saveItem(it,{bloq:!it.bloq}); toast(it.bloq?"Desbloqueado: ya puedes moverlo":"Bloqueado: ya no se moverá sin querer"); } break; }
+    case "lockAll": { const p0=proyecto(), r0=p0&&room(p0); if(!r0) break; const its=S.items.filter(i=>i.estanciaId===r0.id), lock=!its.every(i=>i.bloq);
+      held(()=>{ its.forEach(i=>{ if(!!i.bloq!==lock){ const {id,...b}=i; save("items",id,{...b,bloq:lock}).catch(()=>{}); } }); }); toast(lock?`Todo bloqueado en ${r0.nombre}`:`Todo desbloqueado en ${r0.nombre}`); break; }
     case "share": openShare(); break;
     case "shCreate": { const p0=proyecto(); if(!p0) break; t.disabled=true; t.textContent="Creando la copia…"; createShare(p0).then(()=>openShare()).catch(()=>{ t.disabled=false; t.textContent="👥 Crear copia compartida"; toast("No se ha podido compartir. Comprueba la conexión."); }); break; }
     case "shCopyMine": { const p0=proyecto(); if(p0){ $("dlgShare").close(); copyProject(p0); } break; }
@@ -3706,8 +3732,8 @@ document.addEventListener("click",e=>{
     case "rotate": { const it=selItem(); if(it) rotateItem(it); break; }
     case "mirror": { const it=selItem(); if(it) saveItem(it,{espejo:!it.espejo}); break; }
     case "wallToggle": { const it=selItem(); if(!it) break; const on=!isWallItem(it); saveItem(it,wallPatch(it,on)); toast(on?`«${it.nombre}» colgado en la pared más cercana`:`«${it.nombre}» descolgado`); break; }
-    case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
-    case "delItem": { const it=selItem(); if(it) deleteItem(it); break; }
+    case "dup": { const it=selItem(); if(it){ const {id,...b}=it; const nid=uid(); S.sel=nid; save("items",nid,{...b,bloq:false,x:it.x+20,y:it.y+20,creado:Date.now()}).catch(()=>{}); } break; }
+    case "delItem": { const it=selItem(); if(it&&!it.bloq) deleteItem(it); break; }
   }
 });
 document.addEventListener("change",e=>{
@@ -3752,6 +3778,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&e.target.matches("[data-edittask]")) openTask(S.tareas.find(y=>y.id===e.target.dataset.edittask));
   if(S.tab==="plano"&&S.sel&&!e.target.closest("input,textarea,select,dialog")){
     const it=selItem(); if(!it) return;
+    if(it.bloq){ if(/^Arrow|^Delete$|^Backspace$|^r$/i.test(e.key)){ e.preventDefault(); lockedHint(); } return; }
     const step=e.shiftKey?1:5, mv={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];
     if(mv){ e.preventDefault(); const p0=proyecto(), [x,y]=constrain(it,it.x+mv[0],it.y+mv[1],p0&&room(p0)); if(x!==it.x||y!==it.y) saveItem(it,{x,y}); }
     if(e.key==="r"||e.key==="R") rotateItem(it);
