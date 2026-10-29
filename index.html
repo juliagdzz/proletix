@@ -347,6 +347,15 @@ table.budget .ok{color:var(--ok);font-weight:600}
 .btn.rl-bud.on,.btn.rl-bud[aria-pressed="true"]{background:#E3F3E9;color:var(--ok);border-color:var(--ok);font-weight:700}
 .rl-bud .sh{display:none}
 @media (max-width:560px){ .rl-bud .lg{display:none} .rl-bud .sh{display:inline} .rl-acts{flex-direction:column;align-items:stretch} .rl-bud{padding:6px 9px} }
+.qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--surface);overflow:hidden}
+.qty button{width:28px;height:30px;border:0;background:none;font-size:17px;font-weight:700;color:var(--blue-ink);cursor:pointer;padding:0}
+.qty button[disabled]{opacity:.3;cursor:default}
+.qty b{min-width:18px;text-align:center;font-family:var(--f-mono);font-size:14px}
+.ba-a{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.cmp-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+.chip-c{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.chip-c[aria-pressed="true"]{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-ink);font-weight:700}
+.cmp-card{align-self:flex-start}
 .ba-h{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:15px;color:var(--granate)}
 .ba-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .ba-r{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px}
@@ -716,6 +725,7 @@ s.old{color:var(--muted);font-size:.6em;font-weight:500;margin-left:4px}
     <div class="d-grp mine"><h3 class="d-gh">Lo que decides tú</h3>
       <div class="field combo"><label for="d_busco">Lista</label><div class="combo-w"><input id="d_busco" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="d_lsug" placeholder="Escribe o elige: Sofá, Mesita, Lámpara…"><div class="combo-l" id="d_lsug" role="listbox" hidden></div></div><span class="hint" id="d_lhint">Los productos de la misma lista se comparan juntos</span></div>
       <div class="field h3"><label for="d_estado">Estado</label><select id="d_estado"></select></div>
+      <div class="field h3"><label for="d_cant">Cantidad</label><input id="d_cant" type="number" min="1" step="1" inputmode="numeric" value="1"><span class="hint">Por ejemplo, 3 estanterías iguales</span></div>
       <div class="field h3"><label for="d_valor">Te gusta</label><select id="d_valor"><option value="0">Sin valorar</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
       <div class="field h3"><label for="d_room">Estancia</label><select id="d_room"></select></div>
       <div class="field h3"><label for="d_forma">Tipo de mueble</label><select id="d_forma"></select><span class="hint">Para darle forma en el plano y en 3D</span></div>
@@ -2499,19 +2509,19 @@ function roomListsHTML(p,r){
   if(!names.length) return `<section class="rl">${head}<div class="rl-empty">Aún no hay listas para esta estancia. Créalas en <button class="btn sm" type="button" data-tab="productos">Productos</button> (por ejemplo «Mueble de TV» o «Sofá»), mete las opciones que veas y aparecerán aquí para elegir.</div></section>`;
   const win=n=>g[n].find(x=>x.estado==="comprado")||g[n].find(x=>x.estado==="elegido");
   const ons=n=>g[n].filter(x=>x.estado==="comprado"||x.estado==="elegido");
-  const total=names.reduce((s,n)=>s+ons(n).reduce((t,x)=>t+(+x.precio||0),0),0);
+  const total=names.reduce((s,n)=>s+ons(n).reduce((t,x)=>t+lineTotal(x),0),0);
   return `<section class="rl">${head}${names.map(n=>{
     const list=[...g[n]].sort((a,b)=>(+a.precio||1e9)-(+b.precio||1e9)), w=win(n), open=S.openLists.has(n);
     const lid=list[0]?.estanciaId??(S.listas.find(l=>l.proyectoId===pid&&l.nombre===n)?.estanciaId||"");
     return `<details class="rl-d" data-rl="${esc(n)}"${open?" open":""}>
-      <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${ons(n).length>1?`<b>${ons(n).length} en el presupuesto</b> · ${eur.format(ons(n).reduce((t,x)=>t+(+x.precio||0),0))}`:w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Nada en el presupuesto":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
+      <summary><span class="rl-n">${listIcon(n)}${esc(n)}</span><span class="rl-s">${ons(n).length>1||(w&&qty(w)>1)?`<b>${ons(n).reduce((t,x)=>t+qty(x),0)} en el presupuesto</b> · ${eur.format(ons(n).reduce((t,x)=>t+lineTotal(x),0))}`:w?`<b>${esc(w.nombre)}</b>${w.precio!==""&&w.precio!=null?` · ${eur.format(+w.precio)}`:""}`:`<i>${list.length?"Nada en el presupuesto":"Vacía"}</i>`}</span><span class="rl-c num">${list.length} opci${list.length===1?"ón":"ones"}</span></summary>
       <div class="rl-b">${list.map(x=>{ const on=x.estado==="elegido"||x.estado==="comprado", fits=+x.ancho>0&&+x.fondo>0, sw=prodHex(x);
         const enPlano=S.items.filter(i=>i.estanciaId===r.id&&i.productoId===x.id).length;
         return `<div class="rl-row"><div class="rl-o${on?" on":""}" data-editprod="${esc(x.id)}" role="button" tabindex="0" title="Ver o editar el producto">
           ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="rl-sw" style="background:${sw||"var(--f4)"}"></span>`}
           <span class="rl-t"><b>${esc(x.nombre)}</b><small>${[x.tienda,fits?`${cm(x.ancho)}×${cm(x.fondo)}${+x.alto?`×${cm(x.alto)}`:""} cm`:"sin medidas",x.estado==="comprado"?"comprado":"",enPlano?(enPlano>1?`${enPlano} en el plano`:"en el plano"):""].filter(Boolean).map(esc).join(" · ")}</small></span>
           <span class="rl-p num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):""}</span></div>
-          <div class="rl-acts">${budBtn(x)}<button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div></div>`; }).join("")}
+          <div class="rl-acts">${on?qtyBox(x):""}${budBtn(x)}<button type="button" class="btn sm rl-add" data-place="${esc(x.id)}"${fits?"":` disabled title="Añade sus medidas para ponerlo en el plano"`}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="lg">Añadir al plano</span><span class="sh">Al plano</span></button></div></div>`; }).join("")}
         <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-addopt="${esc(n)}" data-optroom="${esc(lid||r.id)}">+ Añadir opción</button><button class="btn ghost sm" type="button" data-editlist="${esc(n)}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar lista</button></div></div>
     </details>`; }).join("")}
     ${total?`<div class="rl-tot"><span>En el presupuesto de ${esc(r.nombre)}</span><b class="num">${eur.format(total)}</b></div>`:""}</section>`;
@@ -2601,6 +2611,10 @@ function rotPreview(it,rot){
 }
 
 /* ---------- Presupuesto ---------- */
+const qty=x=>Math.max(1,Math.round(+x.cantidad||1));
+const lineTotal=x=>(+x.precio||0)*qty(x);
+function qtyBox(x){ const n=qty(x); return `<span class="qty" role="group" aria-label="Cantidad de ${esc(x.nombre)}"><button type="button" data-qty="${esc(x.id)}|-1" aria-label="Una menos"${n<=1?" disabled":""}>−</button><b>${n}</b><button type="button" data-qty="${esc(x.id)}|1" aria-label="Una más">+</button></span>`; }
+function qtyChange(id,dlt){ const x=S.productos.find(y=>y.id===id); if(!x) return; const n=Math.max(1,qty(x)+dlt); if(n===qty(x)) return; const {id:_,...b}=x; save("productos",id,{...b,cantidad:n}).catch(()=>{}); if($("dlgBudAdd").open) setTimeout(fillBudAdd,30); }
 // Botón «Al presupuesto»: un producto está en el presupuesto si está elegido o comprado
 function budBtn(x){
   const on=x.estado==="elegido"||x.estado==="comprado", bought=x.estado==="comprado";
@@ -2620,7 +2634,7 @@ function fillBudAdd(){
   const prods=S.productos.filter(x=>x.proyectoId===p.id&&x.estado!=="descartado");
   const out=prods.filter(x=>x.estado!=="elegido"&&x.estado!=="comprado"), inn=prods.filter(x=>x.estado==="elegido"||x.estado==="comprado");
   const groups={}; out.forEach(x=>(groups[x.busco||"Sin lista"] ||= []).push(x));
-  const row=x=>`<li class="ba-r">${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="ba-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}<span class="ba-t"><b>${esc(x.nombre)}</b><small>${esc([x.tienda,roomName(x.estanciaId)].filter(Boolean).join(" · "))}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):"—"}</span>${budBtn(x)}</li>`;
+  const row=x=>`<li class="ba-r">${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="ba-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}<span class="ba-t"><b>${esc(x.nombre)}</b><small>${esc([x.tienda,roomName(x.estanciaId)].filter(Boolean).join(" · "))}</small></span><span class="num">${x.precio!==""&&x.precio!=null?eur.format(+x.precio):"—"}</span><span class="ba-a">${x.estado==="elegido"||x.estado==="comprado"?qtyBox(x):""}${budBtn(x)}</span></li>`;
   $("budAddBody").innerHTML=(out.length?Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es")).map(g=>`<h4 class="ba-h">${listIcon(g)}${esc(g)}</h4><ul class="ba-l">${groups[g].map(row).join("")}</ul>`).join("")
       :`<p class="muted" style="margin:0">Todos tus productos ya están en el presupuesto.</p>`)
     +`<div style="margin:14px 0"><button class="btn" type="button" data-act="budNewProd">＋ Crear producto nuevo</button></div>`
@@ -2631,7 +2645,7 @@ function budgetRows(p){
   const prods=S.productos.filter(x=>x.proyectoId===p.id&&(x.estado==="elegido"||x.estado==="comprado"));
   const tasks=S.tareas.filter(x=>x.proyectoId===p.id), gastos=S.gastos.filter(x=>x.proyectoId===p.id);
   return [
-    ...prods.map(x=>{ const cj=x.conjuntoId&&S.conjuntos.find(c=>c.id===x.conjuntoId); return {concepto:x.nombre,sub:cj?`Conjunto · ${x.busco}`:x.busco,room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:+x.precio||0,real:x.estado==="comprado"?+x.precio||0:cj?cjPaid(cj):0,attr:`data-editprod="${esc(x.id)}"`}; }),
+    ...prods.map(x=>{ const cj=x.conjuntoId&&S.conjuntos.find(c=>c.id===x.conjuntoId); return {concepto:qty(x)>1?`${x.nombre} × ${qty(x)}`:x.nombre,sub:[cj?`Conjunto · ${x.busco}`:x.busco,qty(x)>1&&+x.precio?`${qty(x)} × ${eur2.format(+x.precio)}`:""].filter(Boolean).join(" · "),room:x.estanciaId||"",tipo:"Compra",estado:x.estado==="comprado"?"Comprado":"Elegido",ok:x.estado==="comprado",prev:lineTotal(x),real:x.estado==="comprado"?lineTotal(x):cj?cjPaid(cj):0,attr:`data-editprod="${esc(x.id)}"`}; }),
     ...tasks.map(t=>({concepto:t.titulo,sub:S.contactos.find(c=>c.id===t.contactoId)?.nombre||"",room:t.estanciaId||"",tipo:"Reforma",estado:(ESTADOS_T.find(e=>e[0]===t.estado)||ESTADOS_T[0])[1],ok:t.estado==="hecha",prev:+t.prev||+t.real||0,real:+t.real||0,attr:`data-edittask="${esc(t.id)}"`})),
     ...S.conjuntos.filter(c=>c.proyectoId===p.id&&(c.elementos||[]).length&&!S.productos.some(y=>y.conjuntoId===c.id)).map(c=>({concepto:c.nombre,sub:`${c.elementos.length} elementos`,room:c.estanciaId||"",tipo:"Conjunto",estado:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0?"Todo comprado":`${c.elementos.filter(e=>e.comprado).length}/${c.elementos.length} comprado`,ok:cjPaid(c)>=cjTotal(c)&&cjTotal(c)>0,prev:cjTotal(c),real:cjPaid(c),attr:`data-tab="conjuntos"`})),
     ...gastos.map(g=>({concepto:g.concepto,sub:g.notas||"",room:g.estanciaId||"",tipo:"Otro gasto",estado:g.pagado?"Pagado":"Pendiente",ok:!!g.pagado,prev:+g.importe||0,real:g.pagado?+g.importe||0:0,attr:`data-editgasto="${esc(g.id)}"`}))
@@ -3328,7 +3342,10 @@ function openBell(){
 function stars(n){ n=+n||0; return n?`<span class="stars" aria-label="${n} de 5">${"★".repeat(n)}<i>${"★".repeat(5-n)}</i></span>`:""; }
 // Comparador tipo tienda: una columna por producto y una fila por característica
 function compareHTML(list){
-  const xs=list.filter(x=>x.estado!=="descartado"); if(xs.length<2) return "";
+  const all=list.filter(x=>x.estado!=="descartado"); if(all.length<2) return "";
+  // si has marcado al menos dos con «Comparar», solo salen esos
+  const picked=all.filter(x=>x.cmp), xs=picked.length>=2?picked:all;
+  const pick=`<div class="cmp-pick"><span class="label">Comparar ${xs.length} de ${all.length}</span>${all.map(x=>`<button type="button" class="chip-c" data-cmppick="${esc(x.id)}" aria-pressed="${!!x.cmp}">${x.cmp?"✓ ":""}${esc(x.nombre.length>26?x.nombre.slice(0,25)+"…":x.nombre)}</button>`).join("")}${picked.length?`<button type="button" class="btn ghost sm" data-cmpclear="${esc(all[0].busco)}">Ver todos</button>`:""}${picked.length===1?`<span class="muted" style="font-size:12px">Marca al menos otro</span>`:""}</div>`;
   const hm=listMed(xs[0].proyectoId,xs[0].busco);
   const prices=xs.map(x=>+x.precio).filter(v=>v>0), min=prices.length?Math.min(...prices):null, maxP=prices.length?Math.max(...prices):null;
   const vals=xs.map(x=>+x.valor||0), bestV=Math.max(...vals), anyV=new Set(vals).size>1;
@@ -3339,7 +3356,7 @@ function compareHTML(list){
   const dims=x=>[x.ancho,x.fondo,x.alto].some(v=>+v>0)?`${[x.ancho,x.fondo,x.alto].map(v=>+v>0?cm(v):"?").join(" × ")} cm`:"—";
   const row=(label,cell,cls)=>`<tr><th scope="row">${label}</th>${xs.map(x=>`<td class="${cls?cls(x):""}">${cell(x)}</td>`).join("")}</tr>`;
   const on=x=>x.estado==="elegido"||x.estado==="comprado";
-  return `<div class="cmp-wrap"><table class="cmp">
+  return `${pick}<div class="cmp-wrap"><table class="cmp">
     <thead><tr><th scope="col"><span class="sr">Característica</span></th>${xs.map(x=>`<th scope="col" class="${on(x)?"on":""}">
       ${safeUrl(x.imagen)?`<img src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span class="cmp-sw" style="background:${prodHex(x)||"var(--f4)"}"></span>`}
       <b>${esc(x.nombre)}</b>${safeUrl(x.url)?`<a href="${esc(x.url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}</th>`).join("")}</tr></thead>
@@ -3380,13 +3397,14 @@ function shopHTML(p,prods){
         return `<article class="prod ${x.estado||""}" style="${x.estado==="descartado"?"opacity:.55":""}">${safeUrl(x.imagen)?`<img class="pimg" src="${esc(x.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}
           <div class="row"><span class="st st-${x.estado||"visto"}">${(ESTADOS_P.find(e=>e[0]===x.estado)||ESTADOS_P[0])[1]}</span>${min!==null&&+x.precio===min&&x.estado!=="descartado"?'<span class="tag cheap">Más barato</span>':""}</div>
           <h4>${esc(x.nombre)}</h4>
-          <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}${dropOf(x)?` <s class="old">${eur2.format(+x.precioAntes)}</s>`:""}</span>${stars(x.valor)}</div>
+          <div class="row"><span class="price">${x.precio!==""&&x.precio!=null?eur2.format(+x.precio):"—"}${dropOf(x)?` <s class="old">${eur2.format(+x.precioAntes)}</s>`:""}${qty(x)>1?` <small class="muted">× ${qty(x)}${+x.precio?` = ${eur2.format(lineTotal(x))}`:""}</small>`:""}</span>${stars(x.valor)}</div>
           ${dropOf(x)?`<span class="tag drop">Ha bajado un ${dropOf(x)} %</span>`:""}${x.check&&safeUrl(x.url)?`<span class="dims">Precio comprobado ${ago(+x.check)}</span>`:""}
           <span class="shop">${esc(x.tienda||"")}${x.estanciaId?` · ${esc(roomName(x.estanciaId))}`:""}</span>
           ${dims?`<span class="dims">${dims}</span>`:""}
           ${x.conjuntoId&&S.conjuntos.find(c=>c.id===x.conjuntoId)?`<button type="button" class="cj-chip" data-gocj="${esc(x.conjuntoId)}">Conjunto · ${(S.conjuntos.find(c=>c.id===x.conjuntoId).elementos||[]).length} elementos ›</button>`:""}
           ${(()=>{ const hm=listMed(x.proyectoId,x.busco), f=hm&&fitsMed(x,hm); return f?`<span class="fit ${f.ok?"ok":"bad"}">${f.ok?"✓":"✗"} ${esc(f.t.replace(/^Cabe · /,"Cabe en "+hm.nombre+" · ").replace(/^No cabe:/,"No cabe en "+hm.nombre+":"))}</span>`:""; })()}
           ${x.nota?`<span class="note">${esc(x.nota)}</span>`:""}
+          ${canCmp&&x.estado!=="descartado"?`<button type="button" class="chip-c cmp-card" data-cmppick="${esc(x.id)}" aria-pressed="${!!x.cmp}">${x.cmp?"✓ Para comparar":"＋ Comparar"}</button>`:""}
           <div class="foot"><button class="btn sm" type="button" data-editprod="${esc(x.id)}">Editar</button>
             ${url?`<a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Ver en tienda ↗</a>`:""}
             ${+x.ancho>0&&+x.fondo>0?`<button class="btn sm" type="button" data-place="${esc(x.id)}">Colocar en plano</button>`:""}
@@ -3487,7 +3505,7 @@ function openProd(x,preset={}){
   $("d_busco").value=""; $("d_nombre").value=x?.nombre||""; $("d_tienda").value=x?.tienda||""; $("d_precio").value=x?.precio??"";
   fill($("d_forma"),FORMAS,x?.forma||""); $("d_pared").checked=typeof x?.pared==="boolean"?x.pared:PARED.has(x?.forma||detectForma(`${x?.nombre||""} ${x?.busco||""}`)); $("d_pared").dataset.set=typeof x?.pared==="boolean"?"1":""; fillLists(pid,x?.busco||preset.busco||S.lastList||"");
   $("d_url").value=x?.url||""; lastUrl=x?.url||""; $("d_img").value=x?.imagen||""; $("d_color").value=x?.color||colorFromName(x?.nombre)||"#b07a55"; $("d_color").dataset.set=x?.color?"1":""; $("d_colormsg").textContent=x?.color?"Color guardado":"Para pintarlo en el plano"; $("d_urlmsg").textContent=HAS_API?"Al pegarlo se leen el nombre, el precio, las medidas y la foto":"Al pegarlo se rellenan la tienda y el nombre"; $("d_paste").value=""; $("d_fillmsg").textContent=""; $("d_more").open=false; $("d_ancho").value=x?.ancho??""; $("d_fondo").value=x?.fondo??""; $("d_alto").value=x?.alto??"";
-  $("d_valor").value=String(x?.valor||0); $("d_nota").value=x?.nota||"";
+  $("d_valor").value=String(x?.valor||0); $("d_cant").value=x?qty(x):1; $("d_nota").value=x?.nota||"";
   $("d_del").hidden=!x;
   if(x) armDelete($("d_del"),async()=>{ for(const it of S.items.filter(i=>i.productoId===x.id)) await remove("items",it.id); await remove("productos",x.id); $("dlgProd").close(); toast("Producto eliminado"); });
   $("dlgProd").showModal();
@@ -3498,7 +3516,7 @@ $("fProd").addEventListener("submit",async ev=>{
   { const v=$("d_busco").value.trim(), ex=listExact(edD?.proyectoId||S.proyId,v); $("d_busco").value=ex?ex.nombre:v.charAt(0).toUpperCase()+v.slice(1); }
   const id=edD?.id||uid();
   const data={proyectoId:edD?.proyectoId||S.proyId,busco:$("d_busco").value.trim(),nombre:$("d_nombre").value.trim(),tienda:$("d_tienda").value.trim(),precio:num($("d_precio").value),
-    forma:$("d_forma").value,pared:$("d_pared").checked,conjuntoId:edD?.conjuntoId||S.prodFromCj||"",url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,
+    forma:$("d_forma").value,pared:$("d_pared").checked,conjuntoId:edD?.conjuntoId||S.prodFromCj||"",url:$("d_url").value.trim(),imagen:$("d_img").value.trim(),color:$("d_color").dataset.set?$("d_color").value:colorFromName($("d_nombre").value),ancho:num($("d_ancho").value),fondo:num($("d_fondo").value),alto:num($("d_alto").value),estado:$("d_estado").value,valor:+$("d_valor").value,cantidad:Math.max(1,Math.round(+$("d_cant").value||1)),
     estanciaId:$("d_room").value,nota:$("d_nota").value.trim(),creado:edD?.creado||Date.now()};
   try{
     S.lastList=data.busco; await ensureList(data.proyectoId,data.busco,data.estanciaId);
@@ -3671,7 +3689,7 @@ $("d_url").addEventListener("input",()=>{ clearTimeout(onProdUrl.t); onProdUrl.t
 document.addEventListener("click",e=>{
   if(e.target.closest("summary button")) e.preventDefault();
   document.querySelectorAll("details.menu[open]").forEach(m=>{ if(!m.contains(e.target)||e.target.closest(".menu-p button")) m.open=false; });
-  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-budget],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
+  const t=e.target.closest("[data-act],[data-tab],[data-room],[data-addgen],[data-addprod],[data-editprod],[data-place],[data-choose],[data-edittask],[data-cycle],[data-editcont],[data-color],[data-vista],[data-addopt],[data-tpl],[data-editgasto],[data-dellist],[data-editlist],[data-wall],[data-wallreset],[data-cj2list],[data-gocj],[data-goprod],[data-photo],[data-rmfoto],[data-editmed],[data-copymed],[data-rotby],[data-zby],[data-zto],[data-hex2],[data-cam],[data-addcat],[data-fxnew],[data-fxedit],[data-fxdel],[data-qty],[data-cmppick],[data-cmpclear],[data-budget],[data-shcopy],[data-shsend],[data-shimport],[data-shstop],[data-shleave],[data-shopen],[data-hlnew],[data-hledit],[data-pc],[data-pt],[data-st],[data-sc],[data-view],[data-rotto],[data-proj],[data-openbud],[data-editcj],[data-qadd],[data-elchk],[data-eledit],[data-placecj],[data-addcj],[data-dupcj]");
   if(!t) return;
   const p=proyecto(), r=p&&room(p), d=t.dataset;
   if(d.tpl){ const P0=pts(r), {W,L}=bbox(P0); S.shapeSel=null; saveShape(r,template(d.tpl,W,L)); return; }
@@ -3680,6 +3698,9 @@ document.addEventListener("click",e=>{
   if(d.room){ S.roomId=d.room; S.sel=null; S.editShape=false; S.shapeSel=null; render(); return; }
   if(d.cam){ moveCam(d.cam); return; }
   if(d.budget){ budToggle(d.budget); return; }
+  if(d.qty){ const [id,dl]=d.qty.split("|"); qtyChange(id,+dl); return; }
+  if(d.cmppick){ const x=S.productos.find(y=>y.id===d.cmppick); if(x){ const {id,...b}=x; saveQuiet("productos",id,{...b,cmp:!x.cmp}).catch(()=>{}); } return; }
+  if(d.cmpclear){ const p0=proyecto(); held(()=>{ S.productos.filter(x=>x.proyectoId===p0?.id&&x.busco===d.cmpclear&&x.cmp).forEach(x=>{ const {id,...b}=x; saveQuiet("productos",id,{...b,cmp:false}).catch(()=>{}); }); }); return; }
   if(d.shcopy){ const l=shareLink(d.shcopy); (navigator.clipboard?.writeText(l)||Promise.reject()).then(()=>toast("Enlace copiado. Pégalo en WhatsApp o en un correo."),()=>{ $("shLink")?.select(); toast("Copia el enlace seleccionado"); }); return; }
   if(d.shsend){ navigator.share({title:"Proyectia",text:`Te comparto mi proyecto «${proyecto()?.nombre||""}» en Proyectia`,url:shareLink(d.shsend)}).catch(()=>{}); return; }
   if(d.shimport){ importShare(d.shimport); return; }
