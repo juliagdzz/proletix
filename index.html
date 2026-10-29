@@ -1847,9 +1847,24 @@ function snapToWall(it,r){
   const ncx=bx+nx*(+it.d/2+.5), ncy=by+ny*(+it.d/2+.5), f2=footprint({...it,rot});
   return {rot,x:Math.round((ncx-f2.fw/2)*10)/10,y:Math.round((ncy-f2.fd/2)*10)/10};
 }
+// Busca el hueco libre más cercano al centro de la estancia para no dejar el mueble encima de otro
+function freeSpot(it,r){
+  const P=pts(r), {W,L}=bbox(P), {fw,fd}=footprint(it), h=shape3d(it).h, step=10;
+  const others=S.items.filter(o=>o.estanciaId===r.id&&o.tipo!=="ventana"&&!isRug(o)&&!isWallItem(o)).map(o=>({C:hitCorners(o),z:+o.z||0,h:shape3d(o).h}));
+  const cx=(W-fw)/2, cy=(L-fd)/2, cands=[];
+  for(let x=0;x<=W-fw;x+=step) for(let y=0;y<=L-fd;y+=step) cands.push([x,y,(x-cx)**2+(y-cy)**2]);
+  cands.push([Math.max(0,cx),Math.max(0,cy),-1]); cands.sort((a,b)=>a[2]-b[2]);
+  for(const [x,y] of cands){
+    if(!itemFits(it,x,y,P)) continue;
+    const A=corners(it,x,y,1);
+    if(others.every(o=>o.z>=h-1||!quadsOverlap(A,o.C))) return {x:Math.round(x),y:Math.round(y)};
+  }
+  return null;
+}
 function addItem(r,base){
   const {fw,fd}=footprint({...base,rot:0});
   const it={estanciaId:r.id,rot:0,color:0,...base,x:Math.max(0,Math.round((r.ancho-fw)/2/5)*5),y:Math.max(0,Math.round((r.largo-fd)/2/5)*5),creado:Date.now()};
+  if(!isHueco(it)&&!isWallItem(it)){ const sp=freeSpot(it,r); if(sp){ it.x=sp.x; it.y=sp.y; } else setTimeout(()=>toast(`No queda un hueco libre para «${it.nombre}»: lo he dejado en el centro, muévelo a su sitio.`),50); }
   if(canStack(it)) it.z=supportHeight(it);
   if(isWallItem(it)){ Object.assign(it,snapToWall(it,r)); if(it.z==null) it.z=WALLZ[shape3d(it).f]||120; }
   const id=uid(); S.sel=id; save("items",id,it).catch(()=>{});
